@@ -10,8 +10,10 @@ Workflow execution is intentionally out of scope for Phase 1.
 
 ## Status
 
-Phase 1 scaffolding is underway. The server and analysis engine are not yet
-implemented. See `DEVELOPMENT_PLAN.md` for the full roadmap.
+Phase 2 (core MCP protocol + transports) is in progress. The MCP server supports
+stdio mode and partial HTTP/SSE (session binding + JSON-RPC POST). Arcaflow
+workflow execution and analysis features are still under active development.
+See `DEVELOPMENT_PLAN.md` for the full roadmap.
 
 ## AI-assisted development
 
@@ -43,6 +45,31 @@ Basic guidance when working with an AI coding agent:
 3. Download Go dependencies: `cd server && go mod download`.
 4. Run `./scripts/validate.sh` to confirm tooling.
 5. Use `./scripts/test-all.sh` to run the full test suite.
+
+## Quick start (usage)
+
+### Local mode (stdio, recommended)
+
+Local mode is the primary way to connect desktop MCP clients. Configure your
+client to launch the server on demand with:
+
+```
+./server/arcaflow-mcp --mode local
+```
+
+Client configuration guide (Gemini, Claude Desktop, Cursor, etc.):
+`docs/arcaflow-mcp/usage/local-mode.md`.
+
+### Server mode (HTTP/SSE, partial)
+
+Server mode provides an HTTP POST endpoint and SSE stream with session binding:
+
+```
+./server/arcaflow-mcp --mode server --address 127.0.0.1:8080
+```
+
+See `docs/arcaflow-mcp/usage/server-mode.md` for endpoint, session binding, and
+example `curl` usage.
 
 ## Repository layout
 

@@ -2,14 +2,22 @@
 package main
 
 import (
-	"errors"
+	"context"
+	"encoding/json"
 	"flag"
 	"fmt"
+	"io"
 	"log/slog"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 
 	"github.com/arcalot/arcaflow-mcp/server/pkg/config"
+	"github.com/arcalot/arcaflow-mcp/server/pkg/protocol"
+	"github.com/arcalot/arcaflow-mcp/server/pkg/transport/httpserver"
+	"github.com/arcalot/arcaflow-mcp/server/pkg/transport/stdio"
+	"github.com/arcalot/arcaflow-mcp/server/pkg/version"
 )
 
 const (
@@ -45,19 +53,103 @@ func run() error {
 		return err
 	}
 
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+	logOutput := chooseLogOutput(cfg.Mode)
+
+	logger := slog.New(slog.NewJSONHandler(logOutput, &slog.HandlerOptions{
 		Level: parseLogLevel(cfg.Logging.Level),
 	}))
 	slog.SetDefault(logger)
 
+	ctx, stop := signal.NotifyContext(
+		context.Background(),
+		os.Interrupt,
+		syscall.SIGTERM,
+	)
+	defer stop()
+
 	switch cfg.Mode {
 	case modeLocal:
-		return errors.New("local mode not implemented yet")
+		serverVersion := version.Current()
+		handler := protocol.NewServer(
+			logger.With("component", "protocol"),
+			protocol.ServerInfo{
+				Name:    "arcaflow-mcp",
+				Version: serverVersion,
+			},
+		)
+		registerDefaultTools(handler)
+		server := stdio.NewServer(
+			handler,
+			os.Stdin,
+			os.Stdout,
+			logger.With("component", "stdio"),
+		)
+
+		slog.Info("starting local stdio server")
+		return server.Serve(ctx)
 	case modeServer:
-		return errors.New("server mode not implemented yet")
+		serverVersion := version.Current()
+		handler := protocol.NewServer(
+			logger.With("component", "protocol"),
+			protocol.ServerInfo{
+				Name:    "arcaflow-mcp",
+				Version: serverVersion,
+			},
+		)
+		registerDefaultTools(handler)
+		httpServer := httpserver.NewServer(
+			httpserver.Config{Address: cfg.Address},
+			handler,
+			logger.With("component", "http"),
+		)
+		slog.Info("starting server mode", "address", cfg.Address)
+		return httpServer.Serve(ctx)
 	default:
 		return fmt.Errorf("unknown mode %q", cfg.Mode)
 	}
+}
+
+func registerDefaultTools(server *protocol.Server) {
+	if server == nil {
+		return
+	}
+	server.RegisterTool(protocol.ToolRegistration{
+		Definition: protocol.ToolDefinition{
+			Name:        "ping",
+			Description: "Ping the server to verify connectivity.",
+			InputSchema: json.RawMessage(
+				`{"type":"object","properties":{"message":{"type":"string"}},"additionalProperties":false}`,
+			),
+		},
+		Handler: func(
+			ctx context.Context,
+			arguments map[string]interface{},
+		) (protocol.ToolsCallResult, *protocol.ErrorObject) {
+			_ = ctx
+			message := "pong"
+			if value, ok := arguments["message"].(string); ok && value != "" {
+				message = value
+			}
+			return protocol.ToolsCallResult{
+				Content: []protocol.ToolContent{
+					{
+						Type: "text",
+						Text: message,
+					},
+				},
+			}, nil
+		},
+	})
+}
+
+func chooseLogOutput(mode string) io.Writer {
+	// Use stderr in stdio mode so protocol output stays clean.
+	logOutput := io.Writer(os.Stdout)
+	if mode == modeLocal {
+		logOutput = os.Stderr
+	}
+
+	return logOutput
 }
 
 // parseLogLevel maps string levels to slog levels.
