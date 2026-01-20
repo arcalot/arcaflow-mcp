@@ -1,0 +1,8 @@
+services:
+  server:
+    image: arcaflow-mcp-server:dev
+    environment:
+      - ARCAFLOW_MCP_MODE=server
+
+  analysis:
+    image: arcaflow-mcp-analysis:dev

@@ -1,10 +1,10 @@
 # Arcaflow MCP Server - Development Plan
 
-**Version:** 1.1.9  
+**Version:** 1.1.12  
 **Last Updated:** 2026-01-20  
 **Language:** Hybrid Go + Python (Go for MCP server core, Python for analysis engine)  
-**Status:** Phase 0 - Planning & Design  
-**Current Phase:** Phase 0 - Awaiting user approval to proceed to Phase 1
+**Status:** Phase 1 - Project Setup & Scaffolding  
+**Current Phase:** Phase 1 - Project Setup & Scaffolding (In Progress)
 
 **Version History:** Update version and date above when making significant changes to this plan.
 
@@ -54,7 +54,6 @@ This document serves as the **living development plan** throughout the project p
    - Create `docs/planning/README.md` explaining archived plans
    - Update root README.md to reference archived plan location
 4. The working plan may transition to:
-   - GitHub Issues/Projects for task tracking
    - Individual ADRs for specific decisions
    - Component-specific documentation in each directory
    - Release planning in separate documents
@@ -154,6 +153,7 @@ This document serves as the **living development plan** throughout the project p
 - Keep explanations brief and direct
 - Question if new content truly belongs here vs. in permanent docs
 - Update "Last Updated" date in header for minor edits
+- When changing phases, update header Status and Current Phase fields
 - Increment version and add changelog entry for significant plan changes
 
 **Change Tracking:**
@@ -241,9 +241,8 @@ This project maintains TWO distinct sets of documentation:
 - **Release notes and changelog** - Version history and changes
 
 **Format:**
-- Standard Markdown
+- Standard Markdown (GitHub-first navigation)
 - Generated API docs (godoc, Sphinx for Python)
-- May include separate `docs/mkdocs-project.yml` for building project docs site if desired
 
 **User-Facing Documentation Structure (For Arcaflow Docs):**
 ```
@@ -264,7 +263,7 @@ docs/
     │   ├── result-analysis.md  # Skill 2 guide
     │   └── configuration.md    # Configuration reference
     ├── deployment/             # Deployment guides
-    │   ├── docker.md           # Docker deployment
+    │   ├── container.md        # Podman-first container deployment
     │   ├── kubernetes.md       # Kubernetes deployment
     │   ├── authentication.md   # Auth setup
     │   └── tls.md              # TLS configuration
@@ -281,7 +280,6 @@ docs/
 **Project Documentation Structure (Permanent in Repo):**
 ```
 docs/
-├── mkdocs-project.yml          # Optional: MkDocs config for project docs
 ├── architecture/               # Technical architecture docs
 │   ├── overview.md             # System design
 │   ├── go-server.md            # Go MCP server internals
@@ -331,12 +329,11 @@ LICENSE                         # Apache 2.0 license
 
 **Build Commands:**
 - `mkdocs serve -f docs/mkdocs-arcaflow.yml` - Preview user-facing docs (for Arcaflow integration)
-- `mkdocs serve -f docs/mkdocs-project.yml` - Preview project documentation (if using MkDocs)
 - `mkdocs build -f docs/mkdocs-arcaflow.yml` - Build user-facing docs for CI
 - Or use `./scripts/docs-serve.sh` and `./scripts/docs-build.sh` wrapper scripts
 
 **CI Validation:**
-- Both documentation sets build successfully
+- User docs build successfully
 - Check for broken links and formatting issues
 - Ensure code examples in docs are tested and functional
 - Verify godoc and Python docstrings are complete
@@ -889,8 +886,8 @@ sequenceDiagram
 
 ## Development Phases
 
-### Phase 0: Planning & Design CURRENT PHASE
-**Status:** In Progress - Awaiting Gate Approval  
+### Phase 0: Planning & Design
+**Status:** COMPLETE (2026-01-20)  
 **Gate Keeper:** User approval to proceed to Phase 1
 
 **Objectives:**
@@ -900,22 +897,32 @@ sequenceDiagram
 - Set up project governance
 
 **Tasks:**
-- [IN PROGRESS] Create DEVELOPMENT_PLAN.md
-- [ ] Review and approve architecture
-- [ ] Confirm technical approach
-- [ ] Identify Phase 1 dependencies
+- [DONE] Create DEVELOPMENT_PLAN.md (2026-01-20)
+- [DONE] Review and approve architecture (2026-01-20)
+- [DONE] Confirm technical approach (2026-01-20)
+- [DONE] Identify Phase 1 dependencies (2026-01-20)
+
+**Phase 1 Dependencies Identified:**
+- Go 1.23.0 toolchain with `golangci-lint` available
+- Python 3.12 and Poetry 1.8.3 available for `analysis/`
+- Protobuf tooling: `protoc` and Go/Python gRPC plugins
+- MkDocs + Material theme for dual documentation sets
+- Podman/Buildah available for container builds
+- Access to target workflow repo:
+  `https://gitlab.com/redhat/edge/tests/perfscale/arcaflow-workflow-auto-perf`
+- GitHub Actions enabled for CI/CD pipelines
 
 **Exit Criteria:**
-- [ ] Architecture documented
-- [ ] Development plan approved by user
-- [ ] Phase-gate process established
+- [DONE] Architecture documented (2026-01-20)
+- [DONE] Development plan approved by user (2026-01-20)
+- [DONE] Phase-gate process established (2026-01-20)
 
-**Awaiting Gate Approval:** YES - Waiting for user approval to proceed to Phase 1
+**Awaiting Gate Approval:** NO - Approved to proceed to Phase 1 (2026-01-20)
 
 ---
 
 ### Phase 1: Project Setup & Scaffolding
-**Status:** Not Started  
+**Status:** COMPLETE (2026-01-20)  
 **Gate Keeper:** User approval to proceed to Phase 2
 
 **Objectives:**
@@ -925,13 +932,13 @@ sequenceDiagram
 - Establish build and test infrastructure
 
 **Tasks:**
-- [ ] **Template the directory structure** per Architecture Design section below
-- [ ] **Initialize governance files:** LICENSE (Apache 2.0), CONTRIBUTING.md, CODE_OF_CONDUCT.md, CODEOWNERS, SECURITY.md
-- [ ] **Create root README.md** with: overview, quick start, prerequisites, dev setup, git hooks instructions, workflow, structure overview
-- [ ] **Create VERSION file** (unified versioning: 0.1.0-dev)
-- [ ] **Create first ADR:** `docs/adr/ADR-001-hybrid-go-python-architecture.md`
+- [DONE] **Template the directory structure** per Architecture Design section below (2026-01-20)
+- [DONE] **Initialize governance files:** LICENSE (Apache 2.0), CONTRIBUTING.md, CODE_OF_CONDUCT.md, CODEOWNERS, SECURITY.md (2026-01-20)
+- [DONE] **Create root README.md** with: overview, quick start, prerequisites, dev setup, git hooks instructions, workflow, structure overview (2026-01-20)
+- [DONE] **Create VERSION file** (unified versioning: 0.1.0-dev) (2026-01-20)
+- [DONE] **Create first ADR:** `docs/adr/ADR-001-hybrid-go-python-architecture.md` (2026-01-20)
 
-- [ ] **Directory structure to create (Monorepo with Language Separation):**
+- [DONE] **Directory structure to create (Monorepo with Language Separation):** (2026-01-20)
 
 ```
 arcaflow-mcp/                    # Repository root
@@ -975,13 +982,12 @@ arcaflow-mcp/                    # Repository root
 │   └── mcp-client-configs/
 │
 ├── deploy/                      # Deployment configurations
-│   ├── docker/                  # Dockerfiles and compose
+│   ├── container/               # Podman-first container files and compose
 │   ├── kubernetes/              # K8s manifests
 │   └── systemd/                 # Service files
 │
 ├── docs/                        # Documentation (dual purpose)
 │   ├── mkdocs-arcaflow.yml      # MkDocs config for user docs
-│   ├── mkdocs-project.yml       # Optional: MkDocs for project docs
 │   ├── arcaflow-mcp/            # User docs (for Arcaflow integration)
 │   │   ├── index.md, getting-started.md
 │   │   ├── concepts/, usage/, deployment/
@@ -1002,21 +1008,21 @@ arcaflow-mcp/                    # Repository root
 
 **Note:** This shows the organizational structure. Specific files will be created as needed during development.
 
-- [ ] **Initialize Go module in `server/`** with proper dependency management and golangci-lint configuration
-- [ ] **Initialize Python project in `analysis/`** using Poetry with pyproject.toml, dependencies (pandas, pyyaml, grpcio, SQLAlchemy, pytest, black, ruff)
-- [ ] **Create development scripts** in `scripts/`: dev-setup.sh, test-*.sh, validate.sh, build.sh, proto-gen.sh
-- [ ] **Set up CI/CD** with GitHub Actions workflows (Go, Python, integration tests, security scanning, releases, multi-arch container builds)
+- [DONE] **Initialize Go module in `server/`** with proper dependency management and golangci-lint configuration (2026-01-20)
+- [DONE] **Initialize Python project in `analysis/`** using Poetry with pyproject.toml, dependencies (pandas, pyyaml, grpcio, SQLAlchemy, pytest, black, ruff) (2026-01-20)
+- [DONE] **Create development scripts** in `scripts/`: dev-setup.sh, test-*.sh, validate.sh, build.sh, proto-gen.sh (2026-01-20)
+- [DONE] **Set up CI/CD** with GitHub Actions workflows (Go, Python, integration tests, security scanning, releases, multi-arch container builds) (2026-01-20)
   - Reference multi-arch container build workflow: `/home/dblack/git/dustinblack/horreum-mcp/.github/workflows/container-build.yml` (`https://github.com/dustinblack/horreum-mcp/blob/main/.github/workflows/container-build.yml`)
-- [ ] **Create Docker Compose** for local development with both services
-- [ ] **Add EditorConfig and Dependabot** configuration
+- [DONE] **Create container compose** for local development with both services (2026-01-20)
+- [DONE] **Add EditorConfig and Renovate** configuration (2026-01-20)
     - Combined `.gitignore` for Go and Python patterns
 
-- [ ] **Create `.githooks/` directory** with README.md, setup-hooks.sh, pre-commit script. Hooks check: formatting, linting, fast tests, security scanning (changed files only)
-- [ ] **Create basic server entry point** in `server/cmd/arcaflow-mcp/main.go` supporting both stdio and HTTP/SSE modes, CLI flag parsing, graceful startup/shutdown
-- [ ] **Create Python gRPC server scaffolding** in `analysis/` with service interface, health checks, structured logging
-- [ ] **Add logging infrastructure:** Structured JSON logging across both services with consistent format and configurable levels
-- [ ] **Create configuration system:** YAML-based config with environment overrides, validation, supports both deployment modes
-- [ ] **Set up dual documentation structure:** User docs in `docs/arcaflow-mcp/` (MkDocs), project docs in `docs/architecture/`, `docs/adr/`, `docs/development/`, `docs/CHANGELOG.md`
+- [DONE] **Create `.githooks/` directory** with README.md, setup-hooks.sh, pre-commit script. Hooks check: formatting, linting, fast tests, security scanning (changed files only) (2026-01-20)
+- [DONE] **Create basic server entry point** in `server/cmd/arcaflow-mcp/main.go` supporting both stdio and HTTP/SSE modes, CLI flag parsing, graceful startup/shutdown (2026-01-20)
+- [DONE] **Create Python gRPC server scaffolding** in `analysis/` with service interface, health checks, structured logging (2026-01-20)
+- [DONE] **Add logging infrastructure:** Structured JSON logging across both services with consistent format and configurable levels (2026-01-20)
+- [DONE] **Create configuration system:** YAML-based config with environment overrides, validation, supports both deployment modes (2026-01-20)
+- [DONE] **Set up dual documentation structure:** User docs in `docs/arcaflow-mcp/` (MkDocs), project docs in `docs/architecture/`, `docs/adr/`, `docs/development/`, `docs/CHANGELOG.md` (2026-01-20)
     
     **Build System:**
     - Add MkDocs and Material theme to development dependencies
@@ -1041,19 +1047,18 @@ arcaflow-mcp/                    # Repository root
 - Decision finalized: Go + Python hybrid approach
 
 **Exit Criteria:**
-- Repository structure matches documented monorepo layout
-- Governance files complete (LICENSE, CONTRIBUTING, CODE_OF_CONDUCT, CODEOWNERS, SECURITY, first ADR)
-- README.md complete with developer setup and git hooks instructions  
-- Go and Python projects build, test, and lint successfully
-- Shell scripts in `scripts/` work correctly (dev-setup.sh, test-*.sh, validate.sh, build.sh)
-- Git hooks installed via dev-setup.sh and tested with violations
-- Docker Compose brings up both services with basic gRPC communication
-- CI workflows configured and passing (build, test, lint, security scans)
-- Dual documentation structure initialized (user docs + project docs), both build successfully
-- New developer can follow README.md alone to get productive environment
-- [ ] GitHub Issues created from Phase 1 task list
+- [DONE] Repository structure matches documented monorepo layout (2026-01-20)
+- [DONE] Governance files complete (LICENSE, CONTRIBUTING, CODE_OF_CONDUCT, CODEOWNERS, SECURITY, first ADR) (2026-01-20)
+- [DONE] README.md complete with developer setup and git hooks instructions (2026-01-20)  
+- [DONE] Go and Python projects build, test, and lint successfully (2026-01-20)
+- [DONE] Shell scripts in `scripts/` work correctly (dev-setup.sh, test-*.sh, validate.sh, build.sh) (2026-01-20)
+- [DONE] Git hooks installed via dev-setup.sh and tested with violations (2026-01-20)
+- [DONE] CI workflows configured and passing (build, test, lint, security scans) (2026-01-20)
+- [DONE] Dual documentation structure initialized (user docs + project docs) (2026-01-20)
+- [DONE] User docs build successfully (2026-01-20)
+- [DONE] New developer can follow README.md alone to get productive environment (2026-01-20)
 
-**Awaiting Gate Approval:** NO
+**Awaiting Gate Approval:** YES - Awaiting approval to proceed to Phase 2
 
 ---
 
@@ -1649,7 +1654,7 @@ arcaflow-mcp/                    # Repository root
     - Multi-arch container build using Podman/Buildah
     - Reference existing CI automation: `/home/dblack/git/dustinblack/horreum-mcp/.github/workflows/container-build.yml`
     - Containerfile(s) for Go MCP server and Python analysis engine
-    - Docker Compose / Podman Compose for local/simple deployments
+    - Podman Compose (Docker-compatible) for local/simple deployments
     - Kubernetes manifests (deployments, services, ingress, config)
     - Systemd service files for bare-metal deployments
     - Configuration examples and TLS setup guide
@@ -1677,7 +1682,8 @@ arcaflow-mcp/                    # Repository root
 - [ ] Go binaries built for all platforms
 - [ ] Python packages built and tested
 - [ ] Docker images published for both services
-- [ ] Docker Compose tested
+- [ ] Container compose brings up both services with basic gRPC communication
+- [ ] Container compose tested
 - [ ] Kubernetes manifests tested (both services communicating)
 - [ ] Release v0.1.0 published (both components)
 - [ ] Installation tested on all platforms (both modes)
@@ -1691,7 +1697,7 @@ arcaflow-mcp/                    # Repository root
     - Claude Desktop configuration succeeds using provided templates
     - MCP server successfully starts and connects to Claude Desktop
   - [ ] **Server Mode Deployment:**
-    - Docker Compose deployment succeeds on clean system
+    - Container compose deployment succeeds on clean system
     - Kubernetes deployment succeeds in test cluster
     - Both services (Go MCP server + Python analysis engine) start and communicate
     - TLS configuration works correctly
@@ -1712,16 +1718,16 @@ arcaflow-mcp/                    # Repository root
 
 ---
 
-## 📍 Current Status
+## Current Status
 
 ### Current Phase
-**Phase 0: Planning & Design**
+**Phase 1: Project Setup & Scaffolding**
 
 ### Current Task
-Creating DEVELOPMENT_PLAN.md - defining architecture and phased development approach
+Phase 1 complete; awaiting approval to proceed to Phase 2
 
 ### Next Milestone
-Complete Phase 0 and receive user approval to begin Phase 1 (Project Setup)
+Receive user approval to begin Phase 2 (Core MCP Protocol)
 
 ### Blockers
 None currently
@@ -1840,6 +1846,19 @@ None currently
 ## Plan Changelog
 
 **Purpose:** Track significant changes to this plan itself (not development progress).
+
+### 2026-01-20 - Remove Issue Tracking Tasks (v1.1.12)
+- Removed GitHub Issues/Projects references for initial development tracking
+- Dropped Phase 1 task for creating GitHub Issues
+
+### 2026-01-20 - Defer Container Compose Validation (v1.1.11)
+- Moved container compose bring-up validation to deployment phase
+- Phase 1 now focuses on scaffolding without runnable images
+
+### 2026-01-20 - Project Docs Use Standard Markdown (v1.1.10)
+- Clarified project docs are standard Markdown (no MkDocs build required)
+- Removed mkdocs-project config references and updated build/CI expectations
+- Kept MkDocs only for user-facing Arcaflow integration docs
 
 ### 2026-01-20 - Enhanced Phase Gate Verification Requirements (v1.1.9)
 - Significantly strengthened Phase Gate Protocol section with explicit verification steps

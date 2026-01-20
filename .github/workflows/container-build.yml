@@ -1,0 +1,163 @@
+name: container-build
+
+on:
+  push:
+    paths:
+      - "deploy/container/**"
+      - "scripts/build_multiarch.sh"
+      - ".github/workflows/container-build.yml"
+  pull_request:
+    paths:
+      - "deploy/container/**"
+      - "scripts/build_multiarch.sh"
+      - ".github/workflows/container-build.yml"
+  release:
+    types: [published]
+  workflow_dispatch: {}
+
+concurrency:
+  group: container-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  IMAGE_REPO: ${{ vars.IMAGE_REPO }}
+  OCI_REVISION: ${{ github.sha }}
+
+jobs:
+  build:
+    name: Build multi-arch container images
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check containerfiles
+        id: check_files
+        run: |
+          if ls deploy/container/Containerfile.* >/dev/null 2>&1; then
+            echo "found=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "found=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Skip when containerfiles missing
+        if: steps.check_files.outputs.found != 'true'
+        run: |
+          echo "No containerfiles present; skipping build."
+          exit 0
+
+      - name: Compute tag
+        id: compute_tag
+        run: |
+          if [ "${{ github.event_name }}" = "release" ]; then
+            VERSION="${{ github.event.release.tag_name }}"
+            echo "tag=${VERSION}" >> "$GITHUB_OUTPUT"
+            echo "expires=" >> "$GITHUB_OUTPUT"
+            echo "push_alias=latest" >> "$GITHUB_OUTPUT"
+            echo "push_main=false" >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.event_name }}" = "pull_request" ]; then
+            PR_NUM="${{ github.event.pull_request.number }}"
+            SHORT_SHA="${GITHUB_SHA:0:7}"
+            echo "tag=pr-${PR_NUM}-${SHORT_SHA}" >> "$GITHUB_OUTPUT"
+            echo "expires=14d" >> "$GITHUB_OUTPUT"
+            echo "push_main=false" >> "$GITHUB_OUTPUT"
+            echo "push_alias=" >> "$GITHUB_OUTPUT"
+          else
+            SHORT_SHA="${GITHUB_SHA:0:7}"
+            echo "tag=${SHORT_SHA}" >> "$GITHUB_OUTPUT"
+            if [ "${{ github.ref_name }}" = "main" ]; then
+              echo "push_main=true" >> "$GITHUB_OUTPUT"
+              echo "expires=90d" >> "$GITHUB_OUTPUT"
+            else
+              echo "push_main=false" >> "$GITHUB_OUTPUT"
+              echo "expires=30d" >> "$GITHUB_OUTPUT"
+            fi
+            echo "push_alias=" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Check registry configuration
+        if: steps.check_files.outputs.found == 'true'
+        env:
+          QUAY_USERNAME: ${{ secrets.QUAY_USERNAME }}
+          QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
+        run: |
+          if [ -z "${IMAGE_REPO}" ]; then
+            echo "IMAGE_REPO GitHub variable is required." >&2
+            exit 1
+          fi
+          if [ -z "${QUAY_USERNAME}" ] || [ -z "${QUAY_PASSWORD}" ]; then
+            echo "QUAY_USERNAME and QUAY_PASSWORD secrets are required." >&2
+            exit 1
+          fi
+
+      - name: Install buildah/podman/qemu
+        if: steps.check_files.outputs.found == 'true'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends podman buildah qemu-user-static
+
+      - name: Enable binfmt (best-effort)
+        if: steps.check_files.outputs.found == 'true'
+        run: |
+          podman run --privileged --rm tonistiigi/binfmt --install all || true
+
+      - name: Build multi-arch images and push
+        if: steps.check_files.outputs.found == 'true'
+        env:
+          TAG: ${{ steps.compute_tag.outputs.tag }}
+          EXPIRES: ${{ steps.compute_tag.outputs.expires }}
+          PUSH_ALIAS: ${{ steps.compute_tag.outputs.push_alias }}
+          QUAY_USERNAME: ${{ secrets.QUAY_USERNAME }}
+          QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
+        run: |
+          for file in deploy/container/Containerfile.*; do
+            name="$(basename "$file" | cut -d. -f2-)"
+            if [ "${{ steps.compute_tag.outputs.push_main }}" = "true" ]; then
+              PUSH_MAIN="--push-main"
+            else
+              PUSH_MAIN=""
+            fi
+            if [ -n "${PUSH_ALIAS}" ]; then
+              PUSH_ALIAS_FLAG="--push-alias ${PUSH_ALIAS}"
+            else
+              PUSH_ALIAS_FLAG=""
+            fi
+            scripts/build_multiarch.sh \
+              --tag "${TAG}" \
+              --expires "${EXPIRES}" \
+              --file "${file}" \
+              --context deploy/container \
+              --name "arcaflow-mcp-${name}" \
+              --push ${PUSH_MAIN} ${PUSH_ALIAS_FLAG}
+          done
+
+      - name: Install Trivy
+        if: steps.check_files.outputs.found == 'true'
+        run: |
+          wget -qO- https://aquasecurity.github.io/trivy-repo/deb/public.key | \
+            sudo gpg --dearmor -o /usr/share/keyrings/trivy.gpg
+          echo "deb [signed-by=/usr/share/keyrings/trivy.gpg] \
+            https://aquasecurity.github.io/trivy-repo/deb generic main" | \
+            sudo tee /etc/apt/sources.list.d/trivy.list
+          sudo apt-get update
+          sudo apt-get install -y trivy
+
+      - name: Start Podman socket for Trivy
+        if: steps.check_files.outputs.found == 'true'
+        run: |
+          systemctl --user start podman.socket
+          systemctl --user status podman.socket
+
+      - name: Scan images with Trivy
+        if: steps.check_files.outputs.found == 'true'
+        env:
+          TAG: ${{ steps.compute_tag.outputs.tag }}
+        run: |
+          for file in deploy/container/Containerfile.*; do
+            name="$(basename "$file" | cut -d. -f2-)"
+            image="${IMAGE_REPO}/arcaflow-mcp-${name}:${TAG}-local"
+            scripts/trivy_scan.sh "$image"
+          done
