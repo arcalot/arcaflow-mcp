@@ -1,9 +1,10 @@
 # Arcaflow MCP Server - Development Plan
 
-Version: 1.1.14  
+Version: 1.1.15  
 Last Updated: 2026-01-21  
 Language: Go for MCP server core, Python for analysis engine  
-Current Phase: Phase 2.5 - Authentication & Multi-tenancy (In Progress)
+Current Phase: Phase 2.75 - Admin Operations &
+  Audit Persistence (In Progress)
 
 ---
 
@@ -1155,8 +1156,8 @@ Awaiting Gate Approval: NO - Approved to proceed to Phase 2.5 (2026-01-20)
 ---
 
 ### Phase 2.5: Authentication & Multi-tenancy
-Status: In Progress  
-Gate Keeper: User approval to proceed to Phase 3
+Status: COMPLETE (2026-01-21)  
+Gate Keeper: User approval to proceed to Phase 2.75
 
 Objectives:
 - Implement authentication for server mode
@@ -1225,6 +1226,68 @@ Exit Criteria:
     - [DONE] Local mode still works without authentication (2026-01-21)
     - [DONE] Authentication is transparently bypassed for stdio transport (2026-01-21)
     - [DONE] No performance degradation in local mode (2026-01-21)
+
+Awaiting Gate Approval: NO - Approved to proceed to Phase 2.75
+  (2026-01-21)
+
+---
+
+### Phase 2.75: Admin Operations & Audit Persistence
+Status: In Progress  
+Gate Keeper: User approval to proceed to Phase 3
+
+Objectives:
+- Deliver admin operations beyond token management (tenant lifecycle, usage
+  stats)
+- Persist and query audit logs for compliance reporting
+- Enforce per-tenant resource quotas and usage policies
+- Ensure token data survives server restarts
+
+Tasks:
+- [ ] Implement tenant management admin endpoints (server mode)
+  - Outcome: Admins can create, list, update, and delete tenant records.
+  - Requirements: Validate tenant IDs, enforce admin auth, return structured
+    JSON.
+
+- [ ] Add usage statistics endpoints (server mode)
+  - Outcome: Admins can retrieve per-tenant usage metrics.
+  - Requirements: Request counts, rate-limit violations, active sessions, and
+    audit log totals per tenant.
+
+- [ ] Persist audit logs with query support
+  - Outcome: Durable audit trail with searchable records.
+  - Requirements: Structured storage, query by tenant/time/action, retention
+    policy configuration.
+
+- [ ] Enforce per-tenant resource quotas
+  - Outcome: Workspace usage and request activity constrained by quotas.
+  - Requirements: Track workspace sizes, deny over-limit operations with clear
+    errors, document quota configuration.
+
+- [ ] Add token store persistence
+  - Outcome: Tenant tokens survive server restarts.
+  - Requirements: Durable storage, revoke support, rotation strategy documented.
+
+Dependencies:
+- Phase 2.5 complete (auth, multi-tenancy, rate limiting, audit logs
+  baseline)
+
+Exit Criteria:
+- [ ] Tenant management endpoints operational and documented
+- [ ] Usage statistics endpoints operational and documented
+- [ ] Audit logs persisted and queryable
+- [ ] Resource quotas enforced with clear errors
+- [ ] Token persistence verified across restart
+- [ ] Unit and integration tests added for new admin and audit features
+  (>85% coverage)
+- [ ] User documentation updated (admin APIs, audit queries, quota
+  configuration)
+- [ ] Manual User Validation:
+  - [ ] Admin can create/list/update/delete tenants
+  - [ ] Usage statistics include request counts and rate-limit events
+  - [ ] Audit log queries return expected tenant-scoped entries
+  - [ ] Tenant workspace quotas block over-limit actions
+  - [ ] Tokens remain valid after server restart (unless revoked)
 
 Awaiting Gate Approval: NO
 
@@ -1326,7 +1389,8 @@ Tasks - Common:
   - Considerations: Use the target workflow as primary test case.
 
 Dependencies:
-- Phase 2.5 complete (auth and multi-tenancy ready)
+- Phase 2.75 complete (admin ops, audit persistence, quota enforcement
+  ready)
 - Sample Arcaflow workflow YAML files available
 - Sample Arcaflow execution result files available
 - Target workflow (arcaflow-workflow-auto-perf) accessible
@@ -1741,13 +1805,13 @@ Awaiting Gate Approval: NO
 ## Current Status
 
 ### Current Phase
-Phase 2.5: Authentication & Multi-tenancy
+Phase 2.75: Admin Operations & Audit Persistence
 
 ### Current Task
-Complete Phase 2.5 manual validation steps
+Define and implement Phase 2.75 admin operations and persistence
 
 ### Next Milestone
-Complete Phase 2.5 exit criteria and validation
+Complete Phase 2.75 exit criteria and validation
 
 ### Blockers
 None currently
@@ -1866,6 +1930,11 @@ Clear messaging - User understands:
 ## Plan Changelog
 
 Purpose: Track significant changes to this plan itself (not development progress).
+
+### 2026-01-21 - Add Phase 2.75 for Admin Ops (v1.1.15)
+- Added Phase 2.75 to cover tenant admin endpoints, usage stats, audit
+  persistence, resource quotas, and token durability
+- Updated dependencies and current status to reflect the new phase ordering
 
 ### 2026-01-21 - Testing Standards Clarification and Token Efficiency (v1.1.14)
 - Separated testing standards into distinct categories: unit tests (isolated, mocked), integration tests (component interactions), and e2e tests (complete workflows)
