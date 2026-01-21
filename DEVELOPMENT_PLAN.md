@@ -1,10 +1,10 @@
 # Arcaflow MCP Server - Development Plan
 
-**Version:** 1.1.12  
+**Version:** 1.1.13  
 **Last Updated:** 2026-01-20  
 **Language:** Hybrid Go + Python (Go for MCP server core, Python for analysis engine)  
-**Status:** Phase 2 - Core MCP Protocol Implementation  
-**Current Phase:** Phase 2 - Core MCP Protocol Implementation (In Progress)
+**Status:** Phase 2.5 - Authentication & Multi-tenancy  
+**Current Phase:** Phase 2.5 - Authentication & Multi-tenancy (In Progress)
 
 **Version History:** Update version and date above when making significant changes to this plan.
 
@@ -22,6 +22,8 @@
 6. **Update "Current Phase" and "Current Task"** as work progresses
 7. **Review MCP standards and best practices** before implementing protocol features
 8. **Check for MCP specification updates** regularly during development
+9. **Maintain each phase checklist**: update task and exit criteria checkboxes
+   as work progresses, keeping them in sync with implementation
 
 ### Balancing Guidance with Creativity
 
@@ -1157,12 +1159,12 @@ arcaflow-mcp/                    # Repository root
 - Deviations: stdio also accepts newline-delimited JSON to support Cursor and
   Gemini CLI framing behavior.
 
-**Awaiting Gate Approval:** YES - Awaiting approval to proceed to Phase 2.5
+**Awaiting Gate Approval:** NO - Approved to proceed to Phase 2.5 (2026-01-20)
 
 ---
 
 ### Phase 2.5: Authentication & Multi-tenancy
-**Status:** Not Started  
+**Status:** In Progress  
 **Gate Keeper:** User approval to proceed to Phase 3
 
 **Objectives:**
@@ -1172,26 +1174,26 @@ arcaflow-mcp/                    # Repository root
 - Create audit logging
 
 **Tasks:**
-- [ ] **Implement Authentication** (server mode only)
+- [DONE] **Implement Authentication** (server mode only) (2026-01-20)
   - **Outcome:** Secure authentication for server mode with bypass for local mode.
   - **Requirements:** Bearer token validation, token management (generation/revocation), authentication middleware.
   - **Creative Freedom:** Choose token format (JWT vs opaque), decide on key storage, implement appropriate security measures.
 
-- [ ] **Build Multi-tenancy Support**
+- [DONE] **Build Multi-tenancy Support** (2026-01-20)
   - **Outcome:** Complete tenant isolation with resource controls.
   - **Requirements:** Tenant context propagation, workspace isolation, resource quotas, concurrent execution limits.
   - **Considerations:** Extract tenant ID from tokens, isolate file system access, prevent cross-tenant data leakage.
 
-- [ ] **Implement Rate Limiting**
+- [DONE] **Implement Rate Limiting** (2026-01-20)
   - **Outcome:** Per-tenant request throttling with configurable limits.
   - **Requirements:** Rate limit enforcement, standard rate limit headers, backpressure handling.
   - **Creative Freedom:** Choose rate limiting algorithm (token bucket, leaky bucket, etc.), decide on limits and windows.
 
-- [ ] **Add Audit Logging**
+- [DONE] **Add Audit Logging** (2026-01-20)
   - **Outcome:** Complete audit trail for security and compliance.
   - **Requirements:** Log authenticated requests, track tenant activity, security event logging, structured format.
 
-- [ ] **Create admin endpoints** (server mode)
+- [DONE] **Create admin endpoints** (server mode) (2026-01-20)
   - **Outcome:** Administrative interface for server management.
   - **Requirements:** Tenant management, token operations, usage statistics, health checks.
   - **Considerations:** Secure these endpoints appropriately, consider separate admin auth.
@@ -1202,36 +1204,36 @@ arcaflow-mcp/                    # Repository root
 - Multi-tenancy requirements defined
 
 **Exit Criteria:**
-- [ ] Authentication working in server mode
-- [ ] Tenant isolation verified
-- [ ] Rate limiting effective
-- [ ] Audit logs complete
-- [ ] Local mode unaffected (no auth required)
-- [ ] **Manual User Validation:**
-  - [ ] **Authentication Testing:**
-    - Server rejects unauthenticated requests with proper error messages
-    - Valid bearer token grants access to server
-    - Invalid or expired tokens are rejected appropriately
-    - Admin can generate and revoke tokens successfully
-  - [ ] **Multi-tenancy Testing:**
-    - User A cannot access User B's workflows or data
-    - Each tenant sees only their own resources
-    - Workspace isolation prevents file system cross-tenant access
-    - Concurrent tenant usage works without interference
-  - [ ] **Rate Limiting Testing:**
-    - Rapid requests are throttled after exceeding limit
-    - Rate limit headers correctly indicate remaining quota
-    - Different tenants have independent rate limits
-    - Rate limits reset properly after time window
-  - [ ] **Audit Logging Testing:**
-    - All authenticated requests appear in audit logs
-    - Logs contain tenant ID, action, timestamp, and outcome
-    - Failed authentication attempts are logged
-    - Logs are queryable and retain tenant context
-  - [ ] **Local Mode Validation:**
-    - Local mode still works without authentication
-    - Authentication is transparently bypassed for stdio transport
-    - No performance degradation in local mode
+- [DONE] Authentication working in server mode (2026-01-20)
+- [DONE] Tenant isolation verified (2026-01-20)
+- [DONE] Rate limiting effective (2026-01-20)
+- [DONE] Audit logs complete (2026-01-20)
+- [DONE] Local mode unaffected (no auth required) (2026-01-20)
+- [DONE] **Manual User Validation:** (2026-01-21)
+  - [DONE] **Authentication Testing:** (2026-01-21)
+    - [DONE] Server rejects unauthenticated requests with proper error messages (2026-01-21)
+    - [DONE] Valid bearer token grants access to server (2026-01-21)
+    - [DONE] Invalid or expired tokens are rejected appropriately (2026-01-21)
+    - [DONE] Admin can generate and revoke tokens successfully (2026-01-21)
+  - [DONE] **Multi-tenancy Testing:** (2026-01-21)
+    - [DONE] User A cannot access User B's workflows or data (2026-01-21)
+    - [DONE] Each tenant sees only their own resources (2026-01-21)
+    - [DONE] Workspace isolation prevents file system cross-tenant access (2026-01-21)
+    - [DONE] Concurrent tenant usage works without interference (2026-01-21)
+  - [DONE] **Rate Limiting Testing:** (2026-01-21)
+    - [DONE] Rapid requests are throttled after exceeding limit (2026-01-21)
+    - [DONE] Rate limit headers correctly indicate remaining quota (2026-01-21)
+    - [DONE] Different tenants have independent rate limits (2026-01-21)
+    - [DONE] Rate limits reset properly after time window (2026-01-21)
+  - [DONE] **Audit Logging Testing:** (2026-01-21)
+    - [DONE] All authenticated requests appear in audit logs (2026-01-21)
+    - [DONE] Logs contain tenant ID, action, timestamp, and outcome (2026-01-21)
+    - [DONE] Failed authentication attempts are logged (2026-01-21)
+    - [DONE] Logs are queryable and retain tenant context (2026-01-21)
+  - [DONE] **Local Mode Validation:** (2026-01-21)
+    - [DONE] Local mode still works without authentication (2026-01-21)
+    - [DONE] Authentication is transparently bypassed for stdio transport (2026-01-21)
+    - [DONE] No performance degradation in local mode (2026-01-21)
 
 **Awaiting Gate Approval:** NO
 
@@ -1748,13 +1750,13 @@ arcaflow-mcp/                    # Repository root
 ## Current Status
 
 ### Current Phase
-**Phase 2: Core MCP Protocol Implementation**
+**Phase 2.5: Authentication & Multi-tenancy**
 
 ### Current Task
-Implement MCP JSON-RPC core, stdio transport, and protocol tests
+Complete Phase 2.5 manual validation steps
 
 ### Next Milestone
-Complete Phase 2 exit criteria for core MCP protocol
+Complete Phase 2.5 exit criteria and validation
 
 ### Blockers
 None currently
@@ -1873,6 +1875,9 @@ None currently
 ## Plan Changelog
 
 **Purpose:** Track significant changes to this plan itself (not development progress).
+
+### 2026-01-20 - Maintain Checklist Instruction (v1.1.13)
+- Updated agent instructions to maintain checklists for all phases
 
 ### 2026-01-20 - Remove Issue Tracking Tasks (v1.1.12)
 - Removed GitHub Issues/Projects references for initial development tracking

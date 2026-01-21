@@ -13,14 +13,30 @@ import (
 	"testing"
 	"time"
 
+	"github.com/arcalot/arcaflow-mcp/server/pkg/auth"
 	"github.com/arcalot/arcaflow-mcp/server/pkg/protocol"
+	"github.com/arcalot/arcaflow-mcp/server/pkg/tenant"
 	"github.com/arcalot/arcaflow-mcp/server/pkg/transport/httpserver"
 )
 
+const testAdminToken = "test-admin-token"
+
 func TestHTTPSSessionBinding(t *testing.T) {
 	handler := protocol.NewServer(nil, protocol.ServerInfo{Name: "arcaflow-mcp"})
+	authManager, err := auth.NewManager(testAdminToken, nil)
+	if err != nil {
+		t.Fatalf("create auth manager: %v", err)
+	}
+	workspaceManager, err := tenant.NewWorkspaceManager(t.TempDir())
+	if err != nil {
+		t.Fatalf("create workspace manager: %v", err)
+	}
 	server := httpserver.NewServer(
-		httpserver.Config{Address: "127.0.0.1:0"},
+		httpserver.Config{
+			Address:          "127.0.0.1:0",
+			AuthManager:      authManager,
+			WorkspaceManager: workspaceManager,
+		},
 		handler,
 		nil,
 	)
@@ -30,6 +46,7 @@ func TestHTTPSSessionBinding(t *testing.T) {
 	defer cancel()
 
 	sseReq := httptest.NewRequest(http.MethodGet, "/mcp/events", nil)
+	sseReq.Header.Set("Authorization", "Bearer "+testAdminToken)
 	sseReq = sseReq.WithContext(ctx)
 	sseRecorder := newStreamingResponse()
 	go func() {
@@ -56,7 +73,15 @@ func TestHTTPSSessionBinding(t *testing.T) {
 		Method:  "initialize",
 		Params:  mustMarshalRaw(protocol.InitializeParams{ProtocolVersion: protocol.ProtocolVersion}),
 	}
-	postJSON(t, httpHandler, "/mcp", sessionID, initReq, http.StatusOK)
+	postJSON(
+		t,
+		httpHandler,
+		"/mcp",
+		sessionID,
+		testAdminToken,
+		initReq,
+		http.StatusOK,
+	)
 
 	event, data = readSSEEvent(t, ctx, reader)
 	if event != "message" {
@@ -74,14 +99,30 @@ func TestHTTPSSessionBinding(t *testing.T) {
 		JSONRPC: protocol.JSONRPCVersion,
 		Method:  "initialized",
 	}
-	postJSON(t, httpHandler, "/mcp", sessionID, initialized, http.StatusNoContent)
+	postJSON(
+		t,
+		httpHandler,
+		"/mcp",
+		sessionID,
+		testAdminToken,
+		initialized,
+		http.StatusNoContent,
+	)
 
 	pingReq := protocol.Request{
 		JSONRPC: protocol.JSONRPCVersion,
 		ID:      rawID(2),
 		Method:  "ping",
 	}
-	postJSON(t, httpHandler, "/mcp", sessionID, pingReq, http.StatusOK)
+	postJSON(
+		t,
+		httpHandler,
+		"/mcp",
+		sessionID,
+		testAdminToken,
+		pingReq,
+		http.StatusOK,
+	)
 
 	event, data = readSSEEvent(t, ctx, reader)
 	if event != "message" {
@@ -101,6 +142,7 @@ func postJSON(
 	handler http.Handler,
 	path string,
 	sessionID string,
+	token string,
 	req protocol.Request,
 	expected int,
 ) {
@@ -111,6 +153,7 @@ func postJSON(
 	}
 	httpReq := httptest.NewRequest(http.MethodPost, path, bytes.NewReader(payload))
 	httpReq.Header.Set("Content-Type", "application/json")
+	httpReq.Header.Set("Authorization", "Bearer "+token)
 	if sessionID != "" {
 		httpReq.Header.Set("Mcp-Session-Id", sessionID)
 	}

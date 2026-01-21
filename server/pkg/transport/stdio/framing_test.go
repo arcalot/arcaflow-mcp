@@ -71,3 +71,32 @@ func TestReadFrameJSONPayloadWithFallback(t *testing.T) {
 		t.Fatalf("expected json mode, got %s", mode)
 	}
 }
+
+func TestReadFrameJSONPayloadMultipleLines(t *testing.T) {
+	first := []byte(`{"jsonrpc":"2.0","id":1,"method":"ping"}`)
+	second := []byte(`{"jsonrpc":"2.0","id":2,"method":"ping"}`)
+	payload := append(append(first, '\n'), append(second, '\n')...)
+	reader := bufio.NewReader(bytes.NewReader(payload))
+
+	readPayload, mode, err := ReadFrameWithMode(reader)
+	if err != nil {
+		t.Fatalf("read first frame: %v", err)
+	}
+	if string(readPayload) != string(first) {
+		t.Fatalf("first payload mismatch: %s", readPayload)
+	}
+	if mode != ModeJSON {
+		t.Fatalf("expected json mode, got %s", mode)
+	}
+
+	readPayload, mode, err = ReadFrameWithMode(reader)
+	if err != nil {
+		t.Fatalf("read second frame: %v", err)
+	}
+	if string(readPayload) != string(second) {
+		t.Fatalf("second payload mismatch: %s", readPayload)
+	}
+	if mode != ModeJSON {
+		t.Fatalf("expected json mode, got %s", mode)
+	}
+}

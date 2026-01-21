@@ -17,6 +17,36 @@ func TestDefaultConfig(t *testing.T) {
 	if cfg.Logging.Level != "info" {
 		t.Fatalf("expected default log level info, got %q", cfg.Logging.Level)
 	}
+	if cfg.Auth.AdminToken != "" {
+		t.Fatalf("expected default admin token empty, got %q", cfg.Auth.AdminToken)
+	}
+	if !cfg.RateLimiting.Enabled {
+		t.Fatalf("expected rate limiting enabled by default")
+	}
+	if cfg.RateLimiting.RequestsPerMinute <= 0 {
+		t.Fatalf("expected default requests per minute > 0")
+	}
+	if cfg.RateLimiting.WindowSeconds <= 0 {
+		t.Fatalf("expected default window seconds > 0")
+	}
+	if !cfg.RateLimiting.BackoffEnabled {
+		t.Fatalf("expected backoff enabled by default")
+	}
+	if cfg.RateLimiting.BackoffBaseSeconds <= 0 {
+		t.Fatalf("expected default backoff base seconds > 0")
+	}
+	if cfg.RateLimiting.BackoffMaxSeconds <= 0 {
+		t.Fatalf("expected default backoff max seconds > 0")
+	}
+	if cfg.Tenancy.WorkspaceRoot == "" {
+		t.Fatalf("expected default workspace root set")
+	}
+	if cfg.Tenancy.MaxConcurrentRequests <= 0 {
+		t.Fatalf("expected default max concurrent requests > 0")
+	}
+	if cfg.Tenancy.MaxSessions <= 0 {
+		t.Fatalf("expected default max sessions > 0")
+	}
 }
 
 func TestValidateConfig(t *testing.T) {
@@ -33,6 +63,216 @@ func TestValidateConfig(t *testing.T) {
 				Logging: LoggingConfig{Level: "info"},
 			},
 			wantErr: false,
+		},
+		{
+			name: "valid server with admin token",
+			cfg: Config{
+				Mode:    "server",
+				Address: "127.0.0.1:8080",
+				Logging: LoggingConfig{Level: "info"},
+				Auth:    AuthConfig{AdminToken: "admin-token"},
+				RateLimiting: RateLimitConfig{
+					Enabled:            true,
+					RequestsPerMinute:  60,
+					WindowSeconds:      60,
+					BackoffEnabled:     true,
+					BackoffBaseSeconds: 1,
+					BackoffMaxSeconds:  60,
+				},
+				Tenancy: TenancyConfig{
+					WorkspaceRoot:         t.TempDir(),
+					MaxConcurrentRequests: 5,
+					MaxSessions:           2,
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "valid server without rate limit",
+			cfg: Config{
+				Mode:    "server",
+				Address: "127.0.0.1:8080",
+				Logging: LoggingConfig{Level: "info"},
+				Auth:    AuthConfig{AdminToken: "admin-token"},
+				RateLimiting: RateLimitConfig{
+					Enabled:        false,
+					BackoffEnabled: false,
+				},
+				Tenancy: TenancyConfig{
+					WorkspaceRoot:         t.TempDir(),
+					MaxConcurrentRequests: 0,
+					MaxSessions:           0,
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "invalid server missing admin token",
+			cfg: Config{
+				Mode:    "server",
+				Address: "127.0.0.1:8080",
+				Logging: LoggingConfig{Level: "info"},
+			},
+			wantErr: true,
+		},
+		{
+			name: "invalid server missing rpm",
+			cfg: Config{
+				Mode:    "server",
+				Address: "127.0.0.1:8080",
+				Logging: LoggingConfig{Level: "info"},
+				Auth:    AuthConfig{AdminToken: "admin-token"},
+				RateLimiting: RateLimitConfig{
+					Enabled:            true,
+					RequestsPerMinute:  0,
+					WindowSeconds:      60,
+					BackoffEnabled:     true,
+					BackoffBaseSeconds: 1,
+					BackoffMaxSeconds:  60,
+				},
+				Tenancy: TenancyConfig{
+					WorkspaceRoot:         t.TempDir(),
+					MaxConcurrentRequests: 5,
+					MaxSessions:           2,
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "invalid server missing window",
+			cfg: Config{
+				Mode:    "server",
+				Address: "127.0.0.1:8080",
+				Logging: LoggingConfig{Level: "info"},
+				Auth:    AuthConfig{AdminToken: "admin-token"},
+				RateLimiting: RateLimitConfig{
+					Enabled:            true,
+					RequestsPerMinute:  60,
+					WindowSeconds:      0,
+					BackoffEnabled:     true,
+					BackoffBaseSeconds: 1,
+					BackoffMaxSeconds:  60,
+				},
+				Tenancy: TenancyConfig{
+					WorkspaceRoot:         t.TempDir(),
+					MaxConcurrentRequests: 5,
+					MaxSessions:           2,
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "invalid server backoff base",
+			cfg: Config{
+				Mode:    "server",
+				Address: "127.0.0.1:8080",
+				Logging: LoggingConfig{Level: "info"},
+				Auth:    AuthConfig{AdminToken: "admin-token"},
+				RateLimiting: RateLimitConfig{
+					Enabled:            true,
+					RequestsPerMinute:  60,
+					WindowSeconds:      60,
+					BackoffEnabled:     true,
+					BackoffBaseSeconds: 0,
+					BackoffMaxSeconds:  60,
+				},
+				Tenancy: TenancyConfig{
+					WorkspaceRoot:         t.TempDir(),
+					MaxConcurrentRequests: 5,
+					MaxSessions:           2,
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "invalid server backoff max",
+			cfg: Config{
+				Mode:    "server",
+				Address: "127.0.0.1:8080",
+				Logging: LoggingConfig{Level: "info"},
+				Auth:    AuthConfig{AdminToken: "admin-token"},
+				RateLimiting: RateLimitConfig{
+					Enabled:            true,
+					RequestsPerMinute:  60,
+					WindowSeconds:      60,
+					BackoffEnabled:     true,
+					BackoffBaseSeconds: 1,
+					BackoffMaxSeconds:  0,
+				},
+				Tenancy: TenancyConfig{
+					WorkspaceRoot:         t.TempDir(),
+					MaxConcurrentRequests: 5,
+					MaxSessions:           2,
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "invalid server backoff max less than base",
+			cfg: Config{
+				Mode:    "server",
+				Address: "127.0.0.1:8080",
+				Logging: LoggingConfig{Level: "info"},
+				Auth:    AuthConfig{AdminToken: "admin-token"},
+				RateLimiting: RateLimitConfig{
+					Enabled:            true,
+					RequestsPerMinute:  60,
+					WindowSeconds:      60,
+					BackoffEnabled:     true,
+					BackoffBaseSeconds: 5,
+					BackoffMaxSeconds:  1,
+				},
+				Tenancy: TenancyConfig{
+					WorkspaceRoot:         t.TempDir(),
+					MaxConcurrentRequests: 5,
+					MaxSessions:           2,
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "invalid server tenancy workspace",
+			cfg: Config{
+				Mode:    "server",
+				Address: "127.0.0.1:8080",
+				Logging: LoggingConfig{Level: "info"},
+				Auth:    AuthConfig{AdminToken: "admin-token"},
+				RateLimiting: RateLimitConfig{
+					Enabled:            true,
+					RequestsPerMinute:  60,
+					WindowSeconds:      60,
+					BackoffEnabled:     true,
+					BackoffBaseSeconds: 1,
+					BackoffMaxSeconds:  60,
+				},
+				Tenancy: TenancyConfig{
+					WorkspaceRoot: "",
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "invalid server tenant limits",
+			cfg: Config{
+				Mode:    "server",
+				Address: "127.0.0.1:8080",
+				Logging: LoggingConfig{Level: "info"},
+				Auth:    AuthConfig{AdminToken: "admin-token"},
+				RateLimiting: RateLimitConfig{
+					Enabled:            true,
+					RequestsPerMinute:  60,
+					WindowSeconds:      60,
+					BackoffEnabled:     true,
+					BackoffBaseSeconds: 1,
+					BackoffMaxSeconds:  60,
+				},
+				Tenancy: TenancyConfig{
+					WorkspaceRoot:         t.TempDir(),
+					MaxConcurrentRequests: -1,
+					MaxSessions:           -1,
+				},
+			},
+			wantErr: true,
 		},
 		{
 			name: "invalid mode",
@@ -79,6 +319,16 @@ func TestLoadConfigWithOverrides(t *testing.T) {
 	t.Setenv("ARCAFLOW_MCP_MODE", "local")
 	t.Setenv("ARCAFLOW_MCP_ADDRESS", "127.0.0.1:7777")
 	t.Setenv("ARCAFLOW_MCP_LOG_LEVEL", "debug")
+	t.Setenv("ARCAFLOW_MCP_ADMIN_TOKEN", "admin-token")
+	t.Setenv("ARCAFLOW_MCP_RATE_LIMIT_ENABLED", "true")
+	t.Setenv("ARCAFLOW_MCP_RATE_LIMIT_RPM", "120")
+	t.Setenv("ARCAFLOW_MCP_RATE_LIMIT_WINDOW_SECONDS", "30")
+	t.Setenv("ARCAFLOW_MCP_RATE_LIMIT_BACKOFF_ENABLED", "true")
+	t.Setenv("ARCAFLOW_MCP_RATE_LIMIT_BACKOFF_BASE_SECONDS", "2")
+	t.Setenv("ARCAFLOW_MCP_RATE_LIMIT_BACKOFF_MAX_SECONDS", "10")
+	t.Setenv("ARCAFLOW_MCP_TENANT_WORKSPACE_ROOT", tempDir)
+	t.Setenv("ARCAFLOW_MCP_TENANT_MAX_CONCURRENT", "7")
+	t.Setenv("ARCAFLOW_MCP_TENANT_MAX_SESSIONS", "3")
 
 	cfg, err := Load(configPath)
 	if err != nil {
@@ -92,5 +342,57 @@ func TestLoadConfigWithOverrides(t *testing.T) {
 	}
 	if cfg.Logging.Level != "debug" {
 		t.Fatalf("expected log level override, got %q", cfg.Logging.Level)
+	}
+	if cfg.Auth.AdminToken != "admin-token" {
+		t.Fatalf("expected admin token override, got %q", cfg.Auth.AdminToken)
+	}
+	if !cfg.RateLimiting.Enabled {
+		t.Fatalf("expected rate limiting enabled")
+	}
+	if cfg.RateLimiting.RequestsPerMinute != 120 {
+		t.Fatalf(
+			"expected rpm override 120, got %d",
+			cfg.RateLimiting.RequestsPerMinute,
+		)
+	}
+	if cfg.RateLimiting.WindowSeconds != 30 {
+		t.Fatalf(
+			"expected window override 30, got %d",
+			cfg.RateLimiting.WindowSeconds,
+		)
+	}
+	if !cfg.RateLimiting.BackoffEnabled {
+		t.Fatalf("expected backoff enabled")
+	}
+	if cfg.RateLimiting.BackoffBaseSeconds != 2 {
+		t.Fatalf(
+			"expected backoff base override 2, got %d",
+			cfg.RateLimiting.BackoffBaseSeconds,
+		)
+	}
+	if cfg.RateLimiting.BackoffMaxSeconds != 10 {
+		t.Fatalf(
+			"expected backoff max override 10, got %d",
+			cfg.RateLimiting.BackoffMaxSeconds,
+		)
+	}
+	if cfg.Tenancy.WorkspaceRoot != tempDir {
+		t.Fatalf(
+			"expected workspace root override %q, got %q",
+			tempDir,
+			cfg.Tenancy.WorkspaceRoot,
+		)
+	}
+	if cfg.Tenancy.MaxConcurrentRequests != 7 {
+		t.Fatalf(
+			"expected max concurrent override 7, got %d",
+			cfg.Tenancy.MaxConcurrentRequests,
+		)
+	}
+	if cfg.Tenancy.MaxSessions != 3 {
+		t.Fatalf(
+			"expected max sessions override 3, got %d",
+			cfg.Tenancy.MaxSessions,
+		)
 	}
 }

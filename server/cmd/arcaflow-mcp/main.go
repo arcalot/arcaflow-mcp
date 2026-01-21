@@ -12,9 +12,13 @@ import (
 	"os/signal"
 	"strings"
 	"syscall"
+	"time"
 
+	"github.com/arcalot/arcaflow-mcp/server/pkg/auth"
 	"github.com/arcalot/arcaflow-mcp/server/pkg/config"
 	"github.com/arcalot/arcaflow-mcp/server/pkg/protocol"
+	"github.com/arcalot/arcaflow-mcp/server/pkg/ratelimit"
+	"github.com/arcalot/arcaflow-mcp/server/pkg/tenant"
 	"github.com/arcalot/arcaflow-mcp/server/pkg/transport/httpserver"
 	"github.com/arcalot/arcaflow-mcp/server/pkg/transport/stdio"
 	"github.com/arcalot/arcaflow-mcp/server/pkg/version"
@@ -97,8 +101,44 @@ func run() error {
 			},
 		)
 		registerDefaultTools(handler)
+		authManager, err := auth.NewManager(cfg.Auth.AdminToken, nil)
+		if err != nil {
+			return err
+		}
+		workspaceManager, err := tenant.NewWorkspaceManager(
+			cfg.Tenancy.WorkspaceRoot,
+		)
+		if err != nil {
+			return err
+		}
+		requestLimiter := tenant.NewLimiter(cfg.Tenancy.MaxConcurrentRequests)
+		sessionLimiter := tenant.NewLimiter(cfg.Tenancy.MaxSessions)
+		var limiter *ratelimit.Limiter
+		if cfg.RateLimiting.Enabled {
+			limiter, err = ratelimit.NewLimiter(ratelimit.Config{
+				Limit:          cfg.RateLimiting.RequestsPerMinute,
+				Window:         time.Duration(cfg.RateLimiting.WindowSeconds) * time.Second,
+				BackoffEnabled: cfg.RateLimiting.BackoffEnabled,
+				BackoffBase: time.Duration(
+					cfg.RateLimiting.BackoffBaseSeconds,
+				) * time.Second,
+				BackoffMax: time.Duration(
+					cfg.RateLimiting.BackoffMaxSeconds,
+				) * time.Second,
+			})
+			if err != nil {
+				return err
+			}
+		}
 		httpServer := httpserver.NewServer(
-			httpserver.Config{Address: cfg.Address},
+			httpserver.Config{
+				Address:          cfg.Address,
+				AuthManager:      authManager,
+				RateLimiter:      limiter,
+				WorkspaceManager: workspaceManager,
+				RequestLimiter:   requestLimiter,
+				SessionLimiter:   sessionLimiter,
+			},
 			handler,
 			logger.With("component", "http"),
 		)

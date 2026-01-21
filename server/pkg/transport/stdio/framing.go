@@ -207,9 +207,22 @@ func peekNextNonSpace(reader *bufio.Reader) (byte, error) {
 }
 
 func readJSONPayload(reader *bufio.Reader) ([]byte, error) {
-	decoder := json.NewDecoder(reader)
+	line, err := reader.ReadBytes('\n')
+	if err != nil && err != io.EOF {
+		return nil, fmt.Errorf("read json payload: %w", err)
+	}
+	if len(line) == 0 {
+		if err != nil {
+			return nil, err
+		}
+		return nil, fmt.Errorf("empty json payload")
+	}
+	trimmed := bytes.TrimSpace(line)
+	if len(trimmed) == 0 {
+		return nil, fmt.Errorf("empty json payload")
+	}
 	var raw json.RawMessage
-	if err := decoder.Decode(&raw); err != nil {
+	if err := json.Unmarshal(trimmed, &raw); err != nil {
 		return nil, fmt.Errorf("decode json payload: %w", err)
 	}
 	return bytes.TrimSpace(raw), nil
