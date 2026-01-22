@@ -80,6 +80,41 @@ func TestServeHandlesInitialize(t *testing.T) {
 	}
 }
 
+func TestServeReturnsReadError(t *testing.T) {
+	handler := protocol.NewServer(nil, protocol.ServerInfo{Name: "arcaflow-mcp"})
+	input := bytes.NewBufferString("Content-Length: abc\r\n\r\n{}")
+	var output bytes.Buffer
+	server := NewServer(handler, input, &output, nil)
+	if err := server.Serve(context.Background()); err == nil {
+		t.Fatalf("expected read error")
+	}
+}
+
+func TestServeHandlesJSONMode(t *testing.T) {
+	t.Setenv("ARCAFLOW_MCP_STDIO_ALLOW_JSON", "1")
+
+	handler := protocol.NewServer(nil, protocol.ServerInfo{
+		Name: "arcaflow-mcp",
+	})
+
+	var input bytes.Buffer
+	input.WriteString(`{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"`)
+	input.WriteString(protocol.ProtocolVersion)
+	input.WriteString(`"}}` + "\n")
+	input.WriteString(`{"jsonrpc":"2.0","method":"initialized"}` + "\n")
+	input.WriteString(`{"jsonrpc":"2.0","id":2,"method":"ping"}` + "\n")
+
+	var output bytes.Buffer
+	server := NewServer(handler, &input, &output, nil)
+
+	if err := server.Serve(context.Background()); err != nil {
+		t.Fatalf("serve failed: %v", err)
+	}
+	if output.Len() == 0 {
+		t.Fatalf("expected json output")
+	}
+}
+
 func mustMarshal(req protocol.Request) []byte {
 	data, err := json.Marshal(req)
 	if err != nil {

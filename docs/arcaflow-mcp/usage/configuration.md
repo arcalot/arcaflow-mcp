@@ -32,6 +32,8 @@ audit:
   retention_days: 30
 usage:
   store_path: "/var/lib/arcaflow-mcp/usage.json"
+analysis:
+  analysis_http_url: "http://127.0.0.1:8081"
 ```
 
 Tenant IDs are required when minting tokens via
@@ -61,6 +63,13 @@ Tenant IDs must match `[A-Za-z0-9_.-]` and be 1-128 characters.
 - `ARCAFLOW_MCP_AUDIT_STORE_PATH` (audit store file path)
 - `ARCAFLOW_MCP_AUDIT_RETENTION_DAYS` (audit retention in days)
 - `ARCAFLOW_MCP_USAGE_STORE_PATH` (usage store file path)
+- `ARCAFLOW_MCP_ANALYSIS_HTTP_URL` (analysis service HTTP base URL)
+
+### Analysis service integration
+
+When the analysis service is running with its HTTP endpoint enabled, configure
+the MCP server to reach it by setting `analysis.analysis_http_url` in the YAML
+config or `ARCAFLOW_MCP_ANALYSIS_HTTP_URL` as an environment override.
 
 ### Authentication notes
 

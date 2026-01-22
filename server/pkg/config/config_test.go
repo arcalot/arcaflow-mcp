@@ -101,6 +101,30 @@ func TestValidateConfig(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name: "valid analysis http url",
+			cfg: Config{
+				Mode:    "local",
+				Address: "127.0.0.1:8080",
+				Logging: LoggingConfig{Level: "info"},
+				Analysis: AnalysisConfig{
+					HTTPURL: "http://127.0.0.1:8081",
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "invalid analysis http url",
+			cfg: Config{
+				Mode:    "local",
+				Address: "127.0.0.1:8080",
+				Logging: LoggingConfig{Level: "info"},
+				Analysis: AnalysisConfig{
+					HTTPURL: "127.0.0.1:8081",
+				},
+			},
+			wantErr: true,
+		},
+		{
 			name: "valid server with admin token",
 			cfg: Config{
 				Mode:    "server",

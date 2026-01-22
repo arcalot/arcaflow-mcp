@@ -1,0 +1,27 @@
+version: v0.2.0
+input:
+  root: InputParams
+  objects:
+    InputParams:
+      id: InputParams
+      properties:
+        name:
+          required: true
+          type:
+            type_id: string
+input_schema:
+  type: object
+  properties:
+    name:
+      type: string
+  required:
+    - name
+output_schema:
+  type: object
+  properties:
+    status:
+      type: string
+steps:
+  step-a:
+    plugin_schema_ref: plugin-schema.yaml
+outputs: {}

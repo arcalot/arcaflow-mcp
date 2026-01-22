@@ -121,3 +121,19 @@ func TestLimiterProgressiveBackoff(t *testing.T) {
 		t.Fatalf("expected backoff capped at 4s, got %v", fifth.ResetAt.Sub(base))
 	}
 }
+
+func TestLimiterAccessors(t *testing.T) {
+	limiter, err := NewLimiter(Config{
+		Limit:  5,
+		Window: 2 * time.Minute,
+	})
+	if err != nil {
+		t.Fatalf("create limiter: %v", err)
+	}
+	if limiter.Limit() != 5 {
+		t.Fatalf("expected limit 5")
+	}
+	if limiter.Window() != 2*time.Minute {
+		t.Fatalf("expected window 2m")
+	}
+}

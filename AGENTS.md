@@ -68,6 +68,17 @@ License: Apache 2.0
 - Branches: Feature branches, no direct commits to main
 - PRs: Require review and passing CI before merge
 
+### Commit in one try
+- Review changes before committing: `git status --short` and `git diff`
+- Ensure hook caches live in the workspace to avoid permission errors:
+  - `XDG_CACHE_HOME="$PWD/.cache"`
+  - `GOLANGCI_LINT_CACHE="$PWD/.cache/golangci-lint"`
+  - `GOCACHE="$PWD/.cache/go-build"`
+  - `GOMODCACHE="$PWD/.cache/go-mod"`
+  - `POETRY_CACHE_DIR="$PWD/.cache/poetry"`
+  - `POETRY_VIRTUALENVS_IN_PROJECT=true`
+- Fix lint errors before commit (unused imports, import order, errcheck, etc.)
+
 ## Testing Standards
 
 ### Test Types and Scope
@@ -147,6 +158,16 @@ License: Apache 2.0
 - Follow Arcaflow terminology and conventions
 - Integrate documentation with Arcaflow docs (https://arcalot.io/arcaflow/)
 - Test against reference Arcaflow workflows
+- Distinguish workflow schemas from plugin schemas:
+  - Workflow schemas define the top-level `input` scope for the workflow itself.
+  - Plugin schemas define step input/output contracts for each plugin.
+  - MCP Skill 1 input validation must use the workflow `input` scope first.
+  - Plugin schema validation is only required when validating step inputs.
+- When validating workflow inputs, mirror engine behavior:
+  - Use `go.flow.arcalot.io/pluginsdk/schema` and `schema.UnserializeScope`
+    on the workflow `input` section.
+  - Treat a successful `Unserialize` + `Serialize` roundtrip as a valid,
+    deterministic payload.
 
 ## Development Workflow
 

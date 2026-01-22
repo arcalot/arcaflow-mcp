@@ -14,6 +14,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/arcalot/arcaflow-mcp/server/pkg/analysis"
 	"github.com/arcalot/arcaflow-mcp/server/pkg/audit"
 	"github.com/arcalot/arcaflow-mcp/server/pkg/auth"
 	"github.com/arcalot/arcaflow-mcp/server/pkg/config"
@@ -150,10 +151,16 @@ func run() error {
 				return err
 			}
 		}
+		var analysisClient *analysis.Client
+		if cfg.Analysis.HTTPURL != "" {
+			analysisClient = analysis.NewClient(cfg.Analysis.HTTPURL)
+			logger.Info("analysis client configured", "url", cfg.Analysis.HTTPURL)
+		}
 		httpServer := httpserver.NewServer(
 			httpserver.Config{
 				Address:          cfg.Address,
 				AuthManager:      authManager,
+				AnalysisClient:   analysisClient,
 				RateLimiter:      limiter,
 				WorkspaceManager: workspaceManager,
 				RequestLimiter:   requestLimiter,

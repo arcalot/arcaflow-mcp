@@ -1,10 +1,104 @@
 ## Python Analysis Engine
 
-This directory will contain the Python analysis service for Skill 2:
+This directory contains the Python analysis service:
 
 - Result parsing and metrics extraction
 - Analysis and comparison logic
 - Suggestion generation
 - gRPC server interface
 
-Implementation scaffolding is created during Phase 1.
+### gRPC service definition
+
+The analysis service protobuf definition lives in `api/proto/analysis.proto`.
+Generate Python stubs with:
+
+```
+cd analysis
+poetry run python -m grpc_tools.protoc \
+  -I ../api/proto \
+  --python_out ../api/generated/python \
+  --grpc_python_out ../api/generated/python \
+  ../api/proto/analysis.proto
+```
+
+### HTTP analysis endpoint
+
+Set `ARCAFLOW_ANALYSIS_HTTP_ADDRESS` (for example, `127.0.0.1:8081`) to enable
+the HTTP endpoint used by the Go server integration:
+
+- `GET /healthz` for health checks
+- `POST /analysis/summary` for analysis requests
+
+#### POST /analysis/summary
+
+Request body (JSON):
+
+```
+{
+  "results": [
+    {
+      "format": "json",
+      "payload": {
+        "success": true,
+        "metrics": {"latency_ms": 12.3},
+        "records": [{"name": "sample", "value": 1}]
+      }
+    },
+    {
+      "format": "yaml",
+      "payload": "success: false\nmetrics:\n  latency_ms: 18.9\n"
+    }
+  ],
+  "compare": true,
+  "metric_directions": {
+    "latency_ms": "lower"
+  }
+}
+```
+
+Response body (JSON):
+
+```
+{
+  "analysis": {
+    "success_rate": 0.5,
+    "metric_stats": {
+      "latency_ms": {"mean": 15.6, "min": 12.3, "max": 18.9, "p95": 18.9}
+    },
+    "record_count": 1,
+    "findings": [
+      {
+        "severity": "warning",
+        "message": "High variability in latency_ms",
+        "metric": "latency_ms",
+        "value": 18.9,
+        "details": {"coefficient_of_variation": 0.2}
+      }
+    ]
+  },
+  "comparison": {
+    "metric_stats": {
+      "latency_ms": {"mean": 15.6, "min": 12.3, "max": 18.9, "p95": 18.9}
+    },
+    "rankings": {
+      "latency_ms": [["run-0", 12.3], ["run-1", 18.9]]
+    },
+    "findings": []
+  },
+  "suggestions": [
+    {
+      "id": "variability-latency",
+      "severity": "warning",
+      "message": "Reduce latency variability by adjusting inputs.",
+      "target": "stability"
+    }
+  ]
+}
+```
+
+Notes:
+- `results` is required and each entry must include `format` (`json`, `yaml`, or
+  `log`) plus `payload` (raw JSON object, YAML string, or log text).
+- `compare` toggles multi-run comparison output.
+- `metric_directions` controls ranking (`lower` for latency, `higher` for
+  throughput).

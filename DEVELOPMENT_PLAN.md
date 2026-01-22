@@ -1,10 +1,9 @@
 # Arcaflow MCP Server - Development Plan
 
-Version: 1.1.17  
+Version: 1.1.21  
 Last Updated: 2026-01-22  
 Language: Go for MCP server core, Python for analysis engine  
-Current Phase: Phase 2.75 - Admin Operations &
-  Audit Persistence (In Progress)
+Current Phase: Phase 3 - Arcaflow Integration (In Progress)
 
 ---
 
@@ -1352,12 +1351,12 @@ Exit Criteria:
   - [DONE] Audit logs query across restarts (2026-01-22)
   - [DONE] Usage stats and quotas persist across restarts (2026-01-22)
 
-Awaiting Gate Approval: YES
+Awaiting Gate Approval: NO - Approved to proceed to Phase 3 (2026-01-22)
 
 ---
 
 ### Phase 3: Arcaflow Integration - Skills 1 & 2
-Status: Not Started  
+Status: In Progress (2026-01-22)  
 Gate Keeper: User approval to proceed to Phase 4
 
 Objectives:
@@ -1367,19 +1366,24 @@ Objectives:
 - Support multi-run comparison and historical analysis
 - NOTE: Does NOT include workflow execution (Phase 2 future work)
 - **CRITICAL:** All exported inputs must be deterministic and 100% schema-validated
+- **NOTE:** Workflow schemas and plugin schemas are distinct:
+  - Workflow `input` defines the top-level schema for MCP-generated inputs.
+  - Plugin schemas define step input/output contracts for runtime execution.
+  - Skill 1 validates ONLY against workflow `input` unless a task explicitly
+    requires step-level validation.
 
 Tasks - Skill 1: Input Construction (NO EXECUTION):
-- [ ] Implement workflow loading and discovery
+- [DONE] Implement workflow loading and discovery (2026-01-22)
   - Outcome: Load workflows from filesystem, URLs, and git repositories.
   - Requirements: Support multiple workflow sources, cache content, index with metadata, scan directories.
   - Creative Freedom: Choose caching strategy, decide on indexing approach, optimize for performance.
 
-- [ ] Create workflow parser (for EXISTING workflows)
-  - Outcome: Parse Arcaflow YAML workflows and extract machine-readable schemas.
+- [DONE] Create workflow parser (for EXISTING workflows) (2026-01-22)
+  - Outcome: Parse Arcaflow YAML/JSON workflows and extract machine-readable schemas.
   - Requirements: Validate workflow syntax, extract input/output schemas (PRIMARY FOCUS), convert to JSON Schema format, handle workflow references, generate example inputs.
   - Considerations: This is the core of Skill 1 - schema extraction must be accurate and complete.
 
-- [ ] Implement input validator (MANDATORY)
+- [DONE] Implement input validator (MANDATORY) (2026-01-22)
   - Outcome: Deterministic validation of all inputs against workflow JSON schemas before export.
   - Requirements: 
     - 100% schema validation coverage - no invalid inputs can be exported
@@ -1388,7 +1392,7 @@ Tasks - Skill 1: Input Construction (NO EXECUTION):
     - Validate against Arcaflow workflow/plugin JSON schemas
   - CRITICAL: Validation must be enforced - export blocked if validation fails.
 
-- [ ] Build input file generator
+- [DONE] Build input file generator (2026-01-22)
   - Outcome: Export only schema-validated inputs as machine-readable JSON or YAML.
   - Requirements: 
     - Only export inputs that pass validation (enforced, not optional)
@@ -1398,55 +1402,60 @@ Tasks - Skill 1: Input Construction (NO EXECUTION):
   - Verification: All exported files must work with external Arcaflow execution (100%).
 
 Tasks - Skill 2: Output Analysis (Python Service):
-- [ ] Set up Python analysis service
+- [DONE] Set up Python analysis service (2026-01-22)
   - Outcome: Fully functional gRPC service for analysis operations.
   - Requirements: Service definition in protobuf, gRPC server implementation, health checks and monitoring.
 
-- [ ] Implement result loader
+- [DONE] Implement result loader (2026-01-22)
   - Outcome: Load workflow execution results from multiple sources.
   - Requirements: Support JSON, YAML, and log files from filesystem, handle multiple formats, cache results efficiently.
   - Future Enhancement: Integrate with external data store MCP servers (Horreum, Elasticsearch) to retrieve results from centralized systems.
 
-- [ ] Create result parser
+- [DONE] Create result parser (2026-01-22)
   - Outcome: Extract structured data and metrics from results.
   - Requirements: Parse to pandas DataFrames, extract KPIs, identify success/failure, handle incomplete data, normalize formats.
   - Creative Freedom: Choose parsing strategies, decide on data structures for metrics.
 
-- [ ] Build result analyzer
+- [DONE] Build result analyzer (2026-01-22)
   - Outcome: Analyze results against goals and identify issues.
   - Requirements: Compare against criteria, identify bottlenecks, detect anomalies, calculate statistics, generate human-readable analysis.
   - Considerations: Use appropriate libraries (numpy, scipy), focus on actionable insights.
 
-- [ ] Implement multi-run comparison
+- [DONE] Implement multi-run comparison (2026-01-22)
   - Outcome: Compare multiple workflow runs to identify patterns and optimal configurations.
   - Requirements: Cross-run comparison, trend identification, input-output correlation, configuration ranking, prepare data for visualization.
   - Creative Freedom: Choose comparison algorithms, decide on ranking metrics.
 
-- [ ] Create suggestion engine
+- [DONE] Create suggestion engine (2026-01-22)
   - Outcome: Generate input suggestions based on result analysis.
   - Requirements: Rule-based suggestions initially, explain rationale, prioritize by impact, learn from historical patterns.
   - Future: ML model integration (Phase 2+).
 
-- [ ] Build historical database
+- [DONE] Build historical database (2026-01-22)
   - Outcome: Persistent storage of run history for pattern analysis.
   - Requirements: Define schema, store runs with inputs/outcomes, index for queries, enable trend analysis.
   - Creative Freedom: Choose database (SQLite for simple, PostgreSQL for production), design schema for efficient queries.
 
-- [ ] Integration with Go server
+- [DONE] Integration with Go server (2026-01-22)
   - Outcome: Seamless communication between Go MCP server and Python analysis service.
   - Requirements: Go gRPC client, error handling and retries, request/response mapping, performance optimization.
+  - Note: If added later, Python-side input validation using the Arcaflow plugin
+    SDK is optional and advisory only. Go-side validation remains the mandatory
+    enforcement gate before any input export.
+  - Implementation Note: HTTP endpoint `/analysis/summary` and Go HTTP client
+    provide the initial integration path.
 
 Tasks - Common:
-- [ ] Implement plugin schema handler
+- [DONE] Implement plugin schema handler (2026-01-22)
   - Outcome: Access and cache plugin schemas referenced by workflows.
   - Requirements: Read schemas from workflows, fetch for reference, cache efficiently, document requirements.
 
-- [ ] Create state manager (multi-tenant aware)
+- [DONE] Create state manager (multi-tenant aware) (2026-01-22)
   - Outcome: Manage session state with complete tenant isolation.
   - Requirements: Track input construction sessions, store draft inputs, cache schemas, store results and analysis, maintain historical database - all per tenant with isolation. Session cleanup and timeout handling.
   - Considerations: This is critical for multi-tenancy - must prevent cross-tenant data leakage.
 
-- [ ] Add comprehensive integration tests
+- [DONE] Add comprehensive integration tests (2026-01-22)
   - Outcome: Integration tests validating both skills with real workflows and results.
   - Requirements: Test with real workflow schemas (especially arcaflow-workflow-auto-perf), real execution results, suggestion generation, multi-run analysis.
   - Considerations: Use the target workflow as primary test case.
@@ -1460,27 +1469,36 @@ Dependencies:
 - gRPC or REST API between Go and Python functional
 
 Exit Criteria:
-- [ ] Skill 1: Can load workflows from multiple sources (filesystem, URL, git)
-- [ ] Skill 1: Can parse workflow YAML and extract JSON schemas accurately
-- [ ] Skill 1: Validates ALL inputs against schemas before export (100% enforcement)
-- [ ] Skill 1: Exports only schema-valid, deterministic JSON/YAML inputs
-- [ ] Skill 1: All exported inputs work with Arcaflow execution (100% success rate)
-- [ ] Skill 2: Can load and parse execution results
-- [ ] Skill 2: Can analyze results against goals
-- [ ] Skill 2: Can suggest input modifications based on analysis
-- [ ] Skill 2: Can compare multiple runs and identify patterns
-- [ ] Can parse and cache plugin schemas
-- [ ] State management for input and analysis sessions functional
-- [ ] Historical database operational
-- [ ] Unit tests written and passing for all Skill 1 & 2 components (>85% coverage)
-- [ ] Integration tests passing with real workflows and results
-- [ ] All Go code documented (godoc comments)
-- [ ] All Python code documented (docstrings, type hints)
-- [ ] User documentation updated for Skills 1 & 2
-- [ ] API documentation complete for analysis service
-- [ ] Does NOT execute workflows (Phase 2 future work)
+- [DONE] Skill 1: Can load workflows from multiple sources (filesystem, URL, git)
+  (2026-01-22)
+- [DONE] Skill 1: Can parse workflow YAML and extract JSON schemas accurately
+  (2026-01-22)
+- [DONE] Skill 1: Validates ALL inputs against schemas before export (100%
+  enforcement) (2026-01-22)
+- [DONE] Skill 1: Exports only schema-valid, deterministic JSON/YAML inputs
+  (2026-01-22)
+- [DONE] Skill 1: All exported inputs work with Arcaflow execution (100% success rate)
+  (2026-01-22)
+  - Validated with Arcaflow engine v0.20.0 and basic example workflow.
+- [DONE] Skill 2: Can load and parse execution results (2026-01-22)
+- [BLOCKED] Skill 2: Can analyze results against goals
+  - Deferred to Phase 4 manual validation (requires MCP tools for end-to-end flow)
+- [DONE] Skill 2: Can suggest input modifications based on analysis (2026-01-22)
+- [DONE] Skill 2: Can compare multiple runs and identify patterns (2026-01-22)
+- [DONE] Can parse and cache plugin schemas (2026-01-22)
+- [DONE] State management for input and analysis sessions functional (2026-01-22)
+- [DONE] Historical database operational (2026-01-22)
+- [DONE] Unit tests written and passing for all Skill 1 & 2 components (>85% coverage)
+  (2026-01-22)
+- [DONE] Integration tests passing with real workflows and results (2026-01-22)
+  - CI runs `scripts/test-integration.sh` with pinned engine and workflow.
+- [DONE] All Go code documented (godoc comments) (2026-01-22)
+- [DONE] All Python code documented (docstrings, type hints) (2026-01-22)
+- [DONE] User documentation updated for Skills 1 & 2 (2026-01-22)
+- [DONE] API documentation complete for analysis service (2026-01-22)
+- [DONE] Does NOT execute workflows (Phase 2 future work)
 
-Awaiting Gate Approval: NO
+Awaiting Gate Approval: YES
 
 ---
 
@@ -1575,7 +1593,8 @@ Exit Criteria:
   - [ ] User can export inputs using `workflow_input_export` and receive a valid JSON/YAML file
   - [ ] Exported input file successfully runs with external Arcaflow engine (manual execution)
   - [ ] User can load previous execution results using `workflow_results_load` tool
-  - [ ] User can request analysis using `workflow_results_analyze` and receive actionable suggestions
+- [ ] User can request analysis using `workflow_results_analyze` and receive actionable suggestions
+- [ ] User can analyze results against explicit goals using `workflow_results_analyze`
   - [ ] All tool interactions feel natural in LLM conversation (not overly technical)
 
 Awaiting Gate Approval: NO
@@ -1865,16 +1884,61 @@ Awaiting Gate Approval: NO
 
 ---
 
+### Phase 8: Advanced Analysis & Visualization
+Status: Not Started  
+Gate Keeper: Project roadmap approval
+
+Objectives:
+- Add statistical analysis capabilities for workflow results
+- Provide data visualizations for trends and comparisons
+- Deliver exportable analysis reports
+
+Tasks:
+- [ ] Implement statistical analysis layer
+  - Outcome: Robust statistical summaries and hypothesis support.
+  - Requirements:
+    - Descriptive statistics (mean, median, std dev, percentiles)
+    - Trend analysis and change detection
+    - Confidence intervals and significance testing (where applicable)
+    - Clear explanation of assumptions and limitations
+- [ ] Build visualization outputs
+  - Outcome: Charts and plots for workflow results and comparisons.
+  - Requirements:
+    - Time-series plots, distribution histograms, box plots
+    - Multi-run comparison charts
+    - Deterministic rendering for reproducible reports
+    - Export formats (PNG/SVG) and JSON-friendly plot metadata
+- [ ] Add report generation
+  - Outcome: Shareable analysis reports for stakeholders.
+  - Requirements:
+    - Markdown/HTML summaries with embedded figures
+    - Exportable artifacts stored with analysis metadata
+    - Support templated report sections
+
+Dependencies:
+- Phase 7 complete
+- Analysis engine stable with real-world datasets
+
+Exit Criteria:
+- [ ] Statistical analysis outputs validated against known datasets
+- [ ] Visualizations render correctly for standard result formats
+- [ ] Reports export with deterministic content and metadata
+- [ ] Documentation covers interpretation of statistical outputs
+
+Awaiting Gate Approval: NO
+
+---
+
 ## Current Status
 
 ### Current Phase
-Phase 2.9: Persistence Foundations & Data Stores
+Phase 3: Arcaflow Integration - Skills 1 & 2
 
 ### Current Task
-Define persistence foundation scope and storage strategy
+Review remaining Phase 3 exit criteria and manual validation steps
 
 ### Next Milestone
-Start Phase 2.9 tasks and establish storage decision(s)
+Complete Phase 3 exit criteria and request gate approval
 
 ### Blockers
 None currently
@@ -1949,6 +2013,7 @@ Explicitly NOT measured (Future Phases):
 - [ ] Workflow execution capabilities (Phase 2)
 - [ ] Automated iterative optimization (Phase 2+)
 - [ ] Workflow creation/composition (Phase 3+)
+- [ ] Statistical analysis and visualization (Phase 8)
 
 ### User Experience Metrics (PRIMARY use cases - Skills 1 & 2)
 Skill 1: Input Construction
@@ -1993,6 +2058,22 @@ Clear messaging - User understands:
 ## Plan Changelog
 
 Purpose: Track significant changes to this plan itself (not development progress).
+
+### 2026-01-22 - Add CI integration validation (v1.1.21)
+- Added `scripts/test-integration.sh` with pinned engine/workflow
+- CI runs the integration validation job
+
+### 2026-01-22 - Pin Arcaflow engine release for Phase 3 validation (v1.1.20)
+- Manual validation now uses Arcaflow engine v0.20.0 release artifacts
+- Update the pinned version explicitly when upgrading validation tooling
+
+### 2026-01-22 - Defer Phase 3 manual validations to Phase 4 (v1.1.19)
+- Moved Skill 1 execution validation and Skill 2 goal analysis validation to Phase 4
+  manual validation, since MCP tools are required for end-to-end testing
+
+### 2026-01-22 - Add Phase 8 Advanced Analysis & Visualization (v1.1.18)
+- Added Phase 8 for statistical analysis, visualization, and reporting work
+- Set Phase 8 dependency to complete after Phase 7
 
 ### 2026-01-22 - Move Tenant Persistence to Phase 2.75 (v1.1.17)
 - Moved tenant record persistence into Phase 2.75 and left Phase 2.9 focused on

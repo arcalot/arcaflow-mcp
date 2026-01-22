@@ -4,6 +4,7 @@ package config
 import (
 	"errors"
 	"fmt"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -23,6 +24,7 @@ type Config struct {
 	Tenancy      TenancyConfig   `yaml:"tenancy"`
 	Audit        AuditConfig     `yaml:"audit"`
 	Usage        UsageConfig     `yaml:"usage"`
+	Analysis     AnalysisConfig  `yaml:"analysis"`
 }
 
 // LoggingConfig controls structured logging behavior.
@@ -55,6 +57,11 @@ type AuditConfig struct {
 // UsageConfig controls usage statistics persistence.
 type UsageConfig struct {
 	StorePath string `yaml:"store_path"`
+}
+
+// AnalysisConfig controls analysis service integration.
+type AnalysisConfig struct {
+	HTTPURL string `yaml:"analysis_http_url"`
 }
 
 // TenancyConfig controls per-tenant isolation settings.
@@ -104,6 +111,7 @@ func Default() Config {
 		Usage: UsageConfig{
 			StorePath: usageStorePath,
 		},
+		Analysis: AnalysisConfig{},
 	}
 }
 
@@ -191,6 +199,9 @@ func applyEnvOverrides(cfg *Config) {
 	if value, ok := os.LookupEnv("ARCAFLOW_MCP_USAGE_STORE_PATH"); ok && value != "" {
 		cfg.Usage.StorePath = value
 	}
+	if value, ok := os.LookupEnv("ARCAFLOW_MCP_ANALYSIS_HTTP_URL"); ok && value != "" {
+		cfg.Analysis.HTTPURL = value
+	}
 }
 
 // Validate checks required fields and constraints.
@@ -203,6 +214,19 @@ func Validate(cfg Config) error {
 
 	if cfg.Address == "" {
 		return errors.New("address must not be empty")
+	}
+
+	if cfg.Analysis.HTTPURL != "" {
+		parsed, err := url.Parse(cfg.Analysis.HTTPURL)
+		if err != nil {
+			return fmt.Errorf("analysis http url invalid: %w", err)
+		}
+		if parsed.Scheme != "http" && parsed.Scheme != "https" {
+			return errors.New("analysis http url must use http or https")
+		}
+		if parsed.Host == "" {
+			return errors.New("analysis http url must include host")
+		}
 	}
 
 	if cfg.Mode == "server" && cfg.Auth.AdminToken == "" {

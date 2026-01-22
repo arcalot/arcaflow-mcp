@@ -118,6 +118,13 @@ venv.bak/
 
 ### mkdocs
 /site
+
+### Manual validation artifacts
+/manual-validation/engine/
+/manual-validation/exports/
+/manual-validation/results/
+/manual-validation/workflows/
+/manual-validation/tmp/
 /site-arcaflow
 
 ### mypy

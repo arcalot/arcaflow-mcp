@@ -13,6 +13,18 @@ records.
 - Tenant workspaces (`tenancy.workspace_root`) must be on shared storage for
   clustered deployments so each pod sees the same workspace contents.
 
+Analysis service persistence:
+
+- The analysis service requires a writable volume for its SQLite database when
+  running in local or single-node mode.
+- For production, configure PostgreSQL and provide a persistent backend for
+  historical analysis data.
+
+Analysis service integration:
+
+- Set `ARCAFLOW_MCP_ANALYSIS_HTTP_URL` to the analysis service HTTP base URL
+  (for example, `http://analysis-service:8081`) so the MCP server can reach it.
+
 ### Clustered deployment requirements
 
 Running multiple replicas requires additional coordination:

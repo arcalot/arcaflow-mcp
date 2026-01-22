@@ -394,6 +394,556 @@ func TestInvalidParamsRejected(t *testing.T) {
 	}
 }
 
+func TestRegisterToolSkipsInvalid(t *testing.T) {
+	server := NewServer(nil, ServerInfo{})
+	server.RegisterTool(ToolRegistration{})
+	if len(server.tools) != 0 {
+		t.Fatalf("expected no tools registered")
+	}
+	server.RegisterTool(ToolRegistration{
+		Definition: ToolDefinition{Name: "ok"},
+		Handler: func(
+			ctx context.Context,
+			arguments map[string]interface{},
+		) (ToolsCallResult, *ErrorObject) {
+			_ = ctx
+			_ = arguments
+			return ToolsCallResult{}, nil
+		},
+	})
+	if len(server.tools) != 1 {
+		t.Fatalf("expected tool registration")
+	}
+}
+
+func TestHandleUnknownMethod(t *testing.T) {
+	server := NewServer(nil, ServerInfo{})
+	request := Request{
+		JSONRPC: JSONRPCVersion,
+		ID:      rawID(1),
+		Method:  "unknown/method",
+		Params:  mustMarshalRaw(map[string]interface{}{}),
+	}
+	responses, err := server.Handle(context.Background(), mustMarshal(request))
+	if err != nil {
+		t.Fatalf("handle request: %v", err)
+	}
+	if len(responses) != 1 {
+		t.Fatalf("expected 1 response")
+	}
+	var response Response
+	if err := json.Unmarshal(responses[0], &response); err != nil {
+		t.Fatalf("unmarshal response: %v", err)
+	}
+	if response.Error == nil || response.Error.Code != ErrMethodNotFound {
+		t.Fatalf("expected method not found error")
+	}
+}
+
+func TestHandleInitializedTransitions(t *testing.T) {
+	server := NewServer(nil, ServerInfo{Name: "arcaflow-mcp"})
+
+	initReq := mustMarshal(Request{
+		JSONRPC: JSONRPCVersion,
+		ID:      rawID(1),
+		Method:  "initialize",
+		Params:  mustMarshalRaw(InitializeParams{ProtocolVersion: ProtocolVersion}),
+	})
+	if _, err := server.Handle(context.Background(), initReq); err != nil {
+		t.Fatalf("initialize failed: %v", err)
+	}
+
+	initialized := mustMarshal(Request{
+		JSONRPC: JSONRPCVersion,
+		ID:      rawID(2),
+		Method:  "initialized",
+	})
+	responses, err := server.Handle(context.Background(), initialized)
+	if err != nil {
+		t.Fatalf("initialized failed: %v", err)
+	}
+	if len(responses) != 1 {
+		t.Fatalf("expected 1 response")
+	}
+}
+
+func TestHandleResourcesList(t *testing.T) {
+	server := NewServer(nil, ServerInfo{Name: "arcaflow-mcp"})
+
+	initReq := mustMarshal(Request{
+		JSONRPC: JSONRPCVersion,
+		ID:      rawID(1),
+		Method:  "initialize",
+		Params:  mustMarshalRaw(InitializeParams{ProtocolVersion: ProtocolVersion}),
+	})
+	if _, err := server.Handle(context.Background(), initReq); err != nil {
+		t.Fatalf("initialize failed: %v", err)
+	}
+	initialized := mustMarshal(Request{
+		JSONRPC: JSONRPCVersion,
+		ID:      rawID(2),
+		Method:  "initialized",
+	})
+	if _, err := server.Handle(context.Background(), initialized); err != nil {
+		t.Fatalf("initialized failed: %v", err)
+	}
+
+	listReq := mustMarshal(Request{
+		JSONRPC: JSONRPCVersion,
+		ID:      rawID(3),
+		Method:  "resources/list",
+	})
+	responses, err := server.Handle(context.Background(), listReq)
+	if err != nil {
+		t.Fatalf("resources/list failed: %v", err)
+	}
+	if len(responses) != 1 {
+		t.Fatalf("expected 1 response")
+	}
+}
+
+func TestHandleToolsCallSuccess(t *testing.T) {
+	server := NewServer(nil, ServerInfo{Name: "arcaflow-mcp"})
+	server.RegisterTool(ToolRegistration{
+		Definition: ToolDefinition{Name: "echo"},
+		Handler: func(
+			ctx context.Context,
+			arguments map[string]interface{},
+		) (ToolsCallResult, *ErrorObject) {
+			_ = ctx
+			return ToolsCallResult{
+				Content: []ToolContent{{
+					Type: "text",
+					Text: arguments["message"].(string),
+				}},
+			}, nil
+		},
+	})
+
+	initReq := mustMarshal(Request{
+		JSONRPC: JSONRPCVersion,
+		ID:      rawID(1),
+		Method:  "initialize",
+		Params:  mustMarshalRaw(InitializeParams{ProtocolVersion: ProtocolVersion}),
+	})
+	if _, err := server.Handle(context.Background(), initReq); err != nil {
+		t.Fatalf("initialize failed: %v", err)
+	}
+	initialized := mustMarshal(Request{
+		JSONRPC: JSONRPCVersion,
+		ID:      rawID(2),
+		Method:  "initialized",
+	})
+	if _, err := server.Handle(context.Background(), initialized); err != nil {
+		t.Fatalf("initialized failed: %v", err)
+	}
+
+	call := mustMarshal(Request{
+		JSONRPC: JSONRPCVersion,
+		ID:      rawID(3),
+		Method:  "tools/call",
+		Params: mustMarshalRaw(ToolsCallParams{
+			Name:      "echo",
+			Arguments: map[string]interface{}{"message": "hello"},
+		}),
+	})
+	responses, err := server.Handle(context.Background(), call)
+	if err != nil {
+		t.Fatalf("tools/call failed: %v", err)
+	}
+	if len(responses) != 1 {
+		t.Fatalf("expected 1 response")
+	}
+}
+
+func TestHandleToolsCallNotFound(t *testing.T) {
+	server := NewServer(nil, ServerInfo{Name: "arcaflow-mcp"})
+	initReq := mustMarshal(Request{
+		JSONRPC: JSONRPCVersion,
+		ID:      rawID(1),
+		Method:  "initialize",
+		Params:  mustMarshalRaw(InitializeParams{ProtocolVersion: ProtocolVersion}),
+	})
+	if _, err := server.Handle(context.Background(), initReq); err != nil {
+		t.Fatalf("initialize failed: %v", err)
+	}
+	initialized := mustMarshal(Request{
+		JSONRPC: JSONRPCVersion,
+		ID:      rawID(2),
+		Method:  "initialized",
+	})
+	if _, err := server.Handle(context.Background(), initialized); err != nil {
+		t.Fatalf("initialized failed: %v", err)
+	}
+
+	call := mustMarshal(Request{
+		JSONRPC: JSONRPCVersion,
+		ID:      rawID(3),
+		Method:  "tools/call",
+		Params: mustMarshalRaw(ToolsCallParams{
+			Name: "missing",
+		}),
+	})
+	responses, err := server.Handle(context.Background(), call)
+	if err != nil {
+		t.Fatalf("tools/call failed: %v", err)
+	}
+	var response Response
+	if err := json.Unmarshal(responses[0], &response); err != nil {
+		t.Fatalf("unmarshal response: %v", err)
+	}
+	if response.Error == nil || response.Error.Code != ErrInvalidParams {
+		t.Fatalf("expected invalid params error")
+	}
+}
+
+func TestHandleResourcesReadNotFound(t *testing.T) {
+	server := NewServer(nil, ServerInfo{Name: "arcaflow-mcp"})
+	initReq := mustMarshal(Request{
+		JSONRPC: JSONRPCVersion,
+		ID:      rawID(1),
+		Method:  "initialize",
+		Params:  mustMarshalRaw(InitializeParams{ProtocolVersion: ProtocolVersion}),
+	})
+	if _, err := server.Handle(context.Background(), initReq); err != nil {
+		t.Fatalf("initialize failed: %v", err)
+	}
+	initialized := mustMarshal(Request{
+		JSONRPC: JSONRPCVersion,
+		ID:      rawID(2),
+		Method:  "initialized",
+	})
+	if _, err := server.Handle(context.Background(), initialized); err != nil {
+		t.Fatalf("initialized failed: %v", err)
+	}
+
+	read := mustMarshal(Request{
+		JSONRPC: JSONRPCVersion,
+		ID:      rawID(3),
+		Method:  "resources/read",
+		Params: mustMarshalRaw(ResourcesReadParams{
+			URI: "resource://missing",
+		}),
+	})
+	responses, err := server.Handle(context.Background(), read)
+	if err != nil {
+		t.Fatalf("resources/read failed: %v", err)
+	}
+	if len(responses) != 1 {
+		t.Fatalf("expected 1 response")
+	}
+}
+
+func TestHandleResourcesReadMissingParams(t *testing.T) {
+	server := NewServer(nil, ServerInfo{Name: "arcaflow-mcp"})
+	initReq := mustMarshal(Request{
+		JSONRPC: JSONRPCVersion,
+		ID:      rawID(1),
+		Method:  "initialize",
+		Params:  mustMarshalRaw(InitializeParams{ProtocolVersion: ProtocolVersion}),
+	})
+	if _, err := server.Handle(context.Background(), initReq); err != nil {
+		t.Fatalf("initialize failed: %v", err)
+	}
+	initialized := mustMarshal(Request{
+		JSONRPC: JSONRPCVersion,
+		ID:      rawID(2),
+		Method:  "initialized",
+	})
+	if _, err := server.Handle(context.Background(), initialized); err != nil {
+		t.Fatalf("initialized failed: %v", err)
+	}
+
+	read := mustMarshal(Request{
+		JSONRPC: JSONRPCVersion,
+		ID:      rawID(3),
+		Method:  "resources/read",
+	})
+	responses, err := server.Handle(context.Background(), read)
+	if err != nil {
+		t.Fatalf("resources/read failed: %v", err)
+	}
+	var response Response
+	if err := json.Unmarshal(responses[0], &response); err != nil {
+		t.Fatalf("unmarshal response: %v", err)
+	}
+	if response.Error == nil || response.Error.Code != ErrInvalidParams {
+		t.Fatalf("expected invalid params error")
+	}
+}
+
+func TestInvalidRequestID(t *testing.T) {
+	server := NewServer(nil, ServerInfo{Name: "arcaflow-mcp"})
+	raw := json.RawMessage("true")
+	req := Request{
+		JSONRPC: JSONRPCVersion,
+		ID:      &raw,
+		Method:  "initialize",
+		Params:  mustMarshalRaw(InitializeParams{ProtocolVersion: ProtocolVersion}),
+		IDSet:   true,
+	}
+	responses, err := server.Handle(context.Background(), mustMarshal(req))
+	if err != nil {
+		t.Fatalf("handle request failed: %v", err)
+	}
+	var response Response
+	if err := json.Unmarshal(responses[0], &response); err != nil {
+		t.Fatalf("unmarshal response: %v", err)
+	}
+	if response.Error == nil || response.Error.Code != ErrInvalidRequest {
+		t.Fatalf("expected invalid request error")
+	}
+}
+
+func TestHandleResourcesListWithParams(t *testing.T) {
+	server := NewServer(nil, ServerInfo{Name: "arcaflow-mcp"})
+	initReq := mustMarshal(Request{
+		JSONRPC: JSONRPCVersion,
+		ID:      rawID(1),
+		Method:  "initialize",
+		Params:  mustMarshalRaw(InitializeParams{ProtocolVersion: ProtocolVersion}),
+	})
+	if _, err := server.Handle(context.Background(), initReq); err != nil {
+		t.Fatalf("initialize failed: %v", err)
+	}
+	initialized := mustMarshal(Request{
+		JSONRPC: JSONRPCVersion,
+		ID:      rawID(2),
+		Method:  "initialized",
+	})
+	if _, err := server.Handle(context.Background(), initialized); err != nil {
+		t.Fatalf("initialized failed: %v", err)
+	}
+
+	listReq := mustMarshal(Request{
+		JSONRPC: JSONRPCVersion,
+		ID:      rawID(3),
+		Method:  "resources/list",
+		Params: mustMarshalRaw(ResourcesListParams{
+			Cursor: "next",
+		}),
+	})
+	responses, err := server.Handle(context.Background(), listReq)
+	if err != nil {
+		t.Fatalf("resources/list failed: %v", err)
+	}
+	if len(responses) != 1 {
+		t.Fatalf("expected 1 response")
+	}
+}
+
+func TestHandlePingRejectsParams(t *testing.T) {
+	server := NewServer(nil, ServerInfo{Name: "arcaflow-mcp"})
+	initReq := mustMarshal(Request{
+		JSONRPC: JSONRPCVersion,
+		ID:      rawID(1),
+		Method:  "initialize",
+		Params:  mustMarshalRaw(InitializeParams{ProtocolVersion: ProtocolVersion}),
+	})
+	if _, err := server.Handle(context.Background(), initReq); err != nil {
+		t.Fatalf("initialize failed: %v", err)
+	}
+	initialized := mustMarshal(Request{
+		JSONRPC: JSONRPCVersion,
+		ID:      rawID(2),
+		Method:  "initialized",
+	})
+	if _, err := server.Handle(context.Background(), initialized); err != nil {
+		t.Fatalf("initialized failed: %v", err)
+	}
+
+	ping := mustMarshal(Request{
+		JSONRPC: JSONRPCVersion,
+		ID:      rawID(3),
+		Method:  "ping",
+		Params:  mustMarshalRaw(map[string]interface{}{"value": "bad"}),
+	})
+	responses, err := server.Handle(context.Background(), ping)
+	if err != nil {
+		t.Fatalf("ping failed: %v", err)
+	}
+	var response Response
+	if err := json.Unmarshal(responses[0], &response); err != nil {
+		t.Fatalf("unmarshal response: %v", err)
+	}
+	if response.Error == nil || response.Error.Code != ErrInvalidParams {
+		t.Fatalf("expected invalid params error")
+	}
+}
+
+func TestHandleInitializeRejectsBadProtocol(t *testing.T) {
+	server := NewServer(nil, ServerInfo{Name: "arcaflow-mcp"})
+	req := mustMarshal(Request{
+		JSONRPC: JSONRPCVersion,
+		ID:      rawID(1),
+		Method:  "initialize",
+		Params:  mustMarshalRaw(InitializeParams{ProtocolVersion: "invalid"}),
+	})
+	responses, err := server.Handle(context.Background(), req)
+	if err != nil {
+		t.Fatalf("initialize failed: %v", err)
+	}
+	var response Response
+	if err := json.Unmarshal(responses[0], &response); err != nil {
+		t.Fatalf("unmarshal response: %v", err)
+	}
+	if response.Error == nil || response.Error.Code != ErrInvalidParams {
+		t.Fatalf("expected invalid params error")
+	}
+}
+
+func TestHandleInitializeMissingParams(t *testing.T) {
+	server := NewServer(nil, ServerInfo{Name: "arcaflow-mcp"})
+	req := mustMarshal(Request{
+		JSONRPC: JSONRPCVersion,
+		ID:      rawID(1),
+		Method:  "initialize",
+	})
+	responses, err := server.Handle(context.Background(), req)
+	if err != nil {
+		t.Fatalf("initialize failed: %v", err)
+	}
+	var response Response
+	if err := json.Unmarshal(responses[0], &response); err != nil {
+		t.Fatalf("unmarshal response: %v", err)
+	}
+	if response.Error == nil || response.Error.Code != ErrInvalidParams {
+		t.Fatalf("expected invalid params error")
+	}
+}
+
+func TestInitializedNotificationBeforeInit(t *testing.T) {
+	server := NewServer(nil, ServerInfo{Name: "arcaflow-mcp"})
+	req := mustMarshal(Request{
+		JSONRPC: JSONRPCVersion,
+		Method:  "initialized",
+	})
+	responses, err := server.Handle(context.Background(), req)
+	if err != nil {
+		t.Fatalf("initialized failed: %v", err)
+	}
+	if responses != nil {
+		t.Fatalf("expected no response for notification")
+	}
+}
+
+func TestHandleInitializedBeforeInit(t *testing.T) {
+	server := NewServer(nil, ServerInfo{Name: "arcaflow-mcp"})
+	req := mustMarshal(Request{
+		JSONRPC: JSONRPCVersion,
+		ID:      rawID(1),
+		Method:  "initialized",
+	})
+	responses, err := server.Handle(context.Background(), req)
+	if err != nil {
+		t.Fatalf("initialized failed: %v", err)
+	}
+	var response Response
+	if err := json.Unmarshal(responses[0], &response); err != nil {
+		t.Fatalf("unmarshal response: %v", err)
+	}
+	if response.Error == nil || response.Error.Code != ErrInvalidRequest {
+		t.Fatalf("expected invalid request error")
+	}
+}
+
+func TestHandleNotifications(t *testing.T) {
+	server := NewServer(nil, ServerInfo{Name: "arcaflow-mcp"})
+	requests := []Request{
+		{JSONRPC: JSONRPCVersion, Method: "initialized"},
+		{JSONRPC: JSONRPCVersion, Method: "notifications/initialized"},
+		{JSONRPC: JSONRPCVersion, Method: "notifications/cancelled"},
+		{JSONRPC: JSONRPCVersion, Method: "ping"},
+		{JSONRPC: JSONRPCVersion, Method: "unknown"},
+	}
+	for _, req := range requests {
+		responses, err := server.Handle(context.Background(), mustMarshal(req))
+		if err != nil {
+			t.Fatalf("notification failed: %v", err)
+		}
+		if responses != nil {
+			t.Fatalf("expected no response for notification")
+		}
+	}
+}
+
+func TestListTools(t *testing.T) {
+	server := NewServer(nil, ServerInfo{Name: "arcaflow-mcp"})
+	server.RegisterTool(ToolRegistration{
+		Definition: ToolDefinition{Name: "ping"},
+		Handler: func(
+			ctx context.Context,
+			arguments map[string]interface{},
+		) (ToolsCallResult, *ErrorObject) {
+			_ = ctx
+			_ = arguments
+			return ToolsCallResult{}, nil
+		},
+	})
+	list := server.listTools()
+	if len(list) != 1 || list[0].Name != "ping" {
+		t.Fatalf("expected tool list to include ping")
+	}
+}
+
+func TestHandlePingSuccess(t *testing.T) {
+	server := NewServer(nil, ServerInfo{Name: "arcaflow-mcp"})
+	initReq := mustMarshal(Request{
+		JSONRPC: JSONRPCVersion,
+		ID:      rawID(1),
+		Method:  "initialize",
+		Params:  mustMarshalRaw(InitializeParams{ProtocolVersion: ProtocolVersion}),
+	})
+	if _, err := server.Handle(context.Background(), initReq); err != nil {
+		t.Fatalf("initialize failed: %v", err)
+	}
+	initialized := mustMarshal(Request{
+		JSONRPC: JSONRPCVersion,
+		ID:      rawID(2),
+		Method:  "initialized",
+	})
+	if _, err := server.Handle(context.Background(), initialized); err != nil {
+		t.Fatalf("initialized failed: %v", err)
+	}
+
+	ping := mustMarshal(Request{
+		JSONRPC: JSONRPCVersion,
+		ID:      rawID(3),
+		Method:  "ping",
+	})
+	responses, err := server.Handle(context.Background(), ping)
+	if err != nil {
+		t.Fatalf("ping failed: %v", err)
+	}
+	if len(responses) != 1 {
+		t.Fatalf("expected 1 response")
+	}
+}
+
+func TestHandleInitializedTwice(t *testing.T) {
+	server := NewServer(nil, ServerInfo{Name: "arcaflow-mcp"})
+	initReq := mustMarshal(Request{
+		JSONRPC: JSONRPCVersion,
+		ID:      rawID(1),
+		Method:  "initialize",
+		Params:  mustMarshalRaw(InitializeParams{ProtocolVersion: ProtocolVersion}),
+	})
+	if _, err := server.Handle(context.Background(), initReq); err != nil {
+		t.Fatalf("initialize failed: %v", err)
+	}
+	initialized := mustMarshal(Request{
+		JSONRPC: JSONRPCVersion,
+		ID:      rawID(2),
+		Method:  "initialized",
+	})
+	if _, err := server.Handle(context.Background(), initialized); err != nil {
+		t.Fatalf("initialized failed: %v", err)
+	}
+	if _, err := server.Handle(context.Background(), initialized); err != nil {
+		t.Fatalf("second initialized failed: %v", err)
+	}
+}
+
 func mustMarshal(req Request) []byte {
 	data, err := json.Marshal(req)
 	if err != nil {

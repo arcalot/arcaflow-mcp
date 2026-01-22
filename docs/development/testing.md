@@ -38,6 +38,18 @@ Run Python tests with coverage:
 ./scripts/test-python-coverage.sh
 ```
 
+Run integration validation with a real Arcaflow engine and workflow:
+
+```
+./scripts/test-integration.sh
+```
+
+This integration test uses pinned versions defined in
+`scripts/test-integration.sh` (the single source of truth).
+
+The integration test requires a container runtime (`docker` in CI, or `podman`
+locally) and network access to fetch the engine and workflow assets.
+
 ### MCP compliance checklist
 
 Use this checklist to verify MCP protocol compliance (record results in

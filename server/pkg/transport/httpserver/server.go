@@ -16,6 +16,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/arcalot/arcaflow-mcp/server/pkg/analysis"
 	"github.com/arcalot/arcaflow-mcp/server/pkg/audit"
 	"github.com/arcalot/arcaflow-mcp/server/pkg/auth"
 	"github.com/arcalot/arcaflow-mcp/server/pkg/protocol"
@@ -49,6 +50,7 @@ type Server struct {
 	usageStore       tenant.UsageStore
 	auditStore       audit.Store
 	quota            tenant.Quota
+	analysisClient   *analysis.Client
 }
 
 // Config holds HTTP server configuration for MCP transport.
@@ -72,6 +74,8 @@ type Config struct {
 	AuditStore audit.Store
 	// Quota defines per-tenant resource limits.
 	Quota tenant.Quota
+	// AnalysisClient connects to the analysis service.
+	AnalysisClient *analysis.Client
 }
 
 // NewServer constructs a new HTTP/SSE transport server.
@@ -109,6 +113,7 @@ func NewServer(
 		usageStore:       config.UsageStore,
 		auditStore:       config.AuditStore,
 		quota:            config.Quota,
+		analysisClient:   config.AnalysisClient,
 		sessions: &sessionStore{
 			items:   make(map[string]map[string]*sseSession),
 			limiter: config.SessionLimiter,
