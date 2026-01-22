@@ -14,12 +14,14 @@ import (
 const tenantPayloadLimit = 1 << 20
 
 type tenantCreateRequest struct {
-	TenantID    string `json:"tenant_id"`
-	DisplayName string `json:"display_name,omitempty"`
+	TenantID    string            `json:"tenant_id"`
+	DisplayName string            `json:"display_name,omitempty"`
+	Metadata    map[string]string `json:"metadata,omitempty"`
 }
 
 type tenantUpdateRequest struct {
-	DisplayName *string `json:"display_name,omitempty"`
+	DisplayName *string            `json:"display_name,omitempty"`
+	Metadata    *map[string]string `json:"metadata,omitempty"`
 }
 
 type tenantResponse struct {
@@ -164,6 +166,7 @@ func (s *Server) handleAdminTenantCreate(w http.ResponseWriter, r *http.Request)
 	record, err := s.tenantStore.Create(tenant.Record{
 		ID:          payload.TenantID,
 		DisplayName: payload.DisplayName,
+		Metadata:    payload.Metadata,
 	})
 	if err != nil {
 		status := http.StatusInternalServerError
@@ -315,6 +318,7 @@ func (s *Server) handleAdminTenantUpdate(w http.ResponseWriter, r *http.Request)
 	}
 	record, err := s.tenantStore.Update(targetID, tenant.Update{
 		DisplayName: payload.DisplayName,
+		Metadata:    payload.Metadata,
 	})
 	if err != nil {
 		status := http.StatusInternalServerError
@@ -436,7 +440,7 @@ func parseTenantUpdateRequest(r *http.Request) (tenantUpdateRequest, error) {
 	if err := readJSONBody(r, tenantPayloadLimit, &payload); err != nil {
 		return tenantUpdateRequest{}, err
 	}
-	if payload.DisplayName == nil {
+	if payload.DisplayName == nil && payload.Metadata == nil {
 		return tenantUpdateRequest{}, tenant.ErrTenantUpdateRequired
 	}
 	return payload, nil

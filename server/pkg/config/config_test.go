@@ -32,6 +32,9 @@ func TestDefaultConfig(t *testing.T) {
 	if cfg.Audit.StorePath == "" {
 		t.Fatalf("expected default audit store path set")
 	}
+	if cfg.Usage.StorePath == "" {
+		t.Fatalf("expected default usage store path set")
+	}
 	if cfg.Audit.RetentionDays <= 0 {
 		t.Fatalf(
 			"expected default audit retention days > 0, got %d",
@@ -125,6 +128,9 @@ func TestValidateConfig(t *testing.T) {
 					StorePath:     t.TempDir(),
 					RetentionDays: 7,
 				},
+				Usage: UsageConfig{
+					StorePath: t.TempDir(),
+				},
 			},
 			wantErr: false,
 		},
@@ -151,6 +157,9 @@ func TestValidateConfig(t *testing.T) {
 				Audit: AuditConfig{
 					StorePath: t.TempDir(),
 				},
+				Usage: UsageConfig{
+					StorePath: t.TempDir(),
+				},
 			},
 			wantErr: false,
 		},
@@ -160,6 +169,9 @@ func TestValidateConfig(t *testing.T) {
 				Mode:    "server",
 				Address: "127.0.0.1:8080",
 				Logging: LoggingConfig{Level: "info"},
+				Usage: UsageConfig{
+					StorePath: t.TempDir(),
+				},
 			},
 			wantErr: true,
 		},
@@ -170,6 +182,9 @@ func TestValidateConfig(t *testing.T) {
 				Address: "127.0.0.1:8080",
 				Logging: LoggingConfig{Level: "info"},
 				Auth:    AuthConfig{AdminToken: "admin-token"},
+				Usage: UsageConfig{
+					StorePath: t.TempDir(),
+				},
 			},
 			wantErr: true,
 		},
@@ -198,6 +213,9 @@ func TestValidateConfig(t *testing.T) {
 					MaxSessions:           2,
 				},
 				Audit: AuditConfig{
+					StorePath: t.TempDir(),
+				},
+				Usage: UsageConfig{
 					StorePath: t.TempDir(),
 				},
 			},
@@ -230,6 +248,9 @@ func TestValidateConfig(t *testing.T) {
 				Audit: AuditConfig{
 					StorePath: t.TempDir(),
 				},
+				Usage: UsageConfig{
+					StorePath: t.TempDir(),
+				},
 			},
 			wantErr: true,
 		},
@@ -258,6 +279,9 @@ func TestValidateConfig(t *testing.T) {
 					MaxSessions:           2,
 				},
 				Audit: AuditConfig{
+					StorePath: t.TempDir(),
+				},
+				Usage: UsageConfig{
 					StorePath: t.TempDir(),
 				},
 			},
@@ -290,6 +314,9 @@ func TestValidateConfig(t *testing.T) {
 				Audit: AuditConfig{
 					StorePath: t.TempDir(),
 				},
+				Usage: UsageConfig{
+					StorePath: t.TempDir(),
+				},
 			},
 			wantErr: true,
 		},
@@ -320,6 +347,9 @@ func TestValidateConfig(t *testing.T) {
 				Audit: AuditConfig{
 					StorePath: t.TempDir(),
 				},
+				Usage: UsageConfig{
+					StorePath: t.TempDir(),
+				},
 			},
 			wantErr: true,
 		},
@@ -345,6 +375,9 @@ func TestValidateConfig(t *testing.T) {
 					WorkspaceRoot: "",
 				},
 				Audit: AuditConfig{
+					StorePath: t.TempDir(),
+				},
+				Usage: UsageConfig{
 					StorePath: t.TempDir(),
 				},
 			},
@@ -377,6 +410,9 @@ func TestValidateConfig(t *testing.T) {
 				Audit: AuditConfig{
 					StorePath: t.TempDir(),
 				},
+				Usage: UsageConfig{
+					StorePath: t.TempDir(),
+				},
 			},
 			wantErr: true,
 		},
@@ -403,6 +439,39 @@ func TestValidateConfig(t *testing.T) {
 					TenantStorePath:       t.TempDir(),
 					MaxConcurrentRequests: 5,
 					MaxSessions:           2,
+				},
+				Usage: UsageConfig{
+					StorePath: t.TempDir(),
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "invalid server missing usage store path",
+			cfg: Config{
+				Mode:    "server",
+				Address: "127.0.0.1:8080",
+				Logging: LoggingConfig{Level: "info"},
+				Auth: AuthConfig{
+					AdminToken:     "admin-token",
+					TokenStorePath: t.TempDir(),
+				},
+				RateLimiting: RateLimitConfig{
+					Enabled:            true,
+					RequestsPerMinute:  60,
+					WindowSeconds:      60,
+					BackoffEnabled:     true,
+					BackoffBaseSeconds: 1,
+					BackoffMaxSeconds:  60,
+				},
+				Tenancy: TenancyConfig{
+					WorkspaceRoot:         t.TempDir(),
+					TenantStorePath:       t.TempDir(),
+					MaxConcurrentRequests: 5,
+					MaxSessions:           2,
+				},
+				Audit: AuditConfig{
+					StorePath: t.TempDir(),
 				},
 			},
 			wantErr: true,
@@ -435,6 +504,9 @@ func TestValidateConfig(t *testing.T) {
 					StorePath:     t.TempDir(),
 					RetentionDays: -1,
 				},
+				Usage: UsageConfig{
+					StorePath: t.TempDir(),
+				},
 			},
 			wantErr: true,
 		},
@@ -464,6 +536,9 @@ func TestValidateConfig(t *testing.T) {
 					MaxSessions:           2,
 				},
 				Audit: AuditConfig{
+					StorePath: t.TempDir(),
+				},
+				Usage: UsageConfig{
 					StorePath: t.TempDir(),
 				},
 			},
@@ -497,6 +572,9 @@ func TestValidateConfig(t *testing.T) {
 				Audit: AuditConfig{
 					StorePath: t.TempDir(),
 				},
+				Usage: UsageConfig{
+					StorePath: t.TempDir(),
+				},
 			},
 			wantErr: true,
 		},
@@ -523,6 +601,9 @@ func TestValidateConfig(t *testing.T) {
 					TenantStorePath:       t.TempDir(),
 					MaxConcurrentRequests: -1,
 					MaxSessions:           -1,
+				},
+				Usage: UsageConfig{
+					StorePath: t.TempDir(),
 				},
 			},
 			wantErr: true,
@@ -594,6 +675,10 @@ func TestLoadConfigWithOverrides(t *testing.T) {
 		filepath.Join(tempDir, "audit.json"),
 	)
 	t.Setenv("ARCAFLOW_MCP_AUDIT_RETENTION_DAYS", "10")
+	t.Setenv(
+		"ARCAFLOW_MCP_USAGE_STORE_PATH",
+		filepath.Join(tempDir, "usage.json"),
+	)
 
 	cfg, err := Load(configPath)
 	if err != nil {
@@ -656,6 +741,9 @@ func TestLoadConfigWithOverrides(t *testing.T) {
 	}
 	if cfg.Audit.StorePath == "" {
 		t.Fatalf("expected audit store path override")
+	}
+	if cfg.Usage.StorePath == "" {
+		t.Fatalf("expected usage store path override")
 	}
 	if cfg.Tenancy.MaxConcurrentRequests != 7 {
 		t.Fatalf(

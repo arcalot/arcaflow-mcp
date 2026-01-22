@@ -99,6 +99,7 @@ func (s *FileStore) Create(record Record) (Record, error) {
 	now := time.Now().UTC()
 	record.CreatedAt = now
 	record.UpdatedAt = now
+	record.Metadata = cloneMetadata(record.Metadata)
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if _, ok := s.records[record.ID]; ok {
@@ -120,7 +121,7 @@ func (s *FileStore) Update(id string, update Update) (Record, error) {
 	if err := ValidateID(id); err != nil {
 		return Record{}, err
 	}
-	if update.DisplayName == nil {
+	if update.DisplayName == nil && update.Metadata == nil {
 		return Record{}, ErrTenantUpdateRequired
 	}
 	s.mu.Lock()
@@ -131,6 +132,9 @@ func (s *FileStore) Update(id string, update Update) (Record, error) {
 	}
 	if update.DisplayName != nil {
 		record.DisplayName = strings.TrimSpace(*update.DisplayName)
+	}
+	if update.Metadata != nil {
+		record.Metadata = cloneMetadata(*update.Metadata)
 	}
 	record.UpdatedAt = time.Now().UTC()
 	s.records[id] = record

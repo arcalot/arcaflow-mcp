@@ -31,15 +31,17 @@ var tenantIDPattern = regexp.MustCompile(`^[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}$`)
 
 // Record describes a tenant record managed by admin APIs.
 type Record struct {
-	ID          string    `json:"id"`
-	DisplayName string    `json:"display_name,omitempty"`
-	CreatedAt   time.Time `json:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at"`
+	ID          string            `json:"id"`
+	DisplayName string            `json:"display_name,omitempty"`
+	Metadata    map[string]string `json:"metadata,omitempty"`
+	CreatedAt   time.Time         `json:"created_at"`
+	UpdatedAt   time.Time         `json:"updated_at"`
 }
 
 // Update describes mutable fields for a tenant record.
 type Update struct {
-	DisplayName *string `json:"display_name,omitempty"`
+	DisplayName *string            `json:"display_name,omitempty"`
+	Metadata    *map[string]string `json:"metadata,omitempty"`
 }
 
 // Store provides tenant record management.
@@ -116,6 +118,7 @@ func (s *InMemoryStore) Create(record Record) (Record, error) {
 	now := time.Now().UTC()
 	record.CreatedAt = now
 	record.UpdatedAt = now
+	record.Metadata = cloneMetadata(record.Metadata)
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if _, ok := s.records[record.ID]; ok {
@@ -133,7 +136,7 @@ func (s *InMemoryStore) Update(id string, update Update) (Record, error) {
 	if err := ValidateID(id); err != nil {
 		return Record{}, err
 	}
-	if update.DisplayName == nil {
+	if update.DisplayName == nil && update.Metadata == nil {
 		return Record{}, ErrTenantUpdateRequired
 	}
 	s.mu.Lock()
@@ -144,6 +147,9 @@ func (s *InMemoryStore) Update(id string, update Update) (Record, error) {
 	}
 	if update.DisplayName != nil {
 		record.DisplayName = strings.TrimSpace(*update.DisplayName)
+	}
+	if update.Metadata != nil {
+		record.Metadata = cloneMetadata(*update.Metadata)
 	}
 	record.UpdatedAt = time.Now().UTC()
 	s.records[id] = record
@@ -177,4 +183,15 @@ func (s *InMemoryStore) ListIDs() []string {
 	}
 	sort.Strings(ids)
 	return ids
+}
+
+func cloneMetadata(values map[string]string) map[string]string {
+	if values == nil {
+		return nil
+	}
+	clone := make(map[string]string, len(values))
+	for key, value := range values {
+		clone[key] = value
+	}
+	return clone
 }

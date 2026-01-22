@@ -37,6 +37,9 @@ func TestInMemoryStoreLifecycle(t *testing.T) {
 	created, err := store.Create(Record{
 		ID:          "tenant-a",
 		DisplayName: "Tenant A",
+		Metadata: map[string]string{
+			"region": "us-east",
+		},
 	})
 	if err != nil {
 		t.Fatalf("create: %v", err)
@@ -63,6 +66,9 @@ func TestInMemoryStoreLifecycle(t *testing.T) {
 	if fetched.DisplayName != "Tenant A" {
 		t.Fatalf("expected display name, got %q", fetched.DisplayName)
 	}
+	if fetched.Metadata["region"] != "us-east" {
+		t.Fatalf("expected metadata region, got %q", fetched.Metadata["region"])
+	}
 
 	newName := "Tenant Alpha"
 	updated, err := store.Update("tenant-a", Update{DisplayName: &newName})
@@ -71,6 +77,18 @@ func TestInMemoryStoreLifecycle(t *testing.T) {
 	}
 	if updated.DisplayName != "Tenant Alpha" {
 		t.Fatalf("expected updated name, got %q", updated.DisplayName)
+	}
+	if updated.Metadata["region"] != "us-east" {
+		t.Fatalf("expected metadata preserved, got %q", updated.Metadata["region"])
+	}
+
+	updatedMetadata := map[string]string{"tier": "gold"}
+	updated, err = store.Update("tenant-a", Update{Metadata: &updatedMetadata})
+	if err != nil {
+		t.Fatalf("update metadata: %v", err)
+	}
+	if updated.Metadata["tier"] != "gold" {
+		t.Fatalf("expected metadata tier, got %q", updated.Metadata["tier"])
 	}
 
 	if !store.Delete("tenant-a") {

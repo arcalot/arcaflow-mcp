@@ -8,8 +8,8 @@ Server mode needs persistent storage to survive restarts. Tenant records and
 tenant tokens require durable storage. Configure
 `auth.token_store_path` and `tenancy.tenant_store_path` to point at
 PersistentVolumeClaims so data survives restarts. Configure `audit.store_path`
-on a PersistentVolumeClaim to persist audit records. Plan PVCs for usage
-statistics once that backend is implemented.
+and `usage.store_path` on PersistentVolumeClaims to persist audit and usage
+records.
 - Tenant workspaces (`tenancy.workspace_root`) must be on shared storage for
   clustered deployments so each pod sees the same workspace contents.
 
@@ -29,3 +29,5 @@ Running multiple replicas requires additional coordination:
   wide enforcement, move these counters into shared storage.
 - Audit records are stored via `audit.store_path`. For multiple replicas, use a
   shared backend or ReadWriteMany PVC so all pods see the same audit history.
+- Usage statistics are stored via `usage.store_path`. For multiple replicas, use
+  shared storage to keep counts consistent across pods.

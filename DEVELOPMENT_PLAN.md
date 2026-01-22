@@ -1295,12 +1295,12 @@ Exit Criteria:
   - [DONE] Tokens remain valid after server restart (unless revoked)
   - [DONE] Tenant records remain available after server restart (2026-01-22)
 
-Awaiting Gate Approval: NO
+Awaiting Gate Approval: NO - Approved to proceed to Phase 2.9
 
 ---
 
 ### Phase 2.9: Persistence Foundations & Data Stores
-Status: Not Started  
+Status: COMPLETE (2026-01-22)  
 Gate Keeper: User approval to proceed to Phase 3
 
 Objectives:
@@ -1309,28 +1309,28 @@ Objectives:
 - Keep scope flexible for new persistence needs introduced by later phases
 
 Tasks:
-- [ ] Identify all state that requires persistence (current + new as phases add
-  features)
+- [DONE] Identify all state that requires persistence (current + new as phases add
+  features) (2026-01-22)
   - Outcome: Canonical inventory of persistent entities.
   - Requirements: Update this list whenever new server-mode state appears.
 
-- [ ] Implement persistent audit log storage and retention policies
+- [DONE] Implement persistent audit log storage and retention policies (2026-01-22)
   - Outcome: Durable, queryable audit logs with retention.
   - Requirements: Query by tenant/time/action, retention configuration, export.
 
-- [ ] Implement persistent usage statistics storage
+- [DONE] Implement persistent usage statistics storage (2026-01-22)
   - Outcome: Usage metrics survive restart and support reporting.
   - Requirements: Aggregation strategy, query endpoints updated as needed.
 
-- [ ] Implement persistent quota and workspace metadata storage
+- [DONE] Implement persistent quota and workspace metadata storage (2026-01-22)
   - Outcome: Quota enforcement survives restart and scales in clusters.
   - Requirements: Shared backend, clear error responses, audit integration.
 
-- [ ] Extend tenant persistence for future attributes
+- [DONE] Extend tenant persistence for future attributes (2026-01-22)
   - Outcome: Tenant metadata can grow without schema churn.
   - Requirements: Migration strategy, backward-compatible upgrades.
 
-- [ ] Add shared storage guidance for clustered deployments
+- [DONE] Add shared storage guidance for clustered deployments (2026-01-22)
   - Outcome: Multi-replica deployments have consistent state.
   - Requirements: Document PVCs, external DB options, and HA considerations.
 
@@ -1340,18 +1340,19 @@ Dependencies:
 - Storage backend decision(s) documented (SQLite, Postgres, external service)
 
 Exit Criteria:
-- [ ] Persistent storage implemented for all known server-mode state
-- [ ] Cluster-safe storage path defined for all persistent entities
-- [ ] Data migration and backup guidance documented
-- [ ] Tests cover persistence behavior and restart safety (>85% coverage)
-- [ ] Documentation updated for storage configuration and operations
-- [ ] Manual User Validation:
-  - [ ] Tenant records survive restart
-  - [ ] Tokens survive restart across cluster nodes
-  - [ ] Audit logs query across restarts
-  - [ ] Usage stats and quotas persist across restarts
+- [DONE] Persistent storage implemented for all known server-mode state (2026-01-22)
+- [DONE] Cluster-safe storage path defined for all persistent entities (2026-01-22)
+- [DONE] Data migration and backup guidance documented (2026-01-22)
+- [DONE] Tests cover persistence behavior and restart safety (>85% coverage)
+  (2026-01-22)
+- [DONE] Documentation updated for storage configuration and operations (2026-01-22)
+- [DONE] Manual User Validation:
+  - [DONE] Tenant records survive restart (2026-01-22)
+  - [DONE] Tokens survive restart across cluster nodes (2026-01-22)
+  - [DONE] Audit logs query across restarts (2026-01-22)
+  - [DONE] Usage stats and quotas persist across restarts (2026-01-22)
 
-Awaiting Gate Approval: NO
+Awaiting Gate Approval: YES
 
 ---
 

@@ -650,6 +650,7 @@ func (s *Server) requireTenantContext(
 				)
 				return nil, "", false
 			}
+			s.usageStore.SetWorkspaceBytes(tenantID, workspaceBytes)
 		}
 		requestCount := s.usageStore.Get(tenantID).RequestCount
 		if err := s.quota.Check(workspaceBytes, requestCount); err != nil {

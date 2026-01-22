@@ -14,7 +14,13 @@ func TestFileStorePersistsTenants(t *testing.T) {
 	if err != nil {
 		t.Fatalf("create store: %v", err)
 	}
-	created, err := store.Create(Record{ID: "tenant-a", DisplayName: "Tenant A"})
+	created, err := store.Create(Record{
+		ID:          "tenant-a",
+		DisplayName: "Tenant A",
+		Metadata: map[string]string{
+			"tier": "gold",
+		},
+	})
 	if err != nil {
 		t.Fatalf("create tenant: %v", err)
 	}
@@ -26,8 +32,12 @@ func TestFileStorePersistsTenants(t *testing.T) {
 	if err != nil {
 		t.Fatalf("reload store: %v", err)
 	}
-	if _, ok := loaded.Get("tenant-a"); !ok {
+	tenant, ok := loaded.Get("tenant-a")
+	if !ok {
 		t.Fatalf("expected tenant to persist")
+	}
+	if tenant.Metadata["tier"] != "gold" {
+		t.Fatalf("expected metadata tier, got %q", tenant.Metadata["tier"])
 	}
 }
 
@@ -76,12 +86,19 @@ func TestFileStoreUpdateTrimmed(t *testing.T) {
 		t.Fatalf("create tenant: %v", err)
 	}
 	name := "  Tenant A  "
-	updated, err := store.Update("tenant-a", Update{DisplayName: &name})
+	metadata := map[string]string{"owner": "team-a"}
+	updated, err := store.Update("tenant-a", Update{
+		DisplayName: &name,
+		Metadata:    &metadata,
+	})
 	if err != nil {
 		t.Fatalf("update tenant: %v", err)
 	}
 	if updated.DisplayName != "Tenant A" {
 		t.Fatalf("expected trimmed name, got %q", updated.DisplayName)
+	}
+	if updated.Metadata["owner"] != "team-a" {
+		t.Fatalf("expected metadata owner, got %q", updated.Metadata["owner"])
 	}
 }
 

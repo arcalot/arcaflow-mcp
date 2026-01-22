@@ -8,6 +8,7 @@ func TestInMemoryUsageStoreRecords(t *testing.T) {
 	store.RecordRequest("tenant-a")
 	store.RecordRateLimitViolation("tenant-a")
 	store.RecordAuditEvent("tenant-a")
+	store.SetWorkspaceBytes("tenant-a", 128)
 
 	usage := store.Get("tenant-a")
 	if usage.TenantID != "tenant-a" {
@@ -21,6 +22,12 @@ func TestInMemoryUsageStoreRecords(t *testing.T) {
 	}
 	if usage.AuditEvents != 1 {
 		t.Fatalf("expected audit_events 1, got %d", usage.AuditEvents)
+	}
+	if usage.WorkspaceBytes != 128 {
+		t.Fatalf(
+			"expected workspace_bytes 128, got %d",
+			usage.WorkspaceBytes,
+		)
 	}
 }
 
@@ -55,6 +62,7 @@ func TestInMemoryUsageStoreNilSafety(t *testing.T) {
 	store.RecordRequest("tenant-a")
 	store.RecordRateLimitViolation("tenant-a")
 	store.RecordAuditEvent("tenant-a")
+	store.SetWorkspaceBytes("tenant-a", 55)
 	usage := store.Get("tenant-a")
 	if usage.TenantID != "tenant-a" {
 		t.Fatalf("expected tenant-a, got %q", usage.TenantID)

@@ -42,7 +42,8 @@ Server mode requires bearer tokens for all MCP and SSE endpoints. The admin
 token is configured via `ARCAFLOW_MCP_ADMIN_TOKEN` (or `auth.admin_token` in the
 config file) and is used to mint tenant tokens. Tenant tokens are persisted to
 the file defined by `ARCAFLOW_MCP_TOKEN_STORE_PATH` (or `auth.token_store_path`),
-and tenant records are persisted via `tenancy.tenant_store_path`.
+tenant records are persisted via `tenancy.tenant_store_path`, and usage
+statistics are persisted via `usage.store_path`.
 
 1. Create a tenant record using the admin endpoint.
 2. Create a tenant token scoped to that tenant.
@@ -53,7 +54,7 @@ Tenant admin example:
 ```
 curl -H "Authorization: Bearer $ARCAFLOW_MCP_ADMIN_TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"tenant_id":"tenant-a","display_name":"Tenant A"}' \
+  -d '{"tenant_id":"tenant-a","display_name":"Tenant A","metadata":{"team":"platform"}}' \
   http://127.0.0.1:8080/admin/tenants
 ```
 
@@ -132,8 +133,7 @@ Server mode requires persistent storage to survive restarts:
   token store file configured by `auth.token_store_path`.
 - Audit records are stored in the file configured by `audit.store_path`, with
   optional retention via `audit.retention_days`.
-- Usage statistics are persisted in memory today and require a durable backend
-  for restart safety.
+- Usage statistics are stored in the file configured by `usage.store_path`.
 
 ### Example flow
 

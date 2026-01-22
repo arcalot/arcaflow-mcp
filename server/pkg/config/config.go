@@ -22,6 +22,7 @@ type Config struct {
 	RateLimiting RateLimitConfig `yaml:"rate_limit"`
 	Tenancy      TenancyConfig   `yaml:"tenancy"`
 	Audit        AuditConfig     `yaml:"audit"`
+	Usage        UsageConfig     `yaml:"usage"`
 }
 
 // LoggingConfig controls structured logging behavior.
@@ -51,6 +52,11 @@ type AuditConfig struct {
 	RetentionDays int    `yaml:"retention_days"`
 }
 
+// UsageConfig controls usage statistics persistence.
+type UsageConfig struct {
+	StorePath string `yaml:"store_path"`
+}
+
 // TenancyConfig controls per-tenant isolation settings.
 type TenancyConfig struct {
 	WorkspaceRoot         string `yaml:"workspace_root"`
@@ -67,6 +73,7 @@ func Default() Config {
 	tokenStorePath := filepath.Join(defaultDataDir, "tokens.json")
 	tenantStorePath := filepath.Join(defaultDataDir, "tenants.json")
 	auditStorePath := filepath.Join(defaultDataDir, "audit.json")
+	usageStorePath := filepath.Join(defaultDataDir, "usage.json")
 	return Config{
 		Mode:    "local",
 		Address: "127.0.0.1:8080",
@@ -93,6 +100,9 @@ func Default() Config {
 		Audit: AuditConfig{
 			StorePath:     auditStorePath,
 			RetentionDays: 30,
+		},
+		Usage: UsageConfig{
+			StorePath: usageStorePath,
 		},
 	}
 }
@@ -178,6 +188,9 @@ func applyEnvOverrides(cfg *Config) {
 	if value, ok := os.LookupEnv("ARCAFLOW_MCP_AUDIT_RETENTION_DAYS"); ok && value != "" {
 		cfg.Audit.RetentionDays, _ = strconv.Atoi(value)
 	}
+	if value, ok := os.LookupEnv("ARCAFLOW_MCP_USAGE_STORE_PATH"); ok && value != "" {
+		cfg.Usage.StorePath = value
+	}
 }
 
 // Validate checks required fields and constraints.
@@ -233,6 +246,9 @@ func Validate(cfg Config) error {
 		}
 		if cfg.Audit.StorePath == "" {
 			return errors.New("audit store_path must be set in server mode")
+		}
+		if cfg.Usage.StorePath == "" {
+			return errors.New("usage store_path must be set in server mode")
 		}
 		if cfg.Audit.RetentionDays < 0 {
 			return errors.New("audit retention_days must be >= 0")

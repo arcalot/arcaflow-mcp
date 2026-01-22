@@ -127,6 +127,10 @@ func run() error {
 		if err != nil {
 			return err
 		}
+		usageStore, err := tenant.NewFileUsageStore(cfg.Usage.StorePath)
+		if err != nil {
+			return err
+		}
 		requestLimiter := tenant.NewLimiter(cfg.Tenancy.MaxConcurrentRequests)
 		sessionLimiter := tenant.NewLimiter(cfg.Tenancy.MaxSessions)
 		var limiter *ratelimit.Limiter
@@ -155,6 +159,7 @@ func run() error {
 				RequestLimiter:   requestLimiter,
 				SessionLimiter:   sessionLimiter,
 				TenantStore:      tenantStore,
+				UsageStore:       usageStore,
 				AuditStore:       auditStore,
 				Quota: tenant.Quota{
 					MaxWorkspaceBytes: cfg.Tenancy.MaxWorkspaceBytes,

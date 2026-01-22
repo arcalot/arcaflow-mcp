@@ -30,6 +30,8 @@ tenancy:
 audit:
   store_path: "/var/lib/arcaflow-mcp/audit.json"
   retention_days: 30
+usage:
+  store_path: "/var/lib/arcaflow-mcp/usage.json"
 ```
 
 Tenant IDs are required when minting tokens via
@@ -58,12 +60,13 @@ Tenant IDs must match `[A-Za-z0-9_.-]` and be 1-128 characters.
 - `ARCAFLOW_MCP_TENANT_MAX_SESSIONS` (per-tenant SSE sessions)
 - `ARCAFLOW_MCP_AUDIT_STORE_PATH` (audit store file path)
 - `ARCAFLOW_MCP_AUDIT_RETENTION_DAYS` (audit retention in days)
+- `ARCAFLOW_MCP_USAGE_STORE_PATH` (usage store file path)
 
 ### Authentication notes
 
 Server mode requires an admin token to mint tenant tokens. Local mode bypasses
 authentication entirely. Server mode also requires `auth.token_store_path` and
 `tenancy.tenant_store_path` so tenant tokens and tenant records persist across
-restarts, plus `audit.store_path` for audit persistence. Rate limiting is
-applied per tenant in server mode with progressive backoff. Tenancy settings
-control workspace isolation and limits.
+restarts, plus `audit.store_path` and `usage.store_path` for audit and usage
+retention. Rate limiting is applied per tenant in server mode with progressive
+backoff. Tenancy settings control workspace isolation and limits.

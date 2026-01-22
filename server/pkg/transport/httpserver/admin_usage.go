@@ -103,6 +103,7 @@ func (s *Server) handleAdminTenantsUsage(w http.ResponseWriter, r *http.Request)
 			)
 			return
 		}
+		s.usageStore.SetWorkspaceBytes(record.ID, workspaceBytes)
 		usage.ActiveSessions = sessionCounts[record.ID]
 		usage.WorkspaceBytes = workspaceBytes
 		usages = append(usages, usage)
@@ -218,6 +219,7 @@ func (s *Server) handleAdminTenantUsage(w http.ResponseWriter, r *http.Request) 
 		)
 		return
 	}
+	s.usageStore.SetWorkspaceBytes(tenantID, workspaceBytes)
 	usage.ActiveSessions = s.sessions.activeSessions(tenantID)
 	usage.WorkspaceBytes = workspaceBytes
 	writeJSONResponse(w, http.StatusOK, tenantUsageResponse{Usage: usage})

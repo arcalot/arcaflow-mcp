@@ -9,9 +9,8 @@ tokens require durable storage. Configure `auth.token_store_path` and
 `tenancy.tenant_store_path` to point at volume mounts so tenant data survives
 restarts. If running multiple containers behind a load balancer, the tenant and
 token stores must use shared storage so data remains consistent across
-instances. Configure `audit.store_path` on a volume mount to persist audit
-records. Plan to mount persistent storage for usage statistics once that backend
-is implemented.
+instances. Configure `audit.store_path` and `usage.store_path` on volume mounts
+to persist audit and usage records.
 Tenant workspaces (`tenancy.workspace_root`) must be on shared storage when
 running multiple containers behind a load balancer.
 

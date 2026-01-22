@@ -21,6 +21,7 @@ type UsageStore interface {
 	RecordRequest(tenantID string)
 	RecordRateLimitViolation(tenantID string)
 	RecordAuditEvent(tenantID string)
+	SetWorkspaceBytes(tenantID string, bytes int64)
 	Get(tenantID string) UsageStats
 	List() []UsageStats
 }
@@ -74,6 +75,19 @@ func (s *InMemoryUsageStore) RecordAuditEvent(tenantID string) {
 	usage := s.usages[tenantID]
 	usage.TenantID = tenantID
 	usage.AuditEvents++
+	s.usages[tenantID] = usage
+}
+
+// SetWorkspaceBytes records the latest workspace size for a tenant.
+func (s *InMemoryUsageStore) SetWorkspaceBytes(tenantID string, bytes int64) {
+	if s == nil || tenantID == "" {
+		return
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	usage := s.usages[tenantID]
+	usage.TenantID = tenantID
+	usage.WorkspaceBytes = bytes
 	s.usages[tenantID] = usage
 }
 
