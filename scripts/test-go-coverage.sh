@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Run Go unit tests for the server module.
+# Run Go tests with coverage for the server module.
 set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -16,4 +16,4 @@ cd "${server_dir}"
 mkdir -p "${cache_root}" "${mod_cache}"
 export GOCACHE="${cache_root}"
 export GOMODCACHE="${mod_cache}"
-go test ./...
+go test ./... -coverprofile="${server_dir}/coverage.out"

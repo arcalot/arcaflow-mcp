@@ -14,6 +14,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/arcalot/arcaflow-mcp/server/pkg/audit"
 	"github.com/arcalot/arcaflow-mcp/server/pkg/auth"
 	"github.com/arcalot/arcaflow-mcp/server/pkg/config"
 	"github.com/arcalot/arcaflow-mcp/server/pkg/protocol"
@@ -101,13 +102,28 @@ func run() error {
 			},
 		)
 		registerDefaultTools(handler)
-		authManager, err := auth.NewManager(cfg.Auth.AdminToken, nil)
+		tokenStore, err := auth.NewFileStore(cfg.Auth.TokenStorePath)
+		if err != nil {
+			return err
+		}
+		authManager, err := auth.NewManager(cfg.Auth.AdminToken, tokenStore)
+		if err != nil {
+			return err
+		}
+		auditStore, err := audit.NewFileStore(
+			cfg.Audit.StorePath,
+			cfg.Audit.RetentionDays,
+		)
 		if err != nil {
 			return err
 		}
 		workspaceManager, err := tenant.NewWorkspaceManager(
 			cfg.Tenancy.WorkspaceRoot,
 		)
+		if err != nil {
+			return err
+		}
+		tenantStore, err := tenant.NewFileStore(cfg.Tenancy.TenantStorePath)
 		if err != nil {
 			return err
 		}
@@ -138,6 +154,12 @@ func run() error {
 				WorkspaceManager: workspaceManager,
 				RequestLimiter:   requestLimiter,
 				SessionLimiter:   sessionLimiter,
+				TenantStore:      tenantStore,
+				AuditStore:       auditStore,
+				Quota: tenant.Quota{
+					MaxWorkspaceBytes: cfg.Tenancy.MaxWorkspaceBytes,
+					MaxRequests:       cfg.Tenancy.MaxRequestCount,
+				},
 			},
 			handler,
 			logger.With("component", "http"),

@@ -11,6 +11,8 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+const defaultDataDir = "/var/lib/arcaflow-mcp"
+
 // Config is the root configuration for the MCP server.
 type Config struct {
 	Mode         string          `yaml:"mode"`
@@ -19,6 +21,7 @@ type Config struct {
 	Auth         AuthConfig      `yaml:"auth"`
 	RateLimiting RateLimitConfig `yaml:"rate_limit"`
 	Tenancy      TenancyConfig   `yaml:"tenancy"`
+	Audit        AuditConfig     `yaml:"audit"`
 }
 
 // LoggingConfig controls structured logging behavior.
@@ -28,7 +31,8 @@ type LoggingConfig struct {
 
 // AuthConfig controls authentication for server mode.
 type AuthConfig struct {
-	AdminToken string `yaml:"admin_token"`
+	AdminToken     string `yaml:"admin_token"`
+	TokenStorePath string `yaml:"token_store_path"`
 }
 
 // RateLimitConfig controls server mode rate limiting.
@@ -41,21 +45,35 @@ type RateLimitConfig struct {
 	BackoffMaxSeconds  int  `yaml:"backoff_max_seconds"`
 }
 
+// AuditConfig controls audit persistence.
+type AuditConfig struct {
+	StorePath     string `yaml:"store_path"`
+	RetentionDays int    `yaml:"retention_days"`
+}
+
 // TenancyConfig controls per-tenant isolation settings.
 type TenancyConfig struct {
 	WorkspaceRoot         string `yaml:"workspace_root"`
+	TenantStorePath       string `yaml:"tenant_store_path"`
+	MaxWorkspaceBytes     int64  `yaml:"max_workspace_bytes"`
+	MaxRequestCount       int64  `yaml:"max_request_count"`
 	MaxConcurrentRequests int    `yaml:"max_concurrent_requests"`
 	MaxSessions           int    `yaml:"max_sessions"`
 }
 
 // Default returns a baseline configuration.
 func Default() Config {
-	workspaceRoot := filepath.Join(os.TempDir(), "arcaflow-mcp", "tenants")
+	workspaceRoot := filepath.Join(defaultDataDir, "tenants")
+	tokenStorePath := filepath.Join(defaultDataDir, "tokens.json")
+	tenantStorePath := filepath.Join(defaultDataDir, "tenants.json")
+	auditStorePath := filepath.Join(defaultDataDir, "audit.json")
 	return Config{
 		Mode:    "local",
 		Address: "127.0.0.1:8080",
 		Logging: LoggingConfig{Level: "info"},
-		Auth:    AuthConfig{},
+		Auth: AuthConfig{
+			TokenStorePath: tokenStorePath,
+		},
 		RateLimiting: RateLimitConfig{
 			Enabled:            true,
 			RequestsPerMinute:  60,
@@ -66,8 +84,15 @@ func Default() Config {
 		},
 		Tenancy: TenancyConfig{
 			WorkspaceRoot:         workspaceRoot,
+			TenantStorePath:       tenantStorePath,
+			MaxWorkspaceBytes:     0,
+			MaxRequestCount:       0,
 			MaxConcurrentRequests: 10,
 			MaxSessions:           4,
+		},
+		Audit: AuditConfig{
+			StorePath:     auditStorePath,
+			RetentionDays: 30,
 		},
 	}
 }
@@ -108,6 +133,9 @@ func applyEnvOverrides(cfg *Config) {
 	if value, ok := os.LookupEnv("ARCAFLOW_MCP_ADMIN_TOKEN"); ok && value != "" {
 		cfg.Auth.AdminToken = value
 	}
+	if value, ok := os.LookupEnv("ARCAFLOW_MCP_TOKEN_STORE_PATH"); ok && value != "" {
+		cfg.Auth.TokenStorePath = value
+	}
 	if value, ok := os.LookupEnv("ARCAFLOW_MCP_RATE_LIMIT_ENABLED"); ok {
 		cfg.RateLimiting.Enabled = value == "1" || value == "true"
 	}
@@ -129,11 +157,26 @@ func applyEnvOverrides(cfg *Config) {
 	if value, ok := os.LookupEnv("ARCAFLOW_MCP_TENANT_WORKSPACE_ROOT"); ok && value != "" {
 		cfg.Tenancy.WorkspaceRoot = value
 	}
+	if value, ok := os.LookupEnv("ARCAFLOW_MCP_TENANT_STORE_PATH"); ok && value != "" {
+		cfg.Tenancy.TenantStorePath = value
+	}
+	if value, ok := os.LookupEnv("ARCAFLOW_MCP_TENANT_MAX_WORKSPACE_BYTES"); ok && value != "" {
+		cfg.Tenancy.MaxWorkspaceBytes, _ = strconv.ParseInt(value, 10, 64)
+	}
+	if value, ok := os.LookupEnv("ARCAFLOW_MCP_TENANT_MAX_REQUESTS"); ok && value != "" {
+		cfg.Tenancy.MaxRequestCount, _ = strconv.ParseInt(value, 10, 64)
+	}
 	if value, ok := os.LookupEnv("ARCAFLOW_MCP_TENANT_MAX_CONCURRENT"); ok && value != "" {
 		cfg.Tenancy.MaxConcurrentRequests, _ = strconv.Atoi(value)
 	}
 	if value, ok := os.LookupEnv("ARCAFLOW_MCP_TENANT_MAX_SESSIONS"); ok && value != "" {
 		cfg.Tenancy.MaxSessions, _ = strconv.Atoi(value)
+	}
+	if value, ok := os.LookupEnv("ARCAFLOW_MCP_AUDIT_STORE_PATH"); ok && value != "" {
+		cfg.Audit.StorePath = value
+	}
+	if value, ok := os.LookupEnv("ARCAFLOW_MCP_AUDIT_RETENTION_DAYS"); ok && value != "" {
+		cfg.Audit.RetentionDays, _ = strconv.Atoi(value)
 	}
 }
 
@@ -151,6 +194,9 @@ func Validate(cfg Config) error {
 
 	if cfg.Mode == "server" && cfg.Auth.AdminToken == "" {
 		return errors.New("admin token must be set in server mode")
+	}
+	if cfg.Mode == "server" && cfg.Auth.TokenStorePath == "" {
+		return errors.New("token store path must be set in server mode")
 	}
 	if cfg.Mode == "server" && cfg.RateLimiting.Enabled {
 		if cfg.RateLimiting.RequestsPerMinute <= 0 {
@@ -181,6 +227,21 @@ func Validate(cfg Config) error {
 	if cfg.Mode == "server" {
 		if cfg.Tenancy.WorkspaceRoot == "" {
 			return errors.New("tenancy workspace_root must be set in server mode")
+		}
+		if cfg.Tenancy.TenantStorePath == "" {
+			return errors.New("tenancy tenant_store_path must be set in server mode")
+		}
+		if cfg.Audit.StorePath == "" {
+			return errors.New("audit store_path must be set in server mode")
+		}
+		if cfg.Audit.RetentionDays < 0 {
+			return errors.New("audit retention_days must be >= 0")
+		}
+		if cfg.Tenancy.MaxWorkspaceBytes < 0 {
+			return errors.New("tenancy max_workspace_bytes must be >= 0")
+		}
+		if cfg.Tenancy.MaxRequestCount < 0 {
+			return errors.New("tenancy max_request_count must be >= 0")
 		}
 		if cfg.Tenancy.MaxConcurrentRequests < 0 {
 			return errors.New("tenancy max_concurrent_requests must be >= 0")

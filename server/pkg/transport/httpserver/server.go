@@ -16,6 +16,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/arcalot/arcaflow-mcp/server/pkg/audit"
 	"github.com/arcalot/arcaflow-mcp/server/pkg/auth"
 	"github.com/arcalot/arcaflow-mcp/server/pkg/protocol"
 	"github.com/arcalot/arcaflow-mcp/server/pkg/ratelimit"
@@ -44,6 +45,10 @@ type Server struct {
 	auditLogger      *slog.Logger
 	workspaceManager *tenant.WorkspaceManager
 	requestLimiter   *tenant.Limiter
+	tenantStore      tenant.Store
+	usageStore       tenant.UsageStore
+	auditStore       audit.Store
+	quota            tenant.Quota
 }
 
 // Config holds HTTP server configuration for MCP transport.
@@ -59,6 +64,14 @@ type Config struct {
 	RequestLimiter *tenant.Limiter
 	// SessionLimiter enforces per-tenant SSE session limits.
 	SessionLimiter *tenant.Limiter
+	// TenantStore manages tenant records for admin operations.
+	TenantStore tenant.Store
+	// UsageStore records per-tenant usage metrics.
+	UsageStore tenant.UsageStore
+	// AuditStore persists audit records.
+	AuditStore audit.Store
+	// Quota defines per-tenant resource limits.
+	Quota tenant.Quota
 }
 
 // NewServer constructs a new HTTP/SSE transport server.
@@ -76,6 +89,12 @@ func NewServer(
 			Version: version.Current(),
 		})
 	}
+	if config.TenantStore == nil {
+		config.TenantStore = tenant.NewInMemoryStore()
+	}
+	if config.UsageStore == nil {
+		config.UsageStore = tenant.NewInMemoryUsageStore()
+	}
 
 	mux := http.NewServeMux()
 	server := &Server{
@@ -86,6 +105,10 @@ func NewServer(
 		auditLogger:      logger.With("component", "audit"),
 		workspaceManager: config.WorkspaceManager,
 		requestLimiter:   config.RequestLimiter,
+		tenantStore:      config.TenantStore,
+		usageStore:       config.UsageStore,
+		auditStore:       config.AuditStore,
+		quota:            config.Quota,
 		sessions: &sessionStore{
 			items:   make(map[string]map[string]*sseSession),
 			limiter: config.SessionLimiter,
@@ -93,8 +116,11 @@ func NewServer(
 	}
 	mux.HandleFunc("/mcp", server.handleMCPPost)
 	mux.HandleFunc("/mcp/events", server.handleMCPSSE)
-	mux.HandleFunc("/admin/tokens", server.handleAdminTokens)
-	mux.HandleFunc("/admin/tokens/", server.handleAdminToken)
+	mux.HandleFunc("/admin/tenants", server.handleAdminTenants)
+	mux.HandleFunc("/admin/tenants/", server.handleAdminTenant)
+	mux.HandleFunc("/admin/usage/tenants", server.handleAdminTenantsUsage)
+	mux.HandleFunc("/admin/usage/tenants/", server.handleAdminTenantUsage)
+	mux.HandleFunc("/admin/audit", server.handleAdminAudit)
 	mux.HandleFunc("/healthz", handleHealthz)
 
 	httpServer := &http.Server{
@@ -343,144 +369,6 @@ func (s *Server) handleMCPSSE(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// handleAdminTokens creates tenant tokens via POST /admin/tokens.
-func (s *Server) handleAdminTokens(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-	request, ok := s.requireAdmin(w, r)
-	if !ok {
-		return
-	}
-	if !s.requireRateLimit(w, request) {
-		return
-	}
-	request, tenantID, ok := s.requireTenantContext(
-		w,
-		request,
-		"admin_token_create",
-	)
-	if !ok {
-		return
-	}
-	release, ok := s.acquireRequestSlot(
-		w,
-		request,
-		tenantID,
-		"admin_token_create",
-	)
-	if !ok {
-		return
-	}
-	defer release()
-
-	payload, err := parseTokenRequest(request)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		s.auditLog(
-			request,
-			"admin_token_create",
-			"error",
-			http.StatusBadRequest,
-			err,
-		)
-		return
-	}
-
-	info, err := s.authManager.CreateToken(payload.TenantID, payload.ExpiresAt)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		s.auditLog(
-			request,
-			"admin_token_create",
-			"error",
-			http.StatusBadRequest,
-			err,
-		)
-		return
-	}
-
-	writeJSON(w, http.StatusCreated, tokenResponse{
-		Token:     info.Token,
-		TenantID:  info.TenantID,
-		CreatedAt: info.CreatedAt,
-		ExpiresAt: info.ExpiresAt,
-	})
-	s.auditLog(
-		request,
-		"admin_token_create",
-		"success",
-		http.StatusCreated,
-		nil,
-	)
-}
-
-// handleAdminToken revokes a specific token via DELETE /admin/tokens/{token}.
-func (s *Server) handleAdminToken(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodDelete {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-	request, ok := s.requireAdmin(w, r)
-	if !ok {
-		return
-	}
-	if !s.requireRateLimit(w, request) {
-		return
-	}
-	request, tenantID, ok := s.requireTenantContext(
-		w,
-		request,
-		"admin_token_revoke",
-	)
-	if !ok {
-		return
-	}
-	release, ok := s.acquireRequestSlot(
-		w,
-		request,
-		tenantID,
-		"admin_token_revoke",
-	)
-	if !ok {
-		return
-	}
-	defer release()
-
-	token := strings.TrimPrefix(request.URL.Path, "/admin/tokens/")
-	if token == "" {
-		http.Error(w, "token required", http.StatusBadRequest)
-		s.auditLog(
-			request,
-			"admin_token_revoke",
-			"error",
-			http.StatusBadRequest,
-			errors.New("missing token"),
-		)
-		return
-	}
-	if !s.authManager.RevokeToken(token) {
-		http.Error(w, "token not found", http.StatusNotFound)
-		s.auditLog(
-			request,
-			"admin_token_revoke",
-			"error",
-			http.StatusNotFound,
-			errors.New("token not found"),
-		)
-		return
-	}
-	w.WriteHeader(http.StatusNoContent)
-	s.auditLog(
-		request,
-		"admin_token_revoke",
-		"success",
-		http.StatusNoContent,
-		nil,
-	)
-}
-
 func handleHealthz(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -553,6 +441,22 @@ func (s *sessionStore) hasSessions(tenantID string) bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return len(s.items[tenantID]) > 0
+}
+
+func (s *sessionStore) activeSessions(tenantID string) int {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return len(s.items[tenantID])
+}
+
+func (s *sessionStore) activeSessionsAll() map[string]int {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	counts := make(map[string]int, len(s.items))
+	for tenantID, sessions := range s.items {
+		counts[tenantID] = len(sessions)
+	}
+	return counts
 }
 
 func (s *sessionStore) send(tenantID, id string, payload []byte) {
@@ -659,6 +563,9 @@ func (s *Server) requireRateLimit(w http.ResponseWriter, r *http.Request) bool {
 	decision := s.rateLimiter.Allow(tenantID)
 	applyRateLimitHeaders(w, s.rateLimiter, decision)
 	if !decision.Allowed {
+		if s.usageStore != nil {
+			s.usageStore.RecordRateLimitViolation(tenantID)
+		}
 		retryAfter := int(time.Until(decision.ResetAt).Seconds())
 		if retryAfter < 1 {
 			retryAfter = 1
@@ -716,6 +623,49 @@ func (s *Server) requireTenantContext(
 			err,
 		)
 		return nil, "", false
+	}
+	if s.quota.MaxWorkspaceBytes > 0 || s.quota.MaxRequests > 0 {
+		if s.usageStore == nil {
+			http.Error(w, "usage store not configured", http.StatusServiceUnavailable)
+			s.auditLog(
+				r,
+				action,
+				"error",
+				http.StatusServiceUnavailable,
+				errors.New("usage store not configured"),
+			)
+			return nil, "", false
+		}
+		workspaceBytes := int64(0)
+		if s.quota.MaxWorkspaceBytes > 0 {
+			workspaceBytes, err = tenant.WorkspaceUsage(workspace)
+			if err != nil {
+				http.Error(w, "tenant workspace unavailable", http.StatusInternalServerError)
+				s.auditLog(
+					r,
+					action,
+					"error",
+					http.StatusInternalServerError,
+					err,
+				)
+				return nil, "", false
+			}
+		}
+		requestCount := s.usageStore.Get(tenantID).RequestCount
+		if err := s.quota.Check(workspaceBytes, requestCount); err != nil {
+			status := http.StatusForbidden
+			if errors.Is(err, tenant.ErrRequestQuotaExceeded) {
+				status = http.StatusTooManyRequests
+			}
+			http.Error(w, err.Error(), status)
+			s.auditLog(r, action, "denied", status, err)
+			return nil, "", false
+		}
+		if s.usageStore != nil {
+			s.usageStore.RecordRequest(tenantID)
+		}
+	} else if s.usageStore != nil {
+		s.usageStore.RecordRequest(tenantID)
 	}
 	ctx := tenant.WithWorkspace(r.Context(), workspace)
 	return r.WithContext(ctx), tenantID, true
@@ -813,7 +763,7 @@ func (s *Server) auditLog(
 	status int,
 	err error,
 ) {
-	if s.auditLogger == nil {
+	if s.auditLogger == nil && s.auditStore == nil {
 		return
 	}
 	fields := []any{
@@ -826,9 +776,29 @@ func (s *Server) auditLog(
 	}
 	if tenantID, ok := auth.TenantIDFromContext(r.Context()); ok {
 		fields = append(fields, "tenant_id", tenantID)
+		if s.usageStore != nil {
+			s.usageStore.RecordAuditEvent(tenantID)
+		}
 	}
 	if err != nil {
 		fields = append(fields, "error", err.Error())
+	}
+	if s.auditStore != nil {
+		record := audit.Record{
+			Timestamp: time.Now().UTC(),
+			Action:    action,
+			Outcome:   outcome,
+			Status:    status,
+			Method:    r.Method,
+			Path:      r.URL.Path,
+		}
+		if tenantID, ok := auth.TenantIDFromContext(r.Context()); ok {
+			record.TenantID = tenantID
+		}
+		if err != nil {
+			record.Error = err.Error()
+		}
+		_ = s.auditStore.Add(record)
 	}
 	s.auditLogger.Info("audit", fields...)
 }
@@ -846,51 +816,7 @@ func applyRateLimitHeaders(
 	w.Header().Set("RateLimit-Reset", strconv.FormatInt(decision.ResetAt.Unix(), 10))
 }
 
-type tokenRequest struct {
-	TenantID  string     `json:"tenant_id"`
-	ExpiresAt *time.Time `json:"expires_at,omitempty"`
-}
-
-type tokenResponse struct {
-	Token     string     `json:"token"`
-	TenantID  string     `json:"tenant_id"`
-	CreatedAt time.Time  `json:"created_at"`
-	ExpiresAt *time.Time `json:"expires_at,omitempty"`
-}
-
-func parseTokenRequest(r *http.Request) (tokenRequest, error) {
-	payload, err := readJSONPayload(r, 1<<20)
-	if err != nil {
-		return tokenRequest{}, err
-	}
-	if payload.TenantID == "" {
-		return tokenRequest{}, auth.ErrTenantRequired
-	}
-	return payload, nil
-}
-
-func readJSONPayload(r *http.Request, limit int64) (tokenRequest, error) {
-	if r.Body == nil {
-		return tokenRequest{}, errors.New("missing request body")
-	}
-	defer func() {
-		_ = r.Body.Close()
-	}()
-	data, err := io.ReadAll(io.LimitReader(r.Body, limit))
-	if err != nil {
-		return tokenRequest{}, err
-	}
-	if len(data) == 0 {
-		return tokenRequest{}, errors.New("empty request body")
-	}
-	var payload tokenRequest
-	if err := json.Unmarshal(data, &payload); err != nil {
-		return tokenRequest{}, err
-	}
-	return payload, nil
-}
-
-func writeJSON(w http.ResponseWriter, status int, payload tokenResponse) {
+func writeJSONResponse(w http.ResponseWriter, status int, payload any) {
 	data, err := json.Marshal(payload)
 	if err != nil {
 		http.Error(w, "failed to encode response", http.StatusInternalServerError)

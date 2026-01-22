@@ -58,6 +58,7 @@ coverage.xml
 *.cover
 .hypothesis/
 .pytest_cache/
+.poetry-cache/
 
 ### Translations
 *.mo
@@ -140,6 +141,7 @@ dmypy.json
 ### Logs and local artifacts
 *.log
 .gocache/
+.gomodcache/
 .ccache-tmp/
 server/arcaflow-mcp
 tmp/

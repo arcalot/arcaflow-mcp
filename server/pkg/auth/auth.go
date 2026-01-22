@@ -8,6 +8,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"sort"
 	"sync"
 	"time"
 )
@@ -42,6 +43,7 @@ type Store interface {
 	Get(token string) (TokenInfo, bool)
 	Create(tenantID string, expiresAt *time.Time) (TokenInfo, error)
 	Revoke(token string) bool
+	ListByTenant(tenantID string) []TokenInfo
 }
 
 // Manager handles authentication and admin token management.
@@ -116,6 +118,14 @@ func (m *Manager) RevokeToken(token string) bool {
 	return m.store.Revoke(token)
 }
 
+// ListTokens returns tokens scoped to a tenant.
+func (m *Manager) ListTokens(tenantID string) []TokenInfo {
+	if tenantID == "" {
+		return nil
+	}
+	return m.store.ListByTenant(tenantID)
+}
+
 // InMemoryStore keeps tokens in memory for local deployments.
 type InMemoryStore struct {
 	mu     sync.Mutex
@@ -167,6 +177,25 @@ func (s *InMemoryStore) Revoke(token string) bool {
 	}
 	delete(s.tokens, token)
 	return true
+}
+
+// ListByTenant returns token info for a tenant.
+func (s *InMemoryStore) ListByTenant(tenantID string) []TokenInfo {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	tokens := make([]TokenInfo, 0)
+	for _, info := range s.tokens {
+		if info.TenantID == tenantID {
+			tokens = append(tokens, info)
+		}
+	}
+	sort.Slice(tokens, func(i, j int) bool {
+		if tokens[i].CreatedAt.Equal(tokens[j].CreatedAt) {
+			return tokens[i].Token < tokens[j].Token
+		}
+		return tokens[i].CreatedAt.Before(tokens[j].CreatedAt)
+	})
+	return tokens
 }
 
 func newToken() (string, error) {

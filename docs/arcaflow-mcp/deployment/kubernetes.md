@@ -1,3 +1,31 @@
 ## Kubernetes deployment
 
 This section will document Kubernetes deployment patterns and manifests.
+
+### Persistence requirement
+
+Server mode needs persistent storage to survive restarts. Tenant records and
+tenant tokens require durable storage. Configure
+`auth.token_store_path` and `tenancy.tenant_store_path` to point at
+PersistentVolumeClaims so data survives restarts. Configure `audit.store_path`
+on a PersistentVolumeClaim to persist audit records. Plan PVCs for usage
+statistics once that backend is implemented.
+- Tenant workspaces (`tenancy.workspace_root`) must be on shared storage for
+  clustered deployments so each pod sees the same workspace contents.
+
+### Clustered deployment requirements
+
+Running multiple replicas requires additional coordination:
+
+- Tenant records are persisted via `tenancy.tenant_store_path`. Use a shared,
+  durable backend before scaling beyond a single replica.
+- SSE sessions are stored in-memory per pod. Clients must reach the same pod for
+  `/mcp/events` and subsequent `POST /mcp` requests; configure load balancing
+  with session affinity or stickiness.
+- Token persistence relies on `auth.token_store_path`. For multiple replicas,
+  the token store must point at shared storage (ReadWriteMany PVC or an external
+  token backend) so all pods see the same tokens.
+- Rate limiting and concurrency limits are enforced per instance. For cluster
+  wide enforcement, move these counters into shared storage.
+- Audit records are stored via `audit.store_path`. For multiple replicas, use a
+  shared backend or ReadWriteMany PVC so all pods see the same audit history.

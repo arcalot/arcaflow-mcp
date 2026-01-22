@@ -9,8 +9,18 @@ binding and relays responses when a session header is present.
 - `POST /mcp` handles JSON-RPC client-to-server messages (including `ping`)
 - `POST /mcp` returns `204 No Content` for notifications (no `id`)
 - `GET /mcp/events` streams server-to-client SSE events (`session`, `message`)
-- `POST /admin/tokens` creates tenant tokens (admin only)
-- `DELETE /admin/tokens/{token}` revokes tenant tokens (admin only)
+- `GET /admin/tenants` lists tenant records (admin only)
+- `POST /admin/tenants` creates tenant records (admin only)
+- `GET /admin/tenants/{tenant_id}` fetches a tenant record (admin only)
+- `PUT /admin/tenants/{tenant_id}` updates a tenant record (admin only)
+- `DELETE /admin/tenants/{tenant_id}` deletes a tenant record (admin only)
+- `GET /admin/tenants/{tenant_id}/tokens` lists tenant tokens (admin only)
+- `POST /admin/tenants/{tenant_id}/tokens` creates tenant tokens (admin only)
+- `DELETE /admin/tenants/{tenant_id}/tokens/{token}` revokes tenant tokens
+  (admin only)
+- `GET /admin/usage/tenants` lists tenant usage metrics (admin only)
+- `GET /admin/usage/tenants/{tenant_id}` fetches tenant usage metrics (admin only)
+- `GET /admin/audit` queries audit logs (admin only)
 - `GET /healthz` returns a simple health response
 
 ### Session binding
@@ -30,21 +40,56 @@ session header are rejected with `400 Bad Request`.
 
 Server mode requires bearer tokens for all MCP and SSE endpoints. The admin
 token is configured via `ARCAFLOW_MCP_ADMIN_TOKEN` (or `auth.admin_token` in the
-config file) and is used to mint tenant tokens.
+config file) and is used to mint tenant tokens. Tenant tokens are persisted to
+the file defined by `ARCAFLOW_MCP_TOKEN_STORE_PATH` (or `auth.token_store_path`),
+and tenant records are persisted via `tenancy.tenant_store_path`.
 
-1. Create a tenant token using the admin endpoint (tenant ID is required).
-2. Provide `Authorization: Bearer <token>` on `POST /mcp` and `GET /mcp/events`.
+1. Create a tenant record using the admin endpoint.
+2. Create a tenant token scoped to that tenant.
+3. Provide `Authorization: Bearer <token>` on `POST /mcp` and `GET /mcp/events`.
 
-Admin token example (tenant ID is required; not auto-generated):
+Tenant admin example:
 
 ```
 curl -H "Authorization: Bearer $ARCAFLOW_MCP_ADMIN_TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"tenant_id":"tenant-a"}' \
-  http://127.0.0.1:8080/admin/tokens
+  -d '{"tenant_id":"tenant-a","display_name":"Tenant A"}' \
+  http://127.0.0.1:8080/admin/tenants
 ```
 
-Tenant token example:
+Tenant token example (tenant must already exist):
+
+```
+curl -H "Authorization: Bearer $ARCAFLOW_MCP_ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{}' \
+  http://127.0.0.1:8080/admin/tenants/tenant-a/tokens
+```
+
+Tenant token list example:
+
+```
+curl -H "Authorization: Bearer $ARCAFLOW_MCP_ADMIN_TOKEN" \
+  http://127.0.0.1:8080/admin/tenants/tenant-a/tokens
+```
+
+Tenant usage example:
+
+```
+curl -H "Authorization: Bearer $ARCAFLOW_MCP_ADMIN_TOKEN" \
+  http://127.0.0.1:8080/admin/usage/tenants/tenant-a
+```
+
+Usage responses include `workspace_bytes` for current workspace size.
+
+Audit query example:
+
+```
+curl -H "Authorization: Bearer $ARCAFLOW_MCP_ADMIN_TOKEN" \
+  "http://127.0.0.1:8080/admin/audit?tenant_id=tenant-a&action=mcp_request&limit=50"
+```
+
+Tenant request example:
 
 ```
 curl -H "Authorization: Bearer <tenant-token>" \
@@ -76,6 +121,19 @@ events. Each audit entry includes `tenant_id`, `action`, `outcome`, `status`,
 
 Server mode creates a per-tenant workspace directory for isolation. Tenant
 requests are subject to configurable concurrency and SSE session limits.
+
+### Persistence requirement
+
+Server mode requires persistent storage to survive restarts:
+
+- Tenant records created via `/admin/tenants` are stored in the tenant store
+  file configured by `tenancy.tenant_store_path`.
+- Tenant tokens minted via `/admin/tenants/{tenant_id}/tokens` are stored in the
+  token store file configured by `auth.token_store_path`.
+- Audit records are stored in the file configured by `audit.store_path`, with
+  optional retention via `audit.retention_days`.
+- Usage statistics are persisted in memory today and require a durable backend
+  for restart safety.
 
 ### Example flow
 
@@ -118,4 +176,7 @@ tenant concurrency grow.
 ### Notes
 
 - Authentication is required in server mode and bypassed in local mode.
+- Tenant quotas apply when `tenancy.max_workspace_bytes` or
+  `tenancy.max_request_count` are set. Workspace limits return `403 Forbidden`;
+  request quotas return `429 Too Many Requests`.
 - Use local stdio mode for full MCP capabilities until HTTP/SSE is complete.

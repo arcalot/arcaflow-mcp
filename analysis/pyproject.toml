@@ -17,6 +17,7 @@ sqlalchemy = "==2.0.45"
 pytest = "==9.0.2"
 black = "==26.1.0"
 ruff = "==0.14.13"
+pytest-cov = "^7.0.0"
 
 [tool.black]
 line-length = 88

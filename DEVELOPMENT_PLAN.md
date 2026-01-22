@@ -1,7 +1,7 @@
 # Arcaflow MCP Server - Development Plan
 
-Version: 1.1.15  
-Last Updated: 2026-01-21  
+Version: 1.1.17  
+Last Updated: 2026-01-22  
 Language: Go for MCP server core, Python for analysis engine  
 Current Phase: Phase 2.75 - Admin Operations &
   Audit Persistence (In Progress)
@@ -1233,7 +1233,7 @@ Awaiting Gate Approval: NO - Approved to proceed to Phase 2.75
 ---
 
 ### Phase 2.75: Admin Operations & Audit Persistence
-Status: In Progress  
+Status: COMPLETE (2026-01-22)  
 Gate Keeper: User approval to proceed to Phase 3
 
 Objectives:
@@ -1244,27 +1244,31 @@ Objectives:
 - Ensure token data survives server restarts
 
 Tasks:
-- [ ] Implement tenant management admin endpoints (server mode)
+- [DONE] Implement tenant management admin endpoints (server mode) (2026-01-22)
   - Outcome: Admins can create, list, update, and delete tenant records.
   - Requirements: Validate tenant IDs, enforce admin auth, return structured
     JSON.
 
-- [ ] Add usage statistics endpoints (server mode)
+- [DONE] Add usage statistics endpoints (server mode) (2026-01-22)
   - Outcome: Admins can retrieve per-tenant usage metrics.
   - Requirements: Request counts, rate-limit violations, active sessions, and
     audit log totals per tenant.
 
-- [ ] Persist audit logs with query support
+- [DONE] Add tenant record persistence (2026-01-22)
+  - Outcome: Tenant lifecycle survives server restarts.
+  - Requirements: Durable storage, backup guidance, cluster-safe path.
+
+- [DONE] Persist audit logs with query support (2026-01-22)
   - Outcome: Durable audit trail with searchable records.
   - Requirements: Structured storage, query by tenant/time/action, retention
     policy configuration.
 
-- [ ] Enforce per-tenant resource quotas
+- [DONE] Enforce per-tenant resource quotas (2026-01-22)
   - Outcome: Workspace usage and request activity constrained by quotas.
   - Requirements: Track workspace sizes, deny over-limit operations with clear
     errors, document quota configuration.
 
-- [ ] Add token store persistence
+- [DONE] Add token store persistence (2026-01-22)
   - Outcome: Tenant tokens survive server restarts.
   - Requirements: Durable storage, revoke support, rotation strategy documented.
 
@@ -1273,21 +1277,79 @@ Dependencies:
   baseline)
 
 Exit Criteria:
-- [ ] Tenant management endpoints operational and documented
-- [ ] Usage statistics endpoints operational and documented
-- [ ] Audit logs persisted and queryable
-- [ ] Resource quotas enforced with clear errors
-- [ ] Token persistence verified across restart
-- [ ] Unit and integration tests added for new admin and audit features
-  (>85% coverage)
-- [ ] User documentation updated (admin APIs, audit queries, quota
-  configuration)
+- [DONE] Tenant management endpoints operational and documented (2026-01-22)
+- [DONE] Usage statistics endpoints operational and documented (2026-01-22)
+- [DONE] Tenant records persist across restart (2026-01-22)
+- [DONE] Audit logs persisted and queryable (2026-01-22)
+- [DONE] Resource quotas enforced with clear errors (2026-01-22)
+- [DONE] Token persistence verified across restart (2026-01-22)
+- [DONE] Unit and integration tests added for new admin and audit features
+  (>85% coverage) (2026-01-22)
+- [DONE] User documentation updated (admin APIs, audit queries, quota
+  configuration) (2026-01-22)
+- [DONE] Manual User Validation:
+  - [DONE] Admin can create/list/update/delete tenants (2026-01-22)
+  - [DONE] Usage statistics include request counts and rate-limit events (2026-01-22)
+  - [DONE] Audit log queries return expected tenant-scoped entries (2026-01-22)
+  - [DONE] Tenant workspace quotas block over-limit actions (2026-01-22)
+  - [DONE] Tokens remain valid after server restart (unless revoked)
+  - [DONE] Tenant records remain available after server restart (2026-01-22)
+
+Awaiting Gate Approval: NO
+
+---
+
+### Phase 2.9: Persistence Foundations & Data Stores
+Status: Not Started  
+Gate Keeper: User approval to proceed to Phase 3
+
+Objectives:
+- Provide durable storage for all server-mode state that must survive restarts
+- Establish a shared persistence strategy for clustered deployments
+- Keep scope flexible for new persistence needs introduced by later phases
+
+Tasks:
+- [ ] Identify all state that requires persistence (current + new as phases add
+  features)
+  - Outcome: Canonical inventory of persistent entities.
+  - Requirements: Update this list whenever new server-mode state appears.
+
+- [ ] Implement persistent audit log storage and retention policies
+  - Outcome: Durable, queryable audit logs with retention.
+  - Requirements: Query by tenant/time/action, retention configuration, export.
+
+- [ ] Implement persistent usage statistics storage
+  - Outcome: Usage metrics survive restart and support reporting.
+  - Requirements: Aggregation strategy, query endpoints updated as needed.
+
+- [ ] Implement persistent quota and workspace metadata storage
+  - Outcome: Quota enforcement survives restart and scales in clusters.
+  - Requirements: Shared backend, clear error responses, audit integration.
+
+- [ ] Extend tenant persistence for future attributes
+  - Outcome: Tenant metadata can grow without schema churn.
+  - Requirements: Migration strategy, backward-compatible upgrades.
+
+- [ ] Add shared storage guidance for clustered deployments
+  - Outcome: Multi-replica deployments have consistent state.
+  - Requirements: Document PVCs, external DB options, and HA considerations.
+
+Dependencies:
+- Phase 2.75 complete (admin ops, audit persistence baseline, token persistence,
+  tenant persistence)
+- Storage backend decision(s) documented (SQLite, Postgres, external service)
+
+Exit Criteria:
+- [ ] Persistent storage implemented for all known server-mode state
+- [ ] Cluster-safe storage path defined for all persistent entities
+- [ ] Data migration and backup guidance documented
+- [ ] Tests cover persistence behavior and restart safety (>85% coverage)
+- [ ] Documentation updated for storage configuration and operations
 - [ ] Manual User Validation:
-  - [ ] Admin can create/list/update/delete tenants
-  - [ ] Usage statistics include request counts and rate-limit events
-  - [ ] Audit log queries return expected tenant-scoped entries
-  - [ ] Tenant workspace quotas block over-limit actions
-  - [ ] Tokens remain valid after server restart (unless revoked)
+  - [ ] Tenant records survive restart
+  - [ ] Tokens survive restart across cluster nodes
+  - [ ] Audit logs query across restarts
+  - [ ] Usage stats and quotas persist across restarts
 
 Awaiting Gate Approval: NO
 
@@ -1805,13 +1867,13 @@ Awaiting Gate Approval: NO
 ## Current Status
 
 ### Current Phase
-Phase 2.75: Admin Operations & Audit Persistence
+Phase 2.9: Persistence Foundations & Data Stores
 
 ### Current Task
-Define and implement Phase 2.75 admin operations and persistence
+Define persistence foundation scope and storage strategy
 
 ### Next Milestone
-Complete Phase 2.75 exit criteria and validation
+Start Phase 2.9 tasks and establish storage decision(s)
 
 ### Blockers
 None currently
@@ -1930,6 +1992,14 @@ Clear messaging - User understands:
 ## Plan Changelog
 
 Purpose: Track significant changes to this plan itself (not development progress).
+
+### 2026-01-22 - Move Tenant Persistence to Phase 2.75 (v1.1.17)
+- Moved tenant record persistence into Phase 2.75 and left Phase 2.9 focused on
+  future persistence needs (audit, usage, quotas, expansions)
+
+### 2026-01-22 - Add Phase 2.9 for Persistence Foundations (v1.1.16)
+- Added a flexible persistence phase to cover durable storage needs that will
+  emerge as server-mode features expand
 
 ### 2026-01-21 - Add Phase 2.75 for Admin Ops (v1.1.15)
 - Added Phase 2.75 to cover tenant admin endpoints, usage stats, audit

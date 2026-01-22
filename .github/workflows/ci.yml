@@ -40,6 +40,8 @@ jobs:
           go-version: "1.23.x"
       - name: Run Go tests
         run: ./scripts/test-go.sh
+      - name: Run Go coverage
+        run: ./scripts/test-go-coverage.sh
 
   python-tests:
     runs-on: ubuntu-latest
@@ -58,3 +60,5 @@ jobs:
           poetry install --no-root
       - name: Run Python tests
         run: ./scripts/test-python.sh
+      - name: Run Python coverage
+        run: ./scripts/test-python-coverage.sh

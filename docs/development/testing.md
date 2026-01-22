@@ -8,8 +8,21 @@ Arcaflow MCP server.
 Run Go tests for the server:
 
 ```
+./scripts/test-go.sh
+```
+
+Run Go tests with coverage:
+
+```
+./scripts/test-go-coverage.sh
+```
+
+If you need to run Go tests manually, set local cache paths to avoid sandbox
+permission issues:
+
+```
 cd server
-GOCACHE="/path/to/.gocache" go test ./... -count=1
+GOCACHE="/path/to/.gocache" GOMODCACHE="/path/to/.gomodcache" go test ./... -count=1
 ```
 
 Run Python tests for the analysis engine:
@@ -17,6 +30,12 @@ Run Python tests for the analysis engine:
 ```
 cd analysis
 poetry run pytest
+```
+
+Run Python tests with coverage:
+
+```
+./scripts/test-python-coverage.sh
 ```
 
 ### MCP compliance checklist
