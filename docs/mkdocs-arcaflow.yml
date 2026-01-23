@@ -10,7 +10,7 @@ nav:
   - Getting started: getting-started.md
   - Concepts:
       - Architecture: concepts/architecture.md
-      - Skills: concepts/skills.md
+      - Capabilities: concepts/capabilities.md
       - Deployment modes: concepts/deployment-modes.md
       - Multi-tenancy: concepts/multi-tenancy.md
   - Usage:
@@ -26,8 +26,8 @@ nav:
       - TLS: deployment/tls.md
   - Tools:
       - Overview: tools/overview.md
-      - Skill 1 tools: tools/skill1-tools.md
-      - Skill 2 tools: tools/skill2-tools.md
+      - Input construction tools: tools/input-tools.md
+      - Result analysis tools: tools/result-tools.md
   - Examples:
       - Basic workflow: examples/basic-workflow.md
       - Iterative optimization: examples/iterative-optimization.md

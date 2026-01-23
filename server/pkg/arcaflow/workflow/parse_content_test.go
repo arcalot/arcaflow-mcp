@@ -16,6 +16,17 @@ func TestParseContentJSON(t *testing.T) {
 	}
 }
 
+func TestParseDocumentJSON(t *testing.T) {
+	t.Parallel()
+	root, err := ParseDocument([]byte(`{"name":"workflow"}`))
+	if err != nil {
+		t.Fatalf("parse document: %v", err)
+	}
+	if root["name"] != "workflow" {
+		t.Fatalf("expected name to be parsed")
+	}
+}
+
 func TestParseContentRejectsNonObject(t *testing.T) {
 	t.Parallel()
 	if _, err := parseContent([]byte(`["value"]`)); err == nil {

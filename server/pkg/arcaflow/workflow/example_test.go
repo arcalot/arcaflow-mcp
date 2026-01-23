@@ -84,6 +84,35 @@ func TestGenerateExampleInputUsesArrayDefaults(t *testing.T) {
 	}
 }
 
+func TestGenerateExampleInputFromInputScope(t *testing.T) {
+	t.Parallel()
+	inputSchema := json.RawMessage(`{
+  "root": "RootObject",
+  "objects": {
+    "RootObject": {
+      "id": "RootObject",
+      "properties": {
+        "nickname": {
+          "required": true,
+          "type": {"type_id": "string"}
+        }
+      }
+    }
+  }
+}`)
+	example, err := GenerateExampleInputFromInputScope(inputSchema)
+	if err != nil {
+		t.Fatalf("generate input scope example: %v", err)
+	}
+	var decoded map[string]interface{}
+	if err := json.Unmarshal(example, &decoded); err != nil {
+		t.Fatalf("decode input scope example: %v", err)
+	}
+	if _, ok := decoded["nickname"]; !ok {
+		t.Fatalf("expected nickname in example")
+	}
+}
+
 func TestZeroValueForSchema(t *testing.T) {
 	t.Parallel()
 	if value := zeroValueForSchema(map[string]interface{}{"type": "string"}); value != "" {

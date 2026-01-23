@@ -1,0 +1,77 @@
+package workflowtools
+
+import (
+	"context"
+	"encoding/json"
+	"log/slog"
+	"os"
+	"path/filepath"
+	"testing"
+
+	"github.com/arcalot/arcaflow-mcp/server/pkg/arcaflow/workflow"
+	"github.com/arcalot/arcaflow-mcp/server/pkg/protocol"
+)
+
+func TestWorkflowInputExamplesGet(t *testing.T) {
+	root := t.TempDir()
+	workflowPath := filepath.Join(root, "example.yaml")
+	content := []byte(`
+version: v0.2.0
+input:
+  root: RootObject
+  objects:
+    RootObject:
+      id: RootObject
+      properties:
+        nickname:
+          required: true
+          type:
+            type_id: string
+outputs:
+  success:
+    status: ok
+`)
+	if err := os.WriteFile(workflowPath, content, 0o644); err != nil {
+		t.Fatalf("write workflow: %v", err)
+	}
+
+	loader := workflow.NewLoader()
+	parser := workflow.NewParser()
+	tool := NewWorkflowInputExamplesTool(loader, parser, slog.Default())
+	result, errObj := tool.Handler(context.Background(), map[string]interface{}{
+		"source": map[string]interface{}{
+			"kind":     "filesystem",
+			"location": root,
+		},
+		"selector": map[string]interface{}{
+			"path": "example.yaml",
+		},
+	})
+	if errObj != nil {
+		t.Fatalf("expected no error, got %v", errObj)
+	}
+
+	var payload InputExamplesResult
+	if err := json.Unmarshal([]byte(result.Content[0].Text), &payload); err != nil {
+		t.Fatalf("unmarshal result: %v", err)
+	}
+	if len(payload.ExampleInput) == 0 {
+		t.Fatalf("expected example input")
+	}
+	if payload.InputKey != "input" {
+		t.Fatalf("expected input key to be input")
+	}
+}
+
+func TestWorkflowInputExamplesMissingSource(t *testing.T) {
+	loader := workflow.NewLoader()
+	parser := workflow.NewParser()
+	tool := NewWorkflowInputExamplesTool(loader, parser, slog.Default())
+	_, errObj := tool.Handler(context.Background(), map[string]interface{}{})
+	if errObj == nil {
+		t.Fatalf("expected missing source error")
+	}
+	if errObj.Code != protocol.ErrInvalidParams {
+		t.Fatalf("expected invalid params error")
+	}
+}

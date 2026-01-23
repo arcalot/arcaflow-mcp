@@ -8,15 +8,15 @@ Accepted - 2026-01-20
 
 The MCP server requires robust protocol handling and concurrency (Go), while
 workflow result analysis benefits from Python's data analysis ecosystem.
-We need to support Skills 1 and 2 with clear separation of concerns and
-independent scaling.
+We need to support input construction and result analysis with clear separation
+of concerns and independent scaling.
 
 ### Decision
 
 Adopt a hybrid architecture:
 
-- Go implements the MCP server core, transport, and Skill 1 schema handling
-- Python implements the analysis engine and Skill 2 logic
+- Go implements the MCP server core, transport, and input construction schema handling
+- Python implements the analysis engine and result analysis logic
 - gRPC is the preferred inter-service protocol
 
 ### Alternatives considered

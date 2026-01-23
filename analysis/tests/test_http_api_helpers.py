@@ -4,6 +4,8 @@ from __future__ import annotations
 
 # pylint: disable=import-error
 
+from arcaflow_analysis.db.repository import HistoryRepository
+from arcaflow_analysis.db.session import DatabaseConfig, init_db
 from arcaflow_analysis.server import http_api
 
 # pylint: disable=protected-access
@@ -63,3 +65,20 @@ def test_analysis_dict_serialization() -> None:
         )()
     )
     assert summary["success_rate"] == 1.0
+
+
+def test_history_serialization(tmp_path) -> None:
+    db_url = f"sqlite:///{tmp_path}/history.db"
+    session_factory = init_db(DatabaseConfig(url=db_url))
+    repo = HistoryRepository(session_factory)
+
+    summary = repo.add_run(
+        workflow_id="workflow-1",
+        input_payload={"param": "value"},
+        metrics={"latency": 1.0},
+    )
+    listed = http_api.list_history(repo)
+    assert listed["runs"][0]["run_id"] == summary.run_id
+
+    record = http_api.get_history(repo, summary.run_id)
+    assert record["run"]["workflow_id"] == "workflow-1"

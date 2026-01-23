@@ -7,8 +7,8 @@ Purpose: Permanent standards and behaviors for AI coding agents working on this 
 Arcaflow MCP Server - A Model Context Protocol (MCP) server enabling natural language conversations with AI agents to work with Arcaflow workflows.
 
 Primary Capabilities:
-- Skill 1: Build and validate inputs for existing Arcaflow workflows
-- Skill 2: Analyze workflow results and suggest optimizations
+- Input construction: Build and validate inputs for existing Arcaflow workflows
+- Result analysis: Analyze workflow results and suggest optimizations
 - Future: Workflow execution, iterative optimization, workflow creation
 
 Architecture: Hybrid Go (MCP server core) + Python (analysis engine)  
@@ -158,10 +158,20 @@ License: Apache 2.0
 - Follow Arcaflow terminology and conventions
 - Integrate documentation with Arcaflow docs (https://arcalot.io/arcaflow/)
 - Test against reference Arcaflow workflows
+- Workflow engine compatibility notes:
+  - Engine workflows must use real step/plugin definitions (e.g. `steps.*.plugin`
+    with `deployment_type`/`src`). `plugin_schema_ref` is MCP-only and will be
+    rejected by the engine.
+  - Derive input schemas from the workflow `input` section and output schemas
+    from the `output` or `outputs` section. `outputSchema` is optional for
+    user-refinement of the output schema.
+  - `outputs` must be a map with at least one item (not `{}` and not a list).
+  - For engine execution, prefer example workflows from
+    `/home/dblack/git/arcalot/arcaflow-workflows`.
 - Distinguish workflow schemas from plugin schemas:
   - Workflow schemas define the top-level `input` scope for the workflow itself.
   - Plugin schemas define step input/output contracts for each plugin.
-  - MCP Skill 1 input validation must use the workflow `input` scope first.
+  - MCP input validation must use the workflow `input` scope first.
   - Plugin schema validation is only required when validating step inputs.
 - When validating workflow inputs, mirror engine behavior:
   - Use `go.flow.arcalot.io/pluginsdk/schema` and `schema.UnserializeScope`

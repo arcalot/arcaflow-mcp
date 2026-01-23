@@ -1,14 +1,10 @@
 package workflow
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"io"
 	"log/slog"
-	"net/http"
-	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -20,10 +16,22 @@ func TestParserParseYAML(t *testing.T) {
 	workflow := Workflow{
 		ID: "workflow-yaml",
 		Content: []byte(`
-input_schema:
+version: v0.2.0
+input:
+  root: InputParams
+  objects:
+    InputParams:
+      id: InputParams
+      properties:
+        name:
+          required: true
+          type:
+            type_id: string
+outputSchema:
   type: object
-output_schema:
-  type: object
+  properties:
+    status:
+      type: string
 `),
 	}
 
@@ -32,45 +40,17 @@ output_schema:
 		t.Fatalf("parse workflow: %v", err)
 	}
 
-	if parsed.InputSchemaPath != "input_schema" {
-		t.Fatalf("expected input_schema path, got %s", parsed.InputSchemaPath)
+	if parsed.InputSchemaPath != "input" {
+		t.Fatalf("expected input path, got %s", parsed.InputSchemaPath)
 	}
-	if parsed.OutputSchemaPath != "output_schema" {
-		t.Fatalf("expected output_schema path, got %s", parsed.OutputSchemaPath)
+	if parsed.OutputSchemaPath != "outputSchema" {
+		t.Fatalf("expected outputSchema path, got %s", parsed.OutputSchemaPath)
 	}
 	if !json.Valid(parsed.Document) {
 		t.Fatalf("expected normalized document to be valid JSON")
 	}
-	if !json.Valid(parsed.InputExample) {
-		t.Fatalf("expected input example to be valid JSON")
-	}
-}
-
-func TestParserParseJSONNestedSchema(t *testing.T) {
-	t.Parallel()
-	parser := NewParser()
-
-	workflow := Workflow{
-		ID: "workflow-json",
-		Content: []byte(`{
-  "input": {"schema": {"type": "object"}},
-  "output": {"schema": {"type": "object"}}
-}`),
-	}
-
-	parsed, err := parser.Parse(context.Background(), workflow)
-	if err != nil {
-		t.Fatalf("parse workflow: %v", err)
-	}
-
-	if parsed.InputSchemaPath != "input.schema" {
-		t.Fatalf("expected input.schema path, got %s", parsed.InputSchemaPath)
-	}
-	if parsed.OutputSchemaPath != "output.schema" {
-		t.Fatalf("expected output.schema path, got %s", parsed.OutputSchemaPath)
-	}
-	if !json.Valid(parsed.InputSchema) || !json.Valid(parsed.OutputSchema) {
-		t.Fatalf("expected schemas to be valid JSON")
+	if len(parsed.InputExample) != 0 {
+		t.Fatalf("expected no example from arcaflow input schema")
 	}
 }
 
@@ -92,7 +72,7 @@ func TestParserErrorsOnMissingSchemas(t *testing.T) {
 	}
 }
 
-func TestParserInfersSchemaFromInputOutput(t *testing.T) {
+func TestParserHandlesDerivedOutputSchema(t *testing.T) {
 	t.Parallel()
 	parser := NewParser()
 
@@ -126,45 +106,11 @@ outputs:
 	if parsed.OutputSchemaPath != "outputs" {
 		t.Fatalf("expected outputs path, got %s", parsed.OutputSchemaPath)
 	}
-	if !json.Valid(parsed.InputSchema) || !json.Valid(parsed.OutputSchema) {
-		t.Fatalf("expected schemas to be valid JSON")
+	if len(parsed.OutputSchema) == 0 {
+		t.Fatalf("expected derived output schema")
 	}
 	if len(parsed.InputExample) != 0 {
 		t.Fatalf("expected no example from inferred schema")
-	}
-}
-
-func TestParserLoadsSchemaFromURL(t *testing.T) {
-	t.Parallel()
-	ctx := context.Background()
-	client := &http.Client{
-		Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
-			return &http.Response{
-				StatusCode: http.StatusOK,
-				Body: io.NopCloser(
-					bytes.NewBufferString(`{"type":"object"}`),
-				),
-				Header:  make(http.Header),
-				Request: req,
-			}, nil
-		}),
-	}
-	parser := NewParser(WithParserHTTPClient(client))
-
-	workflow := Workflow{
-		Content: []byte(`
-input_schema_ref: "https://example.com/schema.json"
-output_schema:
-  type: object
-`),
-	}
-
-	parsed, err := parser.Parse(ctx, workflow)
-	if err != nil {
-		t.Fatalf("parse workflow: %v", err)
-	}
-	if len(parsed.InputSchema) == 0 {
-		t.Fatalf("expected input schema from url")
 	}
 }
 
@@ -174,81 +120,5 @@ func TestParserLoggerOption(t *testing.T) {
 	parser := NewParser(WithParserLogger(logger))
 	if parser.logger != logger {
 		t.Fatalf("expected logger override")
-	}
-}
-
-func TestParserSchemaRefHTTPError(t *testing.T) {
-	t.Parallel()
-	ctx := context.Background()
-	client := &http.Client{
-		Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
-			return &http.Response{
-				StatusCode: http.StatusInternalServerError,
-				Body:       io.NopCloser(bytes.NewBufferString("error")),
-				Header:     make(http.Header),
-				Request:    req,
-			}, nil
-		}),
-	}
-	parser := NewParser(WithParserHTTPClient(client))
-
-	workflow := Workflow{
-		Content: []byte(`
-input_schema_ref: "https://example.com/schema.json"
-output_schema:
-  type: object
-`),
-	}
-
-	if _, err := parser.Parse(ctx, workflow); err == nil {
-		t.Fatalf("expected schema ref error")
-	}
-}
-
-func TestParserResolvesSchemaRefs(t *testing.T) {
-	t.Parallel()
-	parser := NewParser()
-	root := t.TempDir()
-
-	inputPath := filepath.Join(root, "input-schema.json")
-	outputPath := filepath.Join(root, "output-schema.yaml")
-
-	if err := os.WriteFile(
-		inputPath,
-		[]byte(`{"type":"object"}`),
-		0o644,
-	); err != nil {
-		t.Fatalf("write input schema: %v", err)
-	}
-	if err := os.WriteFile(
-		outputPath,
-		[]byte("type: object"),
-		0o644,
-	); err != nil {
-		t.Fatalf("write output schema: %v", err)
-	}
-
-	workflow := Workflow{
-		ID:        "workflow-refs",
-		LocalPath: filepath.Join(root, "workflow.yaml"),
-		Content: []byte(`
-input_schema_ref: input-schema.json
-output_schema_ref: output-schema.yaml
-`),
-	}
-
-	parsed, err := parser.Parse(context.Background(), workflow)
-	if err != nil {
-		t.Fatalf("parse workflow: %v", err)
-	}
-
-	if parsed.InputSchemaPath != "input_schema_ref" {
-		t.Fatalf("expected input_schema_ref path, got %s", parsed.InputSchemaPath)
-	}
-	if parsed.OutputSchemaPath != "output_schema_ref" {
-		t.Fatalf("expected output_schema_ref path, got %s", parsed.OutputSchemaPath)
-	}
-	if !json.Valid(parsed.InputSchema) || !json.Valid(parsed.OutputSchema) {
-		t.Fatalf("expected schemas to be valid JSON")
 	}
 }

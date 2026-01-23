@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 )
@@ -53,6 +54,23 @@ type AnalyzeResponse struct {
 	Analysis    AnalysisSummary          `json:"analysis"`
 	Comparison  *ComparisonSummary       `json:"comparison,omitempty"`
 	Suggestions []map[string]interface{} `json:"suggestions"`
+}
+
+// HistoryRunSummary describes a stored run summary.
+type HistoryRunSummary struct {
+	RunID      string                 `json:"run_id"`
+	WorkflowID string                 `json:"workflow_id"`
+	CreatedAt  string                 `json:"created_at"`
+	Metrics    map[string]interface{} `json:"metrics"`
+}
+
+// HistoryRunRecord describes a stored run record.
+type HistoryRunRecord struct {
+	RunID        string                 `json:"run_id"`
+	WorkflowID   string                 `json:"workflow_id"`
+	CreatedAt    string                 `json:"created_at"`
+	InputPayload map[string]interface{} `json:"input_payload"`
+	Metrics      map[string]interface{} `json:"metrics"`
 }
 
 // Client communicates with the analysis HTTP API.
@@ -116,4 +134,88 @@ func (client *Client) Analyze(
 		return AnalyzeResponse{}, fmt.Errorf("decode analysis response: %w", err)
 	}
 	return response, nil
+}
+
+// HistoryList fetches stored run summaries from the analysis service.
+func (client *Client) HistoryList(
+	ctx context.Context,
+	workflowID string,
+) ([]HistoryRunSummary, error) {
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
+	}
+	if client.baseURL == "" {
+		return nil, fmt.Errorf("analysis base url is required")
+	}
+	endpoint := client.baseURL + "/analysis/history"
+	if strings.TrimSpace(workflowID) != "" {
+		endpoint = endpoint + "?workflow_id=" + url.QueryEscape(workflowID)
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
+	if err != nil {
+		return nil, fmt.Errorf("build history request: %w", err)
+	}
+	resp, err := client.httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("send history request: %w", err)
+	}
+	if resp.StatusCode < http.StatusOK || resp.StatusCode >= 300 {
+		return nil, fmt.Errorf("analysis service status %d", resp.StatusCode)
+	}
+	raw, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("read history response: %w", err)
+	}
+	if err := resp.Body.Close(); err != nil {
+		return nil, fmt.Errorf("close history response: %w", err)
+	}
+	var response struct {
+		Runs []HistoryRunSummary `json:"runs"`
+	}
+	if err := json.Unmarshal(raw, &response); err != nil {
+		return nil, fmt.Errorf("decode history response: %w", err)
+	}
+	return response.Runs, nil
+}
+
+// HistoryGet fetches a stored run record by ID.
+func (client *Client) HistoryGet(
+	ctx context.Context,
+	runID string,
+) (HistoryRunRecord, error) {
+	if ctx.Err() != nil {
+		return HistoryRunRecord{}, ctx.Err()
+	}
+	if client.baseURL == "" {
+		return HistoryRunRecord{}, fmt.Errorf("analysis base url is required")
+	}
+	if strings.TrimSpace(runID) == "" {
+		return HistoryRunRecord{}, fmt.Errorf("run id is required")
+	}
+	endpoint := client.baseURL + "/analysis/history/" + url.PathEscape(runID)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
+	if err != nil {
+		return HistoryRunRecord{}, fmt.Errorf("build history request: %w", err)
+	}
+	resp, err := client.httpClient.Do(req)
+	if err != nil {
+		return HistoryRunRecord{}, fmt.Errorf("send history request: %w", err)
+	}
+	if resp.StatusCode < http.StatusOK || resp.StatusCode >= 300 {
+		return HistoryRunRecord{}, fmt.Errorf("analysis service status %d", resp.StatusCode)
+	}
+	raw, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return HistoryRunRecord{}, fmt.Errorf("read history response: %w", err)
+	}
+	if err := resp.Body.Close(); err != nil {
+		return HistoryRunRecord{}, fmt.Errorf("close history response: %w", err)
+	}
+	var response struct {
+		Run HistoryRunRecord `json:"run"`
+	}
+	if err := json.Unmarshal(raw, &response); err != nil {
+		return HistoryRunRecord{}, fmt.Errorf("decode history response: %w", err)
+	}
+	return response.Run, nil
 }

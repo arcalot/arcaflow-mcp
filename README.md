@@ -3,8 +3,8 @@
 Arcaflow MCP is a Model Context Protocol (MCP) server for working with
 Arcaflow workflows. The initial focus is:
 
-- Skill 1: Build and validate workflow inputs
-- Skill 2: Analyze workflow outputs and suggest improvements
+- Input construction: Build and validate workflow inputs
+- Result analysis: Analyze workflow outputs and suggest improvements
 
 Workflow execution is intentionally out of scope for Phase 1.
 

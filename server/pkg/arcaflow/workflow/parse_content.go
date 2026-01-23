@@ -15,6 +15,11 @@ func parseContent(content []byte) (map[string]interface{}, error) {
 	return ensureObject(root)
 }
 
+// ParseDocument parses workflow content into a normalized object.
+func ParseDocument(content []byte) (map[string]interface{}, error) {
+	return parseContent(content)
+}
+
 func parseSchemaContent(content []byte) (json.RawMessage, error) {
 	root, err := parseAny(content)
 	if err != nil {

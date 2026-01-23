@@ -22,6 +22,93 @@ func GenerateExampleInput(schema json.RawMessage) (json.RawMessage, error) {
 	return raw, nil
 }
 
+// GenerateExampleInputFromInputScope builds a minimal example from Arcaflow input.
+func GenerateExampleInputFromInputScope(
+	inputSchema json.RawMessage,
+) (json.RawMessage, error) {
+	var payload map[string]interface{}
+	if err := json.Unmarshal(inputSchema, &payload); err != nil {
+		return nil, fmt.Errorf("parse input scope: %w", err)
+	}
+	rootID, _ := payload["root"].(string)
+	objects, _ := payload["objects"].(map[string]interface{})
+	if rootID == "" || objects == nil {
+		return nil, fmt.Errorf("input scope missing root objects")
+	}
+	rootObject, ok := objects[rootID].(map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("input scope missing root object %q", rootID)
+	}
+	example := buildInputObjectExample(rootObject, objects)
+	raw, err := json.Marshal(example)
+	if err != nil {
+		return nil, fmt.Errorf("marshal input example: %w", err)
+	}
+	return raw, nil
+}
+
+func buildInputObjectExample(
+	object map[string]interface{},
+	objects map[string]interface{},
+) map[string]interface{} {
+	props, _ := object["properties"].(map[string]interface{})
+	example := make(map[string]interface{}, len(props))
+	for name, raw := range props {
+		property, ok := raw.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		if required, _ := property["required"].(bool); !required {
+			continue
+		}
+		example[name] = exampleValueForType(property["type"], objects)
+	}
+	return example
+}
+
+func exampleValueForType(
+	typeSpec interface{},
+	objects map[string]interface{},
+) interface{} {
+	spec, ok := typeSpec.(map[string]interface{})
+	if !ok {
+		return nil
+	}
+	typeID, _ := spec["type_id"].(string)
+	switch typeID {
+	case "string":
+		return ""
+	case "integer", "int":
+		return 0
+	case "number", "float":
+		return 0
+	case "bool", "boolean":
+		return false
+	case "object":
+		objectID, _ := spec["id"].(string)
+		if objectID == "" {
+			objectID, _ = spec["object_id"].(string)
+		}
+		if objectID != "" {
+			if raw, ok := objects[objectID].(map[string]interface{}); ok {
+				return buildInputObjectExample(raw, objects)
+			}
+		}
+		if rawProps, ok := spec["properties"].(map[string]interface{}); ok {
+			return buildInputObjectExample(
+				map[string]interface{}{"properties": rawProps},
+				objects,
+			)
+		}
+		return map[string]interface{}{}
+	case "list":
+		item := exampleValueForType(spec["items"], objects)
+		return []interface{}{item}
+	default:
+		return nil
+	}
+}
+
 func buildExample(value interface{}) (interface{}, bool) {
 	schema, ok := value.(map[string]interface{})
 	if !ok {

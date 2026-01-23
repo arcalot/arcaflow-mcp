@@ -25,10 +25,10 @@ const (
 
 // ExportMetadata includes validation confirmation for generated inputs.
 type ExportMetadata struct {
-	WorkflowID      string
-	InputSchemaPath string
-	Validated       bool
-	ValidatedAt     time.Time
+	WorkflowID  string    `json:"workflow_id"`
+	InputKey    string    `json:"input_key"`
+	Validated   bool      `json:"validated"`
+	ValidatedAt time.Time `json:"validated_at"`
 }
 
 // ExportedInput represents a validated input payload and associated metadata.
@@ -82,10 +82,10 @@ func GenerateInputFile(
 		Format:  format,
 		Payload: payload,
 		Metadata: ExportMetadata{
-			WorkflowID:      parsed.Workflow.ID,
-			InputSchemaPath: parsed.InputSchemaPath,
-			Validated:       true,
-			ValidatedAt:     time.Now().UTC(),
+			WorkflowID:  parsed.Workflow.ID,
+			InputKey:    parsed.InputSchemaPath,
+			Validated:   true,
+			ValidatedAt: time.Now().UTC(),
 		},
 	}, nil
 }

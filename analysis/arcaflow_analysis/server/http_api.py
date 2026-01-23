@@ -11,6 +11,7 @@ import json
 
 from arcaflow_analysis.analyzer.result_analyzer import ResultAnalyzer
 from arcaflow_analysis.analyzer.result_comparator import ResultComparator
+from arcaflow_analysis.db.repository import HistoryRepository
 from arcaflow_analysis.parser.result_parser import ResultParser
 from arcaflow_analysis.suggester.suggestion_engine import SuggestionEngine
 
@@ -45,6 +46,51 @@ def analyze_results(request: dict[str, Any]) -> dict[str, Any]:
     if comparison_summary is not None:
         response["comparison"] = _comparison_to_dict(comparison_summary)
     return response
+
+
+def list_history(
+    repo: HistoryRepository, workflow_id: str | None = None
+) -> dict[str, Any]:
+    """List history summaries for stored runs."""
+    runs = repo.list_runs(workflow_id)
+    return {"runs": [_summary_to_dict(run) for run in runs]}
+
+
+def get_history(repo: HistoryRepository, run_id: str) -> dict[str, Any]:
+    """Fetch a stored run record by ID."""
+    record = repo.get_run(run_id)
+    if record is None:
+        return {"run": None}
+    return {
+        "run": {
+            "run_id": record.id,
+            "workflow_id": record.workflow_id,
+            "created_at": record.created_at.isoformat(),
+            "input_payload": record.input_payload,
+            "metrics": record.metrics,
+        }
+    }
+
+
+def add_history(
+    repo: HistoryRepository,
+    workflow_id: str,
+    input_payload: dict[str, Any],
+    metrics: dict[str, Any],
+) -> dict[str, Any]:
+    """Persist a workflow run in history."""
+    summary = repo.add_run(workflow_id, input_payload, metrics)
+    return {"run": _summary_to_dict(summary)}
+
+
+def _summary_to_dict(summary) -> dict[str, Any]:
+    """Serialize a history summary to a JSON-friendly dict."""
+    return {
+        "run_id": summary.run_id,
+        "workflow_id": summary.workflow_id,
+        "created_at": summary.created_at.isoformat(),
+        "metrics": summary.metrics,
+    }
 
 
 def _analysis_to_dict(summary) -> dict[str, Any]:

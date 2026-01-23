@@ -10,7 +10,7 @@ import (
 	"github.com/arcalot/arcaflow-mcp/server/pkg/arcaflow/workflow"
 )
 
-func TestSkill1WorkflowIntegration(t *testing.T) {
+func TestInputWorkflowIntegration(t *testing.T) {
 	t.Parallel()
 
 	fixtures := filepath.Join("..", "..", "..", "test", "fixtures")
@@ -35,7 +35,7 @@ func TestSkill1WorkflowIntegration(t *testing.T) {
 	}
 
 	validator := workflow.NewInputValidator()
-	input := []byte(`{"name":"integration"}`)
+	input := []byte(`{"nickname":"integration"}`)
 	result, err := validator.Validate(context.Background(), parsed.Workflow, input)
 	if err != nil {
 		t.Fatalf("validate input: %v", err)
@@ -66,12 +66,12 @@ func TestSkill1WorkflowIntegration(t *testing.T) {
 	if err != nil {
 		t.Fatalf("load plugin schemas: %v", err)
 	}
-	if len(entries) != 1 {
-		t.Fatalf("expected 1 plugin schema entry, got %d", len(entries))
+	if len(entries) != 0 {
+		t.Fatalf("expected no plugin schema entries, got %d", len(entries))
 	}
 }
 
-func TestSkill1ValidationBlocksInvalidInput(t *testing.T) {
+func TestInputValidationBlocksInvalidInput(t *testing.T) {
 	t.Parallel()
 
 	fixtures := filepath.Join("..", "..", "..", "test", "fixtures")

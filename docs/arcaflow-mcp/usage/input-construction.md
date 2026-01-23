@@ -30,10 +30,12 @@ workflow identifiers for downstream validation and export.
 
 ### Workflow parsing and schema extraction
 
-Arcaflow workflows describe input schemas under the `input` key. If explicit
-`input_schema`/`output_schema` entries are present they are used; otherwise the
-parser falls back to the `input` and `outputs` sections. Input validation uses
-the Arcaflow plugin SDK schema definitions, matching the engine behavior.
+Arcaflow derives input schemas from the workflow `input` section and output
+schemas from either the `output` or `outputs` section. An optional
+`outputSchema` section is available for user-refinement of the output schema.
+Input schema resolution follows Arcaflow namespaces, resolving sub-workflow and
+plugin schemas when refs point into step inputs. Input validation uses the
+Arcaflow plugin SDK schema definitions, matching the engine behavior.
 
 If the input schema is missing or invalid, parsing fails with a clear error so
 invalid workflows never progress to the validation or export steps.
@@ -54,6 +56,13 @@ future validation and documentation. Supported workflow step keys:
 
 Relative paths are resolved from the workflow file location, and HTTP(S) URLs
 are fetched directly.
+
+### Plugin schema resolution for namespaced refs
+
+When workflows reference plugin input schemas using Arcaflow namespace refs
+(for example, `$.steps.<step>.starting.inputs.input`), the server resolves the
+schema by executing the plugin container with `--json-schema input`. A container
+runtime (Podman or Docker) is required for this resolution step.
 
 ### State management
 

@@ -15,12 +15,15 @@ import (
 	"time"
 
 	"github.com/arcalot/arcaflow-mcp/server/pkg/analysis"
+	"github.com/arcalot/arcaflow-mcp/server/pkg/arcaflow/workflow"
 	"github.com/arcalot/arcaflow-mcp/server/pkg/audit"
 	"github.com/arcalot/arcaflow-mcp/server/pkg/auth"
 	"github.com/arcalot/arcaflow-mcp/server/pkg/config"
 	"github.com/arcalot/arcaflow-mcp/server/pkg/protocol"
 	"github.com/arcalot/arcaflow-mcp/server/pkg/ratelimit"
+	"github.com/arcalot/arcaflow-mcp/server/pkg/state"
 	"github.com/arcalot/arcaflow-mcp/server/pkg/tenant"
+	"github.com/arcalot/arcaflow-mcp/server/pkg/tools/workflowtools"
 	"github.com/arcalot/arcaflow-mcp/server/pkg/transport/httpserver"
 	"github.com/arcalot/arcaflow-mcp/server/pkg/transport/stdio"
 	"github.com/arcalot/arcaflow-mcp/server/pkg/version"
@@ -66,6 +69,12 @@ func run() error {
 	}))
 	slog.SetDefault(logger)
 
+	var analysisClient *analysis.Client
+	if cfg.Analysis.HTTPURL != "" {
+		analysisClient = analysis.NewClient(cfg.Analysis.HTTPURL)
+		logger.Info("analysis client configured", "url", cfg.Analysis.HTTPURL)
+	}
+
 	ctx, stop := signal.NotifyContext(
 		context.Background(),
 		os.Interrupt,
@@ -83,7 +92,7 @@ func run() error {
 				Version: serverVersion,
 			},
 		)
-		registerDefaultTools(handler)
+		registerDefaultTools(handler, analysisClient)
 		server := stdio.NewServer(
 			handler,
 			os.Stdin,
@@ -102,7 +111,7 @@ func run() error {
 				Version: serverVersion,
 			},
 		)
-		registerDefaultTools(handler)
+		registerDefaultTools(handler, analysisClient)
 		tokenStore, err := auth.NewFileStore(cfg.Auth.TokenStorePath)
 		if err != nil {
 			return err
@@ -151,11 +160,6 @@ func run() error {
 				return err
 			}
 		}
-		var analysisClient *analysis.Client
-		if cfg.Analysis.HTTPURL != "" {
-			analysisClient = analysis.NewClient(cfg.Analysis.HTTPURL)
-			logger.Info("analysis client configured", "url", cfg.Analysis.HTTPURL)
-		}
 		httpServer := httpserver.NewServer(
 			httpserver.Config{
 				Address:          cfg.Address,
@@ -183,10 +187,16 @@ func run() error {
 	}
 }
 
-func registerDefaultTools(server *protocol.Server) {
+func registerDefaultTools(
+	server *protocol.Server,
+	analysisClient *analysis.Client,
+) {
 	if server == nil {
 		return
 	}
+	loader := workflow.NewLoader()
+	parser := workflow.NewParser()
+	stateManager := state.NewManager(0)
 	server.RegisterTool(protocol.ToolRegistration{
 		Definition: protocol.ToolDefinition{
 			Name:        "ping",
@@ -214,6 +224,77 @@ func registerDefaultTools(server *protocol.Server) {
 			}, nil
 		},
 	})
+	server.RegisterTool(
+		workflowtools.NewWorkflowListTool(loader, slog.Default()),
+	)
+	server.RegisterTool(
+		workflowtools.NewWorkflowLoadTool(loader, slog.Default()),
+	)
+	server.RegisterTool(
+		workflowtools.NewWorkflowSchemaGetTool(loader, parser, slog.Default()),
+	)
+	server.RegisterTool(
+		workflowtools.NewWorkflowDescribeTool(loader, slog.Default()),
+	)
+	server.RegisterTool(
+		workflowtools.NewWorkflowInputBuildTool(
+			loader,
+			stateManager,
+			slog.Default(),
+		),
+	)
+	server.RegisterTool(
+		workflowtools.NewWorkflowInputValidateTool(
+			loader,
+			stateManager,
+			slog.Default(),
+		),
+	)
+	server.RegisterTool(
+		workflowtools.NewWorkflowInputExportTool(
+			loader,
+			parser,
+			stateManager,
+			slog.Default(),
+		),
+	)
+	server.RegisterTool(
+		workflowtools.NewWorkflowInputExamplesTool(
+			loader,
+			parser,
+			slog.Default(),
+		),
+	)
+	server.RegisterTool(
+		workflowtools.NewWorkflowResultsLoadTool(slog.Default()),
+	)
+	server.RegisterTool(
+		workflowtools.NewWorkflowResultsParseTool(analysisClient, slog.Default()),
+	)
+	server.RegisterTool(
+		workflowtools.NewWorkflowResultsAnalyzeTool(analysisClient, slog.Default()),
+	)
+	server.RegisterTool(
+		workflowtools.NewWorkflowResultsCompareTool(analysisClient, slog.Default()),
+	)
+	server.RegisterTool(
+		workflowtools.NewWorkflowInputsSuggestTool(analysisClient, slog.Default()),
+	)
+	server.RegisterTool(
+		workflowtools.NewWorkflowOptimizationGuideTool(
+			analysisClient,
+			slog.Default(),
+		),
+	)
+	server.RegisterTool(
+		workflowtools.NewWorkflowResultsMetricsExtractTool(
+			analysisClient,
+			slog.Default(),
+		),
+	)
+	server.RegisterTool(
+		workflowtools.NewWorkflowHistoryLoadTool(analysisClient, slog.Default()),
+	)
 }
 
 func chooseLogOutput(mode string) io.Writer {

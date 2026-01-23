@@ -1,0 +1,263 @@
+package workflowtools
+
+import (
+	"context"
+	"encoding/json"
+	"log/slog"
+
+	"github.com/arcalot/arcaflow-mcp/server/pkg/arcaflow/workflow"
+	"github.com/arcalot/arcaflow-mcp/server/pkg/auth"
+	"github.com/arcalot/arcaflow-mcp/server/pkg/protocol"
+	"github.com/arcalot/arcaflow-mcp/server/pkg/state"
+)
+
+const workflowInputValidateInputSchema = `{
+  "type": "object",
+  "properties": {
+    "source": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "description": "Workflow source kind: filesystem, url, or git."
+        },
+        "location": {
+          "type": "string",
+          "description": "Filesystem root, URL, or git repository URL."
+        },
+        "ref": {
+          "type": "string",
+          "description": "Optional git ref (branch, tag, or commit)."
+        },
+        "subdir": {
+          "type": "string",
+          "description": "Optional git subdirectory to scan for workflows."
+        }
+      },
+      "required": ["kind", "location"],
+      "additionalProperties": false
+    },
+    "selector": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Workflow ID to load."
+        },
+        "path": {
+          "type": "string",
+          "description": "Workflow path to load."
+        }
+      },
+      "additionalProperties": false
+    },
+    "session_id": {
+      "type": "string",
+      "description": "Advanced: session ID for a stored draft. Only use if you just ran workflow_input_build and received this session_id."
+    },
+    "input": {
+      "type": "object",
+      "description": "Recommended: pass the workflow input payload here for validation."
+    }
+  },
+  "required": ["source"],
+  "additionalProperties": false
+}`
+
+// InputValidateParams defines the workflow_input_validate tool input.
+type InputValidateParams struct {
+	Source    ListSourceParams       `json:"source"`
+	Selector  LoadSelectorParams     `json:"selector,omitempty"`
+	SessionID string                 `json:"session_id,omitempty"`
+	Input     map[string]interface{} `json:"input,omitempty"`
+}
+
+// InputValidateResult is the workflow_input_validate tool output payload.
+type InputValidateResult struct {
+	SessionID  string          `json:"session_id,omitempty"`
+	Workflow   SchemaWorkflow  `json:"workflow"`
+	Validation InputValidation `json:"validation"`
+}
+
+// NewWorkflowInputValidateTool registers the workflow_input_validate tool.
+func NewWorkflowInputValidateTool(
+	loader *workflow.Loader,
+	stateManager *state.Manager,
+	logger *slog.Logger,
+) protocol.ToolRegistration {
+	if logger == nil {
+		logger = slog.Default()
+	}
+	return protocol.ToolRegistration{
+		Definition: protocol.ToolDefinition{
+			Name: "workflow_input_validate",
+			Description: "Validate workflow inputs. STRONGLY prefer passing `input` " +
+				"directly; only use session_id if you just created a draft with " +
+				"workflow_input_build in the same conversation.",
+			InputSchema: json.RawMessage(workflowInputValidateInputSchema),
+		},
+		Handler: func(
+			ctx context.Context,
+			arguments map[string]interface{},
+		) (protocol.ToolsCallResult, *protocol.ErrorObject) {
+			if loader == nil || stateManager == nil {
+				return protocol.ToolsCallResult{}, toolError(
+					protocol.ErrInternal,
+					"workflow input validator not configured",
+					nil,
+				)
+			}
+			if ctx.Err() != nil {
+				return protocol.ToolsCallResult{}, toolError(
+					protocol.ErrInternal,
+					"context cancelled",
+					map[string]string{"error": ctx.Err().Error()},
+				)
+			}
+			if _, ok := auth.TenantIDFromContext(ctx); !ok {
+				ctx = auth.WithTenantID(ctx, "local")
+			}
+
+			payload, err := json.Marshal(arguments)
+			if err != nil {
+				return protocol.ToolsCallResult{}, toolError(
+					protocol.ErrInvalidParams,
+					"invalid tool arguments",
+					map[string]string{"error": err.Error()},
+				)
+			}
+			var params InputValidateParams
+			if err := json.Unmarshal(payload, &params); err != nil {
+				return protocol.ToolsCallResult{}, toolError(
+					protocol.ErrInvalidParams,
+					"invalid tool arguments",
+					map[string]string{"error": err.Error()},
+				)
+			}
+			if params.Source.Kind == "" || params.Source.Location == "" {
+				return protocol.ToolsCallResult{}, toolError(
+					protocol.ErrInvalidParams,
+					"source.kind and source.location are required",
+					nil,
+				)
+			}
+
+			index, err := loadIndex(ctx, loader, params.Source)
+			if err != nil {
+				return protocol.ToolsCallResult{}, toolError(
+					protocol.ErrInvalidParams,
+					"workflow source load failed",
+					map[string]string{"error": err.Error()},
+				)
+			}
+
+			selected, err := selectWorkflow(index.Workflows, params.Selector)
+			if err != nil {
+				return protocol.ToolsCallResult{}, toolError(
+					protocol.ErrInvalidParams,
+					"workflow selection failed",
+					map[string]string{"error": err.Error()},
+				)
+			}
+
+			rawInput, sessionID, err := resolveValidationInput(
+				ctx,
+				stateManager,
+				params.SessionID,
+				params.Input,
+			)
+			if err != nil {
+				if resolutionErr, ok := err.(*inputResolutionError); ok {
+					return protocol.ToolsCallResult{}, toolError(
+						protocol.ErrInvalidParams,
+						resolutionErr.Message,
+						map[string]string{"hint": resolutionErr.Hint},
+					)
+				}
+				return protocol.ToolsCallResult{}, toolError(
+					protocol.ErrInvalidParams,
+					"input resolution failed",
+					map[string]string{"error": err.Error()},
+				)
+			}
+
+			validator := workflow.NewInputValidator()
+			result, err := validator.Validate(ctx, selected, rawInput)
+			if err != nil {
+				return protocol.ToolsCallResult{}, toolError(
+					protocol.ErrInvalidParams,
+					"workflow input validation failed",
+					map[string]string{"error": err.Error()},
+				)
+			}
+
+			validation := InputValidation{
+				Performed:       true,
+				Valid:           result.Valid,
+				NormalizedInput: result.NormalizedInput,
+				Issues:          result.Issues,
+			}
+
+			response := InputValidateResult{
+				SessionID: sessionID,
+				Workflow: SchemaWorkflow{
+					ID:   selected.ID,
+					Name: selected.Name,
+					Path: selected.Path,
+					Source: ListSource{
+						Kind:     string(selected.Source.Kind),
+						Location: selected.Source.Location,
+						Ref:      selected.Source.Ref,
+						Subdir:   selected.Source.Subdir,
+					},
+				},
+				Validation: validation,
+			}
+
+			return renderJSONResult(response, logger)
+		},
+	}
+}
+
+func resolveValidationInput(
+	ctx context.Context,
+	manager *state.Manager,
+	sessionID string,
+	payload map[string]interface{},
+) ([]byte, string, error) {
+	if payload != nil {
+		raw, err := json.Marshal(payload)
+		if err != nil {
+			return nil, sessionID, err
+		}
+		return raw, sessionID, nil
+	}
+	if sessionID == "" {
+		return nil, sessionID, &inputResolutionError{
+			Message: "input is required when session_id is empty. " +
+				"Hint: pass input directly or provide session_id.",
+			Hint: "Call workflow_input_validate with input, or build a session first.",
+		}
+	}
+	data, ok, err := manager.Get(ctx, sessionID)
+	if err != nil {
+		return nil, sessionID, err
+	}
+	if !ok || len(data.DraftInput) == 0 {
+		return nil, sessionID, &inputResolutionError{
+			Message: "draft input not found for session_id. " +
+				"Hint: call workflow_input_validate with input or run workflow_input_build.",
+			Hint: "Use workflow_input_build to create a draft or pass input directly.",
+		}
+	}
+	return data.DraftInput, sessionID, nil
+}
+
+type inputResolutionError struct {
+	Message string
+	Hint    string
+}
+
+func (err *inputResolutionError) Error() string {
+	return err.Message
+}

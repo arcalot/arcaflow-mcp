@@ -28,6 +28,12 @@ the HTTP endpoint used by the Go server integration:
 
 - `GET /healthz` for health checks
 - `POST /analysis/summary` for analysis requests
+- `GET /analysis/history` to list stored runs
+- `GET /analysis/history/{run_id}` to fetch a stored run
+- `POST /analysis/history` to store a run in history
+
+Set `ARCAFLOW_ANALYSIS_DB_URL` to enable history storage (for example,
+`sqlite:////tmp/analysis-history.db`).
 
 #### POST /analysis/summary
 
@@ -102,3 +108,25 @@ Notes:
 - `compare` toggles multi-run comparison output.
 - `metric_directions` controls ranking (`lower` for latency, `higher` for
   throughput).
+
+#### GET /analysis/history
+
+Optional query parameters:
+
+- `workflow_id` filters history by workflow.
+
+#### GET /analysis/history/{run_id}
+
+Fetch a stored run record by its ID.
+
+#### POST /analysis/history
+
+Request body (JSON):
+
+```
+{
+  "workflow_id": "workflow-123",
+  "input_payload": {"param": "value"},
+  "metrics": {"latency_ms": 12.3}
+}
+```
