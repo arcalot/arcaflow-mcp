@@ -13,6 +13,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/dependency-review-action@v4
+        with:
+          # No patched protobuf release available yet for CVE-2026-0994.
+          allow-ghsas: |
+            GHSA-7gcm-g887-7qv7
 
   govulncheck:
     runs-on: ubuntu-latest
@@ -44,4 +48,5 @@ jobs:
           cd analysis
           poetry export --without-hashes -f requirements.txt -o /tmp/req.txt
       - name: Run pip-audit
-        run: pip-audit -r /tmp/req.txt
+        # No patched protobuf release available yet for CVE-2026-0994.
+        run: pip-audit -r /tmp/req.txt --ignore-vuln CVE-2026-0994

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"io"
 	"log/slog"
+	"net/http"
 	"strings"
 	"testing"
 )
@@ -120,5 +121,31 @@ func TestParserLoggerOption(t *testing.T) {
 	parser := NewParser(WithParserLogger(logger))
 	if parser.logger != logger {
 		t.Fatalf("expected logger override")
+	}
+}
+
+func TestParserHTTPClientOption(t *testing.T) {
+	t.Parallel()
+	client := &http.Client{}
+	parser := NewParser(WithParserHTTPClient(client))
+	if parser.httpClient != client {
+		t.Fatalf("expected http client override")
+	}
+}
+
+func TestParserRejectsNullInputSchema(t *testing.T) {
+	t.Parallel()
+
+	parser := NewParser()
+	workflow := Workflow{
+		ID: "workflow-null",
+		Content: []byte(`
+version: v0.2.0
+input: null
+`),
+	}
+
+	if _, err := parser.Parse(context.Background(), workflow); err == nil {
+		t.Fatalf("expected null schema error")
 	}
 }

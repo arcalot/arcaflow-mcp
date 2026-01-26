@@ -137,3 +137,65 @@ func TestLimiterAccessors(t *testing.T) {
 		t.Fatalf("expected window 2m")
 	}
 }
+
+func TestLimiterInvalidConfig(t *testing.T) {
+	cases := []struct {
+		name string
+		cfg  Config
+	}{
+		{
+			name: "missing limit",
+			cfg: Config{
+				Limit:  0,
+				Window: time.Minute,
+			},
+		},
+		{
+			name: "missing window",
+			cfg: Config{
+				Limit:  1,
+				Window: 0,
+			},
+		},
+		{
+			name: "missing backoff base",
+			cfg: Config{
+				Limit:          1,
+				Window:         time.Minute,
+				BackoffEnabled: true,
+				BackoffBase:    0,
+				BackoffMax:     time.Second,
+			},
+		},
+		{
+			name: "missing backoff max",
+			cfg: Config{
+				Limit:          1,
+				Window:         time.Minute,
+				BackoffEnabled: true,
+				BackoffBase:    time.Second,
+				BackoffMax:     0,
+			},
+		},
+		{
+			name: "backoff max below base",
+			cfg: Config{
+				Limit:          1,
+				Window:         time.Minute,
+				BackoffEnabled: true,
+				BackoffBase:    2 * time.Second,
+				BackoffMax:     time.Second,
+			},
+		},
+	}
+
+	for _, testCase := range cases {
+		testCase := testCase
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			if _, err := NewLimiter(testCase.cfg); err == nil {
+				t.Fatalf("expected config error")
+			}
+		})
+	}
+}

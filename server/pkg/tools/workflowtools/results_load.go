@@ -78,7 +78,10 @@ func NewWorkflowResultsLoadTool(
 	return protocol.ToolRegistration{
 		Definition: protocol.ToolDefinition{
 			Name:        "workflow_results_load",
-			Description: "Load workflow result files from disk or URL.",
+			Description: "Load a results file from disk or URL and parse it for " +
+				"inspection. Example: \"show me the contents of /path/results.json\". " +
+				"If the user asks to analyze a file, route to workflow_results_analyze " +
+				"with source instead of read_file.",
 			InputSchema: json.RawMessage(workflowResultsLoadInputSchema),
 		},
 		Handler: func(

@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"log/slog"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"testing"
@@ -76,5 +78,35 @@ func TestWorkflowListMissingSource(t *testing.T) {
 	}
 	if errObj.Code != protocol.ErrInvalidParams {
 		t.Fatalf("expected invalid params error")
+	}
+}
+
+func TestWorkflowListInvalidArguments(t *testing.T) {
+	loader := workflow.NewLoader()
+	tool := NewWorkflowListTool(loader, slog.Default())
+	_, errObj := tool.Handler(context.Background(), map[string]interface{}{
+		"bad": make(chan int),
+	})
+	if errObj == nil {
+		t.Fatalf("expected invalid arguments error")
+	}
+}
+
+func TestLoadIndexURL(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte("version: v0.1\nsteps: {}\n"))
+	}))
+	t.Cleanup(server.Close)
+
+	loader := workflow.NewLoader()
+	index, err := loadIndex(context.Background(), loader, ListSourceParams{
+		Kind:     "url",
+		Location: server.URL,
+	})
+	if err != nil {
+		t.Fatalf("load url: %v", err)
+	}
+	if len(index.Workflows) != 1 {
+		t.Fatalf("expected 1 workflow")
 	}
 }

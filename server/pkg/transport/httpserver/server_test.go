@@ -1115,13 +1115,13 @@ func TestHandleMCPSSEWritesSession(t *testing.T) {
 	}
 
 	server.handleMCPSSE(recorder, request)
-	if recorder.Header().Get("Content-Type") != "text/event-stream" {
+	if recorder.ResponseRecorder.Header().Get("Content-Type") != "text/event-stream" {
 		t.Fatalf("expected event-stream content type")
 	}
-	if recorder.Header().Get(sessionHeader) == "" {
+	if recorder.ResponseRecorder.Header().Get(sessionHeader) == "" {
 		t.Fatalf("expected session header to be set")
 	}
-	if !strings.Contains(recorder.Body.String(), "event: session") {
+	if !strings.Contains(recorder.ResponseRecorder.Body.String(), "event: session") {
 		t.Fatalf("expected session event in body")
 	}
 }

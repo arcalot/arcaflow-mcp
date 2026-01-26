@@ -101,3 +101,14 @@ func TestWorkflowLoadUnknownID(t *testing.T) {
 		t.Fatalf("expected invalid params error")
 	}
 }
+
+func TestWorkflowLoadInvalidArguments(t *testing.T) {
+	loader := workflow.NewLoader()
+	tool := NewWorkflowLoadTool(loader, slog.Default())
+	_, errObj := tool.Handler(context.Background(), map[string]interface{}{
+		"bad": make(chan int),
+	})
+	if errObj == nil {
+		t.Fatalf("expected invalid arguments error")
+	}
+}

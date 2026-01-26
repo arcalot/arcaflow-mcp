@@ -2,6 +2,7 @@ package protocol
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 )
 
@@ -181,4 +182,13 @@ type ResourceContent struct {
 // ResourcesReadResult is returned by resources/read.
 type ResourcesReadResult struct {
 	Contents []ResourceContent `json:"contents"`
+}
+
+// ResourceProvider supplies resources for resources/list and resources/read.
+type ResourceProvider interface {
+	List(ctx context.Context) ([]ResourceItem, *ErrorObject)
+	Read(
+		ctx context.Context,
+		uri string,
+	) (*ResourceContent, bool, *ErrorObject)
 }

@@ -102,3 +102,12 @@ func TestManagerRequiresTenant(t *testing.T) {
 		t.Fatalf("expected tenant required, got %v", err)
 	}
 }
+
+func TestManagerDefaultsTTL(t *testing.T) {
+	t.Parallel()
+
+	manager := NewManager(0)
+	if manager.ttl <= 0 {
+		t.Fatalf("expected default ttl to be set")
+	}
+}

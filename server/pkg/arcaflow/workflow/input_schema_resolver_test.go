@@ -108,3 +108,43 @@ func TestResolveInputJSONSchemaNamespaces(t *testing.T) {
 		t.Fatalf("expected sub_params in schema")
 	}
 }
+
+func TestTypeSchemaVariants(t *testing.T) {
+	t.Parallel()
+
+	resolver := NewInputSchemaResolver()
+	objects := map[string]interface{}{
+		"Obj": map[string]interface{}{
+			"properties": map[string]interface{}{},
+		},
+	}
+	steps := map[string]interface{}{}
+
+	enumSchema := resolver.typeSchema(context.Background(), map[string]interface{}{
+		"type_id": "enum_string",
+		"values": map[string]interface{}{
+			"one": true,
+		},
+	}, objects, steps, "")
+	if _, ok := enumSchema.(map[string]interface{}); !ok {
+		t.Fatalf("expected enum schema")
+	}
+
+	listSchema := resolver.typeSchema(context.Background(), map[string]interface{}{
+		"type_id": "list",
+		"items": map[string]interface{}{
+			"type_id": "string",
+		},
+	}, objects, steps, "")
+	if _, ok := listSchema.(map[string]interface{}); !ok {
+		t.Fatalf("expected list schema")
+	}
+
+	refSchema := resolver.typeSchema(context.Background(), map[string]interface{}{
+		"type_id": "ref",
+		"id":      "Obj",
+	}, objects, steps, "")
+	if _, ok := refSchema.(map[string]interface{}); !ok {
+		t.Fatalf("expected ref schema")
+	}
+}

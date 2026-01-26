@@ -139,3 +139,56 @@ func TestWorkflowInputValidateMissingInput(t *testing.T) {
 		t.Fatalf("expected invalid params error")
 	}
 }
+
+func TestResolveValidationInputErrors(t *testing.T) {
+	t.Parallel()
+
+	manager := state.NewManager(0)
+	_, _, err := resolveValidationInput(context.Background(), manager, "", nil)
+	if err == nil {
+		t.Fatalf("expected error when input and session missing")
+	}
+	if err.Error() == "" {
+		t.Fatalf("expected error message")
+	}
+
+	_, _, err = resolveValidationInput(
+		context.Background(),
+		manager,
+		"session-missing",
+		nil,
+	)
+	if err == nil {
+		t.Fatalf("expected error for missing session")
+	}
+}
+
+func TestWorkflowInputValidateInvalidArguments(t *testing.T) {
+	loader := workflow.NewLoader()
+	stateManager := state.NewManager(0)
+	tool := NewWorkflowInputValidateTool(loader, stateManager, slog.Default())
+	_, errObj := tool.Handler(context.Background(), map[string]interface{}{
+		"bad": make(chan int),
+	})
+	if errObj == nil {
+		t.Fatalf("expected invalid arguments error")
+	}
+}
+
+func TestWorkflowInputValidateInvalidSourceKind(t *testing.T) {
+	loader := workflow.NewLoader()
+	stateManager := state.NewManager(0)
+	tool := NewWorkflowInputValidateTool(loader, stateManager, slog.Default())
+	_, errObj := tool.Handler(context.Background(), map[string]interface{}{
+		"source": map[string]interface{}{
+			"kind":     "invalid",
+			"location": "/tmp",
+		},
+		"input": map[string]interface{}{
+			"name": "arcaflow",
+		},
+	})
+	if errObj == nil {
+		t.Fatalf("expected invalid source error")
+	}
+}

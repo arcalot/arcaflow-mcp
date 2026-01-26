@@ -296,6 +296,84 @@ usage:
 	}
 }
 
+func TestRunLocalModeEOF(t *testing.T) {
+	baseDir := t.TempDir()
+	configPath := filepath.Join(baseDir, "config.yaml")
+	configContent := []byte(`
+mode: local
+address: "127.0.0.1:0"
+logging:
+  level: info
+`)
+	if err := os.WriteFile(configPath, configContent, 0o644); err != nil {
+		t.Fatalf("write config: %v", err)
+	}
+
+	stdinReader, stdinWriter, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("pipe: %v", err)
+	}
+	if err := stdinWriter.Close(); err != nil {
+		t.Fatalf("close writer: %v", err)
+	}
+	originalStdin := os.Stdin
+	os.Stdin = stdinReader
+	t.Cleanup(func() {
+		os.Stdin = originalStdin
+		_ = stdinReader.Close()
+	})
+
+	resetFlags(t, []string{
+		"arcaflow-mcp",
+		"-config",
+		configPath,
+	})
+
+	if err := run(); err != nil {
+		t.Fatalf("expected local mode to exit cleanly: %v", err)
+	}
+}
+
+func TestRunLocalModeWithAnalysisClient(t *testing.T) {
+	baseDir := t.TempDir()
+	configPath := filepath.Join(baseDir, "config.yaml")
+	configContent := []byte(`
+mode: local
+address: "127.0.0.1:0"
+logging:
+  level: info
+analysis:
+  analysis_http_url: "http://example.com"
+`)
+	if err := os.WriteFile(configPath, configContent, 0o644); err != nil {
+		t.Fatalf("write config: %v", err)
+	}
+
+	stdinReader, stdinWriter, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("pipe: %v", err)
+	}
+	if err := stdinWriter.Close(); err != nil {
+		t.Fatalf("close writer: %v", err)
+	}
+	originalStdin := os.Stdin
+	os.Stdin = stdinReader
+	t.Cleanup(func() {
+		os.Stdin = originalStdin
+		_ = stdinReader.Close()
+	})
+
+	resetFlags(t, []string{
+		"arcaflow-mcp",
+		"-config",
+		configPath,
+	})
+
+	if err := run(); err != nil {
+		t.Fatalf("expected local mode to exit cleanly: %v", err)
+	}
+}
+
 func mustMarshal(t *testing.T, value interface{}) json.RawMessage {
 	t.Helper()
 	encoded, err := json.Marshal(value)

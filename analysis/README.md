@@ -35,6 +35,20 @@ the HTTP endpoint used by the Go server integration:
 Set `ARCAFLOW_ANALYSIS_DB_URL` to enable history storage (for example,
 `sqlite:////tmp/analysis-history.db`).
 
+### CLI usage
+
+The analysis service accepts standard help output and optional flags:
+
+```
+python -m arcaflow_analysis.server.app --help
+```
+
+Flags:
+
+- `--http-address` (host:port) to enable the HTTP endpoint.
+- `--log-level` (`debug`, `info`, `warn`, `error`) to set logging level.
+- `--debug` to enable debug logging quickly.
+
 #### POST /analysis/summary
 
 Request body (JSON):
@@ -93,10 +107,10 @@ Response body (JSON):
   },
   "suggestions": [
     {
-      "id": "variability-latency",
-      "severity": "warning",
-      "message": "Reduce latency variability by adjusting inputs.",
-      "target": "stability"
+      "title": "Reduce variability for latency_ms",
+      "rationale": "High p95 relative to mean suggests variability.",
+      "priority": "medium",
+      "suggested_change": {"metric": "latency_ms", "target": "stability"}
     }
   ]
 }

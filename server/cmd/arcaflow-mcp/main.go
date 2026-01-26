@@ -21,6 +21,7 @@ import (
 	"github.com/arcalot/arcaflow-mcp/server/pkg/config"
 	"github.com/arcalot/arcaflow-mcp/server/pkg/protocol"
 	"github.com/arcalot/arcaflow-mcp/server/pkg/ratelimit"
+	"github.com/arcalot/arcaflow-mcp/server/pkg/resources"
 	"github.com/arcalot/arcaflow-mcp/server/pkg/state"
 	"github.com/arcalot/arcaflow-mcp/server/pkg/tenant"
 	"github.com/arcalot/arcaflow-mcp/server/pkg/tools/workflowtools"
@@ -234,6 +235,9 @@ func registerDefaultTools(
 		workflowtools.NewWorkflowSchemaGetTool(loader, parser, slog.Default()),
 	)
 	server.RegisterTool(
+		workflowtools.NewPluginSchemaGetTool(loader, slog.Default()),
+	)
+	server.RegisterTool(
 		workflowtools.NewWorkflowDescribeTool(loader, slog.Default()),
 	)
 	server.RegisterTool(
@@ -294,6 +298,16 @@ func registerDefaultTools(
 	)
 	server.RegisterTool(
 		workflowtools.NewWorkflowHistoryLoadTool(analysisClient, slog.Default()),
+	)
+	server.RegisterResourceProvider(
+		resources.NewWorkflowResourceProvider(
+			loader,
+			parser,
+			slog.Default(),
+		),
+	)
+	server.RegisterResourceProvider(
+		resources.NewExecutionResourceProvider(slog.Default()),
 	)
 }
 

@@ -131,6 +131,96 @@ input:
 	}
 }
 
+func TestNormalizeExportFormat(t *testing.T) {
+	t.Parallel()
+
+	format, err := normalizeExportFormat("")
+	if err != nil || format != workflow.ExportFormatJSON {
+		t.Fatalf("expected default json format")
+	}
+	format, err = normalizeExportFormat("YAML")
+	if err != nil || format != workflow.ExportFormatYAML {
+		t.Fatalf("expected yaml format")
+	}
+	if _, err = normalizeExportFormat("xml"); err == nil {
+		t.Fatalf("expected unknown format error")
+	}
+}
+
+func TestWorkflowInputExportInvalidFormat(t *testing.T) {
+	root := t.TempDir()
+	workflowPath := filepath.Join(root, "export.yaml")
+	content := []byte(`
+version: v0.2.0
+input:
+  root: InputParams
+  objects:
+    InputParams:
+      id: InputParams
+      properties:
+        name:
+          required: true
+          type:
+            type_id: string
+`)
+	if err := os.WriteFile(workflowPath, content, 0o644); err != nil {
+		t.Fatalf("write workflow: %v", err)
+	}
+
+	loader := workflow.NewLoader()
+	parser := workflow.NewParser()
+	stateManager := state.NewManager(0)
+	tool := NewWorkflowInputExportTool(loader, parser, stateManager, slog.Default())
+	_, errObj := tool.Handler(context.Background(), map[string]interface{}{
+		"source": map[string]interface{}{
+			"kind":     "filesystem",
+			"location": root,
+		},
+		"selector": map[string]interface{}{
+			"path": "export.yaml",
+		},
+		"input": map[string]interface{}{
+			"name": "arcaflow",
+		},
+		"format": "xml",
+	})
+	if errObj == nil {
+		t.Fatalf("expected invalid format error")
+	}
+}
+
+func TestWorkflowInputExportInvalidArguments(t *testing.T) {
+	loader := workflow.NewLoader()
+	parser := workflow.NewParser()
+	stateManager := state.NewManager(0)
+	tool := NewWorkflowInputExportTool(loader, parser, stateManager, slog.Default())
+	_, errObj := tool.Handler(context.Background(), map[string]interface{}{
+		"bad": make(chan int),
+	})
+	if errObj == nil {
+		t.Fatalf("expected invalid arguments error")
+	}
+}
+
+func TestWorkflowInputExportInvalidSourceKind(t *testing.T) {
+	loader := workflow.NewLoader()
+	parser := workflow.NewParser()
+	stateManager := state.NewManager(0)
+	tool := NewWorkflowInputExportTool(loader, parser, stateManager, slog.Default())
+	_, errObj := tool.Handler(context.Background(), map[string]interface{}{
+		"source": map[string]interface{}{
+			"kind":     "invalid",
+			"location": "/tmp",
+		},
+		"input": map[string]interface{}{
+			"name": "arcaflow",
+		},
+	})
+	if errObj == nil {
+		t.Fatalf("expected invalid source error")
+	}
+}
+
 func TestWorkflowInputExportMissingInput(t *testing.T) {
 	loader := workflow.NewLoader()
 	parser := workflow.NewParser()

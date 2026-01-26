@@ -32,6 +32,26 @@ const workflowResultsAnalysisInputSchema = `{
       },
       "minItems": 1
     },
+    "source": {
+      "type": "object",
+      "description": "Optional results file source for large payloads or when a file path is provided. Prefer this over read_file for huge files.",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "description": "Result source kind: filesystem or url (use filesystem for local paths)."
+        },
+        "location": {
+          "type": "string",
+          "description": "Filesystem path or URL for the result file (absolute paths preferred)."
+        }
+      },
+      "required": ["kind", "location"],
+      "additionalProperties": false
+    },
+    "format": {
+      "type": "string",
+      "description": "Optional format hint for source: json, yaml, yml, log, or txt."
+    },
     "compare": {
       "type": "boolean",
       "description": "Include comparison summary when true."
@@ -44,7 +64,10 @@ const workflowResultsAnalysisInputSchema = `{
       }
     }
   },
-  "required": ["results"],
+  "anyOf": [
+    {"required": ["results"]},
+    {"required": ["source"]}
+  ],
   "additionalProperties": false
 }`
 
@@ -53,6 +76,8 @@ type ResultsAnalysisParams struct {
 	Results          []analysis.ResultPayload `json:"results"`
 	Compare          bool                     `json:"compare,omitempty"`
 	MetricDirections map[string]string        `json:"metric_directions,omitempty"`
+	Source           *ListSourceParams        `json:"source,omitempty"`
+	FormatHint       string                   `json:"format,omitempty"`
 }
 
 // ResultsParseResult represents parsed analysis summary output.
@@ -92,7 +117,10 @@ func NewWorkflowResultsParseTool(
 ) protocol.ToolRegistration {
 	return newResultsAnalysisTool(
 		"workflow_results_parse",
-		"Parse workflow results and extract summary statistics.",
+		"Summarize result payloads into metrics and findings. Use when the user " +
+			"asks for summary stats or a quick health check. Example: \"summarize " +
+			"/path/results.json\". If a file path is provided, use " +
+			"source.kind=filesystem and do not call read_file.",
 		analysisClient,
 		logger,
 		func(response analysis.AnalyzeResponse) (interface{}, error) {
@@ -109,7 +137,10 @@ func NewWorkflowResultsAnalyzeTool(
 ) protocol.ToolRegistration {
 	return newResultsAnalysisTool(
 		"workflow_results_analyze",
-		"Analyze results and generate input improvement suggestions.",
+		"Analyze results and suggest input improvements. Use when the user asks " +
+			"for recommendations or tuning guidance. Example: \"analyze " +
+			"/path/results.json\". If a file path is provided, use " +
+			"source.kind=filesystem and do not call read_file.",
 		analysisClient,
 		logger,
 		func(response analysis.AnalyzeResponse) (interface{}, error) {
@@ -130,7 +161,10 @@ func NewWorkflowResultsCompareTool(
 ) protocol.ToolRegistration {
 	return newResultsAnalysisTool(
 		"workflow_results_compare",
-		"Compare multiple result payloads and rank metrics.",
+		"Compare multiple runs and rank metrics. Use when the user asks to " +
+			"compare runs or identify the best result. Example: \"compare these two " +
+			"runs\". Provide multiple results; source supports only single-file " +
+			"analysis.",
 		analysisClient,
 		logger,
 		func(response analysis.AnalyzeResponse) (interface{}, error) {
@@ -153,7 +187,10 @@ func NewWorkflowInputsSuggestTool(
 ) protocol.ToolRegistration {
 	return newResultsAnalysisTool(
 		"workflow_inputs_suggest",
-		"Generate input change suggestions from analysis.",
+		"Return only input change suggestions. Use when the user wants just the " +
+			"recommended adjustments. Example: \"suggest inputs for " +
+			"/path/results.json\". If a file path is provided, " +
+			"use source.kind=filesystem and do not call read_file.",
 		analysisClient,
 		logger,
 		func(response analysis.AnalyzeResponse) (interface{}, error) {
@@ -170,7 +207,10 @@ func NewWorkflowOptimizationGuideTool(
 ) protocol.ToolRegistration {
 	return newResultsAnalysisTool(
 		"workflow_optimization_guide",
-		"Summarize strategic optimization guidance from results.",
+		"Provide a short optimization plan plus suggestions. Use when the user " +
+			"asks for strategy or next steps. Example: \"optimize " +
+			"/path/results.json\". If a file path is provided, " +
+			"use source.kind=filesystem and do not call read_file.",
 		analysisClient,
 		logger,
 		func(response analysis.AnalyzeResponse) (interface{}, error) {
@@ -238,12 +278,67 @@ func newResultsAnalysisTool(
 					map[string]string{"error": err.Error()},
 				)
 			}
-			if len(params.Results) == 0 {
+			if params.Source != nil && len(params.Results) > 0 {
 				return protocol.ToolsCallResult{}, toolError(
 					protocol.ErrInvalidParams,
-					"results are required",
+					"provide results or source, not both",
+					map[string]string{
+						"hint": "use source for large files or results for inline data",
+					},
+				)
+			}
+			if params.Source == nil && len(params.Results) == 0 {
+				return protocol.ToolsCallResult{}, toolError(
+					protocol.ErrInvalidParams,
+					"results or source are required",
 					nil,
 				)
+			}
+			if params.Source != nil {
+				if params.Source.Kind == "" || params.Source.Location == "" {
+					return protocol.ToolsCallResult{}, toolError(
+						protocol.ErrInvalidParams,
+						"source.kind and source.location are required",
+						nil,
+					)
+				}
+				resultPayload, format, sizeBytes, err := loadAnalysisResultFromSource(
+					ctx,
+					*params.Source,
+					params.FormatHint,
+				)
+				if err != nil {
+					logger.Warn(
+						"analysis source load failed",
+						"tool",
+						name,
+						"source_kind",
+						params.Source.Kind,
+						"source_location",
+						params.Source.Location,
+						"error",
+						err,
+					)
+					return protocol.ToolsCallResult{}, toolError(
+						protocol.ErrInvalidParams,
+						"result load failed",
+						map[string]string{"error": err.Error()},
+					)
+				}
+				logger.Info(
+					"analysis source loaded",
+					"tool",
+					name,
+					"source_kind",
+					params.Source.Kind,
+					"source_location",
+					params.Source.Location,
+					"format",
+					format,
+					"size_bytes",
+					sizeBytes,
+				)
+				params.Results = []analysis.ResultPayload{resultPayload}
 			}
 			if forceCompare && len(params.Results) < 2 {
 				return protocol.ToolsCallResult{}, toolError(
@@ -264,7 +359,7 @@ func newResultsAnalysisTool(
 				return protocol.ToolsCallResult{}, toolError(
 					protocol.ErrInternal,
 					"analysis request failed",
-					map[string]string{"error": err.Error()},
+					analysisRequestErrorData(err),
 				)
 			}
 			result, err := buildResult(response)
@@ -278,6 +373,41 @@ func newResultsAnalysisTool(
 			return renderJSONResult(result, logger)
 		},
 	}
+}
+
+func loadAnalysisResultFromSource(
+	ctx context.Context,
+	source ListSourceParams,
+	formatHint string,
+) (analysis.ResultPayload, string, int64, error) {
+	rawText, sizeBytes, _, err := loadResultContent(ctx, source)
+	if err != nil {
+		return analysis.ResultPayload{}, "", 0, err
+	}
+	format, payloadValue, err := parseResultPayload(rawText, formatHint)
+	if err != nil {
+		return analysis.ResultPayload{}, "", 0, err
+	}
+	encoded, err := json.Marshal(payloadValue)
+	if err != nil {
+		return analysis.ResultPayload{}, "", 0, fmt.Errorf(
+			"encode result payload: %w",
+			err,
+		)
+	}
+	return analysis.ResultPayload{
+		Format:  format,
+		Payload: encoded,
+	}, format, sizeBytes, nil
+}
+
+func analysisRequestErrorData(err error) map[string]string {
+	data := map[string]string{
+		"error": err.Error(),
+		"hint": "verify analysis.analysis_http_url is reachable and the analysis " +
+			"service is running (check /healthz).",
+	}
+	return data
 }
 
 func buildOptimizationGuidance(response analysis.AnalyzeResponse) string {

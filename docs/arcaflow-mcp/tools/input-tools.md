@@ -364,6 +364,111 @@ Example response:
 }
 ```
 
+### `plugin_schema_get`
+
+Fetches plugin schemas referenced by workflow steps. This tool reads explicit
+schema references (`plugin_schema_ref`, `plugin_schema`, `plugin.schema_ref`,
+or `plugin.schema`) and returns the resolved schema payloads. Relative schema
+paths are resolved from the workflow file location.
+
+Input schema:
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "source": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "description": "Workflow source kind: filesystem, url, or git."
+        },
+        "location": {
+          "type": "string",
+          "description": "Filesystem root, URL, or git repository URL."
+        },
+        "ref": {
+          "type": "string",
+          "description": "Optional git ref (branch, tag, or commit)."
+        },
+        "subdir": {
+          "type": "string",
+          "description": "Optional git subdirectory to scan for workflows."
+        }
+      },
+      "required": ["kind", "location"],
+      "additionalProperties": false
+    },
+    "selector": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Workflow ID to load."
+        },
+        "path": {
+          "type": "string",
+          "description": "Workflow path to load."
+        }
+      },
+      "additionalProperties": false
+    },
+    "step_id": {
+      "type": "string",
+      "description": "Optional workflow step ID to filter results."
+    }
+  },
+  "required": ["source"],
+  "additionalProperties": false
+}
+```
+
+Example request:
+
+```json
+{
+  "source": {
+    "kind": "filesystem",
+    "location": "/workflows"
+  },
+  "selector": {
+    "path": "perf-test.yaml"
+  },
+  "step_id": "step-a"
+}
+```
+
+Example response:
+
+```json
+{
+  "workflow": {
+    "id": "b87f7e7e0f8b1d4b5b0d4b1f8d1f2cb5e1a8c7d0e14f1f2e2d4c3b5a6f7e8d9c",
+    "name": "perf-test",
+    "path": "perf-test.yaml",
+    "source": {
+      "kind": "filesystem",
+      "location": "/workflows"
+    }
+  },
+  "schemas": [
+    {
+      "step_id": "step-a",
+      "location": "plugin-schema.yaml",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "input": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  ]
+}
+```
+
 ### `workflow_input_build`
 
 Builds or updates a draft workflow input payload, storing it in a session and

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import argparse
 import logging
 import os
 import socket
@@ -12,6 +13,9 @@ from pathlib import Path
 from typing import Any
 
 import grpc
+
+# grpc_health is provided by grpcio-health-checking at runtime.
+# pylint: disable=import-error
 from grpc_health.v1 import health, health_pb2, health_pb2_grpc
 
 from arcaflow_analysis.server.http_server import AnalysisHTTPServer
@@ -168,9 +172,11 @@ class GrpcServer:
             self._http_server.stop()
 
 
-def configure_logging() -> None:
+def configure_logging(log_level: str | None = None) -> None:
     """Configure structured logging for the analysis service."""
-    log_level = os.getenv("ARCAFLOW_MCP_LOG_LEVEL", "INFO").upper()
+    if log_level is None:
+        log_level = os.getenv("ARCAFLOW_MCP_LOG_LEVEL", "INFO")
+    log_level = log_level.upper()
     resolved_level = getattr(logging, log_level, logging.INFO)
     logging.basicConfig(
         level=resolved_level,
@@ -179,17 +185,27 @@ def configure_logging() -> None:
     logging.getLogger().setLevel(resolved_level)
 
 
-def main() -> None:
-    """Entrypoint for the analysis service process."""
-    configure_logging()
-    http_address = os.getenv("ARCAFLOW_ANALYSIS_HTTP_ADDRESS")
-    server = GrpcServer(ServerConfig(http_address=http_address))
-    server.start()
-    server.wait_for_termination()
-
-
-if __name__ == "__main__":
-    main()
+def _parse_args(args: list[str]) -> argparse.Namespace:
+    """Parse CLI arguments for the analysis service."""
+    parser = argparse.ArgumentParser(
+        description="Arcaflow analysis service (gRPC + optional HTTP)."
+    )
+    parser.add_argument(
+        "--http-address",
+        default=os.getenv("ARCAFLOW_ANALYSIS_HTTP_ADDRESS"),
+        help="Optional HTTP address (host:port). Defaults to env var.",
+    )
+    parser.add_argument(
+        "--log-level",
+        default=os.getenv("ARCAFLOW_MCP_LOG_LEVEL", "INFO"),
+        help="Log level (debug, info, warn, error).",
+    )
+    parser.add_argument(
+        "--debug",
+        action="store_true",
+        help="Shortcut to enable debug logging.",
+    )
+    return parser.parse_args(args)
 
 
 def _split_host_port(address: str) -> tuple[str, int]:
@@ -198,3 +214,24 @@ def _split_host_port(address: str) -> tuple[str, int]:
         raise ValueError("HTTP address must be host:port")
     host, port_text = address.rsplit(":", 1)
     return host, int(port_text)
+
+
+def main() -> None:
+    """Entrypoint for the analysis service process."""
+    args = _parse_args(sys.argv[1:])
+    log_level = args.log_level
+    if args.debug and args.log_level == "INFO":
+        # Prefer explicit log-level; debug is a convenience flag.
+        log_level = "DEBUG"
+    configure_logging(log_level)
+    server = GrpcServer(ServerConfig(http_address=args.http_address))
+    server.start()
+    try:
+        server.wait_for_termination()
+    except KeyboardInterrupt:
+        # Gracefully stop servers on Ctrl-C.
+        server.stop()
+
+
+if __name__ == "__main__":
+    main()

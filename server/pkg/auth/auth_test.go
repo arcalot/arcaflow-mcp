@@ -105,6 +105,16 @@ func TestManagerIsAdminFalse(t *testing.T) {
 	}
 }
 
+func TestManagerIsAdminEmptyToken(t *testing.T) {
+	manager, err := NewManager("admin-token", nil)
+	if err != nil {
+		t.Fatalf("create manager: %v", err)
+	}
+	if manager.IsAdmin("") {
+		t.Fatalf("expected empty token to not be admin")
+	}
+}
+
 func TestInMemoryStoreRevokeMissing(t *testing.T) {
 	store := NewInMemoryStore()
 	if store.Revoke("missing") {

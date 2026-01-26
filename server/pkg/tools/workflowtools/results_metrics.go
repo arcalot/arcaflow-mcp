@@ -30,9 +30,32 @@ const workflowResultsMetricsExtractInputSchema = `{
         "additionalProperties": false
       },
       "minItems": 1
+    },
+    "source": {
+      "type": "object",
+      "description": "Optional results file source for large payloads or when a file path is provided. Prefer this over read_file for huge files.",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "description": "Result source kind: filesystem or url (use filesystem for local paths)."
+        },
+        "location": {
+          "type": "string",
+          "description": "Filesystem path or URL for the result file (absolute paths preferred)."
+        }
+      },
+      "required": ["kind", "location"],
+      "additionalProperties": false
+    },
+    "format": {
+      "type": "string",
+      "description": "Optional format hint for source: json, yaml, yml, log, or txt."
     }
   },
-  "required": ["results"],
+  "anyOf": [
+    {"required": ["results"]},
+    {"required": ["source"]}
+  ],
   "additionalProperties": false
 }`
 
@@ -53,7 +76,10 @@ func NewWorkflowResultsMetricsExtractTool(
 	return protocol.ToolRegistration{
 		Definition: protocol.ToolDefinition{
 			Name:        "workflow_results_metrics_extract",
-			Description: "Extract metrics and summary statistics from results.",
+			Description: "Extract metrics and summary statistics from results. Use " +
+				"when the user wants KPIs only. Example: \"KPIs from " +
+				"/path/results.json\". If a file path is provided, " +
+				"use source.kind=filesystem and do not call read_file.",
 			InputSchema: json.RawMessage(workflowResultsMetricsExtractInputSchema),
 		},
 		Handler: func(
@@ -92,12 +118,67 @@ func NewWorkflowResultsMetricsExtractTool(
 					map[string]string{"error": err.Error()},
 				)
 			}
-			if len(params.Results) == 0 {
+			if params.Source != nil && len(params.Results) > 0 {
 				return protocol.ToolsCallResult{}, toolError(
 					protocol.ErrInvalidParams,
-					"results are required",
+					"provide results or source, not both",
+					map[string]string{
+						"hint": "use source for large files or results for inline data",
+					},
+				)
+			}
+			if params.Source == nil && len(params.Results) == 0 {
+				return protocol.ToolsCallResult{}, toolError(
+					protocol.ErrInvalidParams,
+					"results or source are required",
 					nil,
 				)
+			}
+			if params.Source != nil {
+				if params.Source.Kind == "" || params.Source.Location == "" {
+					return protocol.ToolsCallResult{}, toolError(
+						protocol.ErrInvalidParams,
+						"source.kind and source.location are required",
+						nil,
+					)
+				}
+				resultPayload, format, sizeBytes, err := loadAnalysisResultFromSource(
+					ctx,
+					*params.Source,
+					params.FormatHint,
+				)
+				if err != nil {
+					logger.Warn(
+						"analysis source load failed",
+						"tool",
+						"workflow_results_metrics_extract",
+						"source_kind",
+						params.Source.Kind,
+						"source_location",
+						params.Source.Location,
+						"error",
+						err,
+					)
+					return protocol.ToolsCallResult{}, toolError(
+						protocol.ErrInvalidParams,
+						"result load failed",
+						map[string]string{"error": err.Error()},
+					)
+				}
+				logger.Info(
+					"analysis source loaded",
+					"tool",
+					"workflow_results_metrics_extract",
+					"source_kind",
+					params.Source.Kind,
+					"source_location",
+					params.Source.Location,
+					"format",
+					format,
+					"size_bytes",
+					sizeBytes,
+				)
+				params.Results = []analysis.ResultPayload{resultPayload}
 			}
 			response, err := analysisClient.Analyze(ctx, analysis.AnalyzeRequest{
 				Results: params.Results,
@@ -106,7 +187,7 @@ func NewWorkflowResultsMetricsExtractTool(
 				return protocol.ToolsCallResult{}, toolError(
 					protocol.ErrInternal,
 					"analysis request failed",
-					map[string]string{"error": err.Error()},
+					analysisRequestErrorData(err),
 				)
 			}
 			result := ResultsMetricsExtractResult{

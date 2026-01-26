@@ -1,6 +1,18 @@
 ## Result analysis tools
 
-This section will document the output analysis tools and schemas.
+This section documents the output analysis tools and schemas. Tool descriptions
+are written to support natural-language routing (users do not need to name a
+tool explicitly). Examples were validated against unit tests on 2026-01-26.
+
+For large result files, prefer the `source` + `format` inputs so the server can
+load and parse data without returning huge payloads to the client.
+
+Routing hints (for natural language clients):
+- "Analyze results at /path/to/file.json" → `workflow_results_analyze` with
+  `source.kind=filesystem`.
+- "Give me KPIs only from /path/to/file.json" → `workflow_results_metrics_extract`
+  with `source.kind=filesystem`.
+- Avoid loading large files with generic file tools; use `source` instead.
 
 ### `workflow_results_load`
 
@@ -99,9 +111,32 @@ Input schema:
         "additionalProperties": false
       },
       "minItems": 1
+    },
+    "source": {
+      "type": "object",
+      "description": "Optional results file source for large payloads or when the user provides a file path.",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "description": "Result source kind: filesystem or url (use filesystem for local paths)."
+        },
+        "location": {
+          "type": "string",
+          "description": "Filesystem path or URL for the result file (absolute paths preferred)."
+        }
+      },
+      "required": ["kind", "location"],
+      "additionalProperties": false
+    },
+    "format": {
+      "type": "string",
+      "description": "Optional format hint for source: json, yaml, yml, log, or txt."
     }
   },
-  "required": ["results"],
+  "anyOf": [
+    {"required": ["results"]},
+    {"required": ["source"]}
+  ],
   "additionalProperties": false
 }
 ```
@@ -134,7 +169,10 @@ Example response:
 
 ### `workflow_results_analyze`
 
-Analyzes results and returns suggestions for improving inputs.
+Analyzes results and returns suggestions for improving inputs. Suggestions include
+`title`, `rationale`, `priority`, and optional `suggested_change` data. If the
+analysis service cannot be reached, the tool returns an error with a hint to
+verify `analysis.analysis_http_url` and the `/healthz` endpoint.
 
 Input schema:
 
@@ -160,10 +198,46 @@ Input schema:
         "additionalProperties": false
       },
       "minItems": 1
+    },
+    "source": {
+      "type": "object",
+      "description": "Optional results file source for large payloads or when the user provides a file path.",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "description": "Result source kind: filesystem or url (use filesystem for local paths)."
+        },
+        "location": {
+          "type": "string",
+          "description": "Filesystem path or URL for the result file (absolute paths preferred)."
+        }
+      },
+      "required": ["kind", "location"],
+      "additionalProperties": false
+    },
+    "format": {
+      "type": "string",
+      "description": "Optional format hint for source: json, yaml, yml, log, or txt."
     }
   },
-  "required": ["results"],
+  "anyOf": [
+    {"required": ["results"]},
+    {"required": ["source"]}
+  ],
   "additionalProperties": false
+}
+```
+
+Example request:
+
+```json
+{
+  "results": [
+    {
+      "format": "json",
+      "payload": {"success": true}
+    }
+  ]
 }
 ```
 
@@ -178,7 +252,12 @@ Example response:
     "findings": []
   },
   "suggestions": [
-    {"title": "Tune input", "priority": "high", "rationale": "Reduce variance."}
+    {
+      "title": "Tune input",
+      "priority": "high",
+      "rationale": "Reduce variance.",
+      "suggested_change": {"action": "review_failures"}
+    }
   ]
 }
 ```
@@ -212,6 +291,26 @@ Input schema:
       },
       "minItems": 2
     },
+    "source": {
+      "type": "object",
+      "description": "Optional results file source for large payloads or when the user provides a file path.",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "description": "Result source kind: filesystem or url (use filesystem for local paths)."
+        },
+        "location": {
+          "type": "string",
+          "description": "Filesystem path or URL for the result file (absolute paths preferred)."
+        }
+      },
+      "required": ["kind", "location"],
+      "additionalProperties": false
+    },
+    "format": {
+      "type": "string",
+      "description": "Optional format hint for source: json, yaml, yml, log, or txt."
+    },
     "metric_directions": {
       "type": "object",
       "description": "Map of metric names to higher or lower.",
@@ -220,8 +319,31 @@ Input schema:
       }
     }
   },
-  "required": ["results"],
+  "anyOf": [
+    {"required": ["results"]},
+    {"required": ["source"]}
+  ],
   "additionalProperties": false
+}
+```
+
+Example request:
+
+```json
+{
+  "results": [
+    {
+      "format": "json",
+      "payload": {"success": true}
+    },
+    {
+      "format": "json",
+      "payload": {"success": true}
+    }
+  ],
+  "metric_directions": {
+    "latency": "lower"
+  }
 }
 ```
 
@@ -271,10 +393,46 @@ Input schema:
         "additionalProperties": false
       },
       "minItems": 1
+    },
+    "source": {
+      "type": "object",
+      "description": "Optional results file source for large payloads or when the user provides a file path.",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "description": "Result source kind: filesystem or url (use filesystem for local paths)."
+        },
+        "location": {
+          "type": "string",
+          "description": "Filesystem path or URL for the result file (absolute paths preferred)."
+        }
+      },
+      "required": ["kind", "location"],
+      "additionalProperties": false
+    },
+    "format": {
+      "type": "string",
+      "description": "Optional format hint for source: json, yaml, yml, log, or txt."
     }
   },
-  "required": ["results"],
+  "anyOf": [
+    {"required": ["results"]},
+    {"required": ["source"]}
+  ],
   "additionalProperties": false
+}
+```
+
+Example request:
+
+```json
+{
+  "results": [
+    {
+      "format": "json",
+      "payload": {"success": true}
+    }
+  ]
 }
 ```
 
@@ -283,7 +441,12 @@ Example response:
 ```json
 {
   "suggestions": [
-    {"title": "Tune input", "priority": "high", "rationale": "Reduce variance."}
+    {
+      "title": "Tune input",
+      "priority": "high",
+      "rationale": "Reduce variance.",
+      "suggested_change": {"action": "review_failures"}
+    }
   ]
 }
 ```
@@ -316,10 +479,62 @@ Input schema:
         "additionalProperties": false
       },
       "minItems": 1
+    },
+    "source": {
+      "type": "object",
+      "description": "Optional results file source for large payloads or when the user provides a file path.",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "description": "Result source kind: filesystem or url (use filesystem for local paths)."
+        },
+        "location": {
+          "type": "string",
+          "description": "Filesystem path or URL for the result file (absolute paths preferred)."
+        }
+      },
+      "required": ["kind", "location"],
+      "additionalProperties": false
+    },
+    "format": {
+      "type": "string",
+      "description": "Optional format hint for source: json, yaml, yml, log, or txt."
     }
   },
-  "required": ["results"],
+  "anyOf": [
+    {"required": ["results"]},
+    {"required": ["source"]}
+  ],
   "additionalProperties": false
+}
+```
+
+Example request:
+
+```json
+{
+  "results": [
+    {
+      "format": "json",
+      "payload": {"success": true}
+    }
+  ]
+}
+```
+
+Example response:
+
+```json
+{
+  "guidance": "Prioritize the highest impact suggestions, then validate improvements.",
+  "suggestions": [
+    {
+      "title": "Tune input",
+      "priority": "high",
+      "rationale": "Reduce variance.",
+      "suggested_change": {"action": "review_failures"}
+    }
+  ]
 }
 ```
 
@@ -351,10 +566,50 @@ Input schema:
         "additionalProperties": false
       },
       "minItems": 1
+    },
+    "source": {
+      "type": "object",
+      "description": "Optional results file source for large payloads or when the user provides a file path.",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "description": "Result source kind: filesystem or url (use filesystem for local paths)."
+        },
+        "location": {
+          "type": "string",
+          "description": "Filesystem path or URL for the result file (absolute paths preferred)."
+        }
+      },
+      "required": ["kind", "location"],
+      "additionalProperties": false
+    },
+    "format": {
+      "type": "string",
+      "description": "Optional format hint for source: json, yaml, yml, log, or txt."
     }
   },
-  "required": ["results"],
+  "anyOf": [
+    {"required": ["results"]},
+    {"required": ["source"]}
+  ],
   "additionalProperties": false
+}
+```
+
+Example request:
+
+```json
+{
+  "results": [
+    {
+      "format": "json",
+      "payload": {"latency_ms": 10.5}
+    },
+    {
+      "format": "json",
+      "payload": {"latency_ms": 11.2}
+    }
+  ]
 }
 ```
 
@@ -395,6 +650,14 @@ Input schema:
 }
 ```
 
+Example request (list):
+
+```json
+{
+  "workflow_id": "workflow-1"
+}
+```
+
 Example response (list):
 
 ```json
@@ -410,6 +673,14 @@ Example response (list):
 }
 ```
 
+Example request (single):
+
+```json
+{
+  "run_id": "run-1"
+}
+```
+
 Example response (single):
 
 ```json
@@ -421,16 +692,5 @@ Example response (single):
     "input_payload": {"param": "value"},
     "metrics": {"latency_ms": 12.3}
   }
-}
-```
-
-Example response:
-
-```json
-{
-  "guidance": "Prioritize the highest impact suggestions, then validate improvements.",
-  "suggestions": [
-    {"title": "Tune input", "priority": "high", "rationale": "Reduce variance."}
-  ]
 }
 ```

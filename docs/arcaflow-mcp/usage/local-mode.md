@@ -51,8 +51,8 @@ Phase 2 exposes core protocol methods with a minimal tool set:
 - `initialize` and `initialized` for capability negotiation
 - `tools/list` (includes `ping`)
 - `tools/call` (supports `ping`)
-- `resources/list` (returns an empty list)
-- `resources/read` (returns a structured error for unknown resources)
+- `resources/list` (returns cached resources, initially empty)
+- `resources/read` (supports workflow, schema, example, plugin schema, and execution/log URIs)
 - `ping`
 
 ### Notes

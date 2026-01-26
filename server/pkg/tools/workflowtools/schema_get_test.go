@@ -77,3 +77,96 @@ func TestWorkflowSchemaGetMissingSource(t *testing.T) {
 		t.Fatalf("expected invalid params error")
 	}
 }
+
+func TestWorkflowSchemaGetMissingInputSection(t *testing.T) {
+	t.Parallel()
+
+	root := t.TempDir()
+	workflowPath := filepath.Join(root, "schema.yaml")
+	content := []byte("version: v0.1\noutputs:\n  success: {}\n")
+	if err := os.WriteFile(workflowPath, content, 0o644); err != nil {
+		t.Fatalf("write workflow: %v", err)
+	}
+
+	loader := workflow.NewLoader()
+	parser := workflow.NewParser()
+	tool := NewWorkflowSchemaGetTool(loader, parser, slog.Default())
+	_, errObj := tool.Handler(context.Background(), map[string]interface{}{
+		"source": map[string]interface{}{
+			"kind":     "filesystem",
+			"location": root,
+		},
+		"selector": map[string]interface{}{
+			"path": "schema.yaml",
+		},
+	})
+	if errObj == nil {
+		t.Fatalf("expected schema resolution error")
+	}
+}
+
+func TestWorkflowSchemaGetSelectorRequired(t *testing.T) {
+	t.Parallel()
+
+	root := t.TempDir()
+	first := filepath.Join(root, "first.yaml")
+	second := filepath.Join(root, "second.yaml")
+	content := []byte(
+		"version: v0.1\n" +
+			"input:\n" +
+			"  root: Input\n" +
+			"  objects:\n" +
+			"    Input:\n" +
+			"      id: Input\n" +
+			"      properties:\n" +
+			"        name:\n" +
+			"          required: true\n" +
+			"          type:\n" +
+			"            type_id: string\n",
+	)
+	if err := os.WriteFile(first, content, 0o644); err != nil {
+		t.Fatalf("write workflow: %v", err)
+	}
+	if err := os.WriteFile(second, content, 0o644); err != nil {
+		t.Fatalf("write workflow: %v", err)
+	}
+
+	loader := workflow.NewLoader()
+	parser := workflow.NewParser()
+	tool := NewWorkflowSchemaGetTool(loader, parser, slog.Default())
+	_, errObj := tool.Handler(context.Background(), map[string]interface{}{
+		"source": map[string]interface{}{
+			"kind":     "filesystem",
+			"location": root,
+		},
+	})
+	if errObj == nil {
+		t.Fatalf("expected selector required error")
+	}
+}
+
+func TestWorkflowSchemaGetInvalidWorkflowContent(t *testing.T) {
+	t.Parallel()
+
+	root := t.TempDir()
+	workflowPath := filepath.Join(root, "schema.yaml")
+	if err := os.WriteFile(workflowPath, []byte("{invalid"), 0o644); err != nil {
+		t.Fatalf("write workflow: %v", err)
+	}
+
+	loader := workflow.NewLoader()
+	parser := workflow.NewParser()
+	tool := NewWorkflowSchemaGetTool(loader, parser, slog.Default())
+	_, errObj := tool.Handler(context.Background(), map[string]interface{}{
+		"source": map[string]interface{}{
+			"kind":     "filesystem",
+			"location": root,
+		},
+		"selector": map[string]interface{}{
+			"path": "schema.yaml",
+		},
+	})
+	if errObj == nil {
+		t.Fatalf("expected parse error")
+	}
+}

@@ -35,6 +35,7 @@ type Server struct {
 	state      connectionState
 	stateMu    sync.Mutex
 	tools      map[string]ToolRegistration
+	resources  []ResourceProvider
 }
 
 // NewServer constructs an MCP protocol server with default capabilities.
@@ -50,6 +51,7 @@ func NewServer(logger *slog.Logger, serverInfo ServerInfo) *Server {
 		serverInfo: serverInfo,
 		state:      stateNew,
 		tools:      make(map[string]ToolRegistration),
+		resources:  []ResourceProvider{},
 	}
 }
 
@@ -59,6 +61,14 @@ func (s *Server) RegisterTool(registration ToolRegistration) {
 		return
 	}
 	s.tools[registration.Definition.Name] = registration
+}
+
+// RegisterResourceProvider adds a resource provider to the server registry.
+func (s *Server) RegisterResourceProvider(provider ResourceProvider) {
+	if provider == nil {
+		return
+	}
+	s.resources = append(s.resources, provider)
 }
 
 // Handle processes a JSON-RPC message and returns serialized responses.
@@ -338,11 +348,17 @@ func (s *Server) handleResourcesList(
 		}
 	}
 
-	_ = ctx
-	_ = params
-
 	result := ResourcesListResult{
 		Resources: []ResourceItem{},
+	}
+	for _, provider := range s.resources {
+		items, errObj := provider.List(ctx)
+		if errObj != nil {
+			return errorResponse(req.ID, errObj)
+		}
+		if len(items) > 0 {
+			result.Resources = append(result.Resources, items...)
+		}
 	}
 
 	return resultResponse(req.ID, result)
@@ -382,7 +398,24 @@ func (s *Server) handleResourcesRead(
 		)
 	}
 
-	_ = ctx
+	for _, provider := range s.resources {
+		content, handled, errObj := provider.Read(ctx, params.URI)
+		if !handled {
+			continue
+		}
+		if errObj != nil {
+			return errorResponse(req.ID, errObj)
+		}
+		if content == nil {
+			return errorResponse(
+				req.ID,
+				newError(ErrInvalidParams, "resource not found", nil),
+			)
+		}
+		return resultResponse(req.ID, ResourcesReadResult{
+			Contents: []ResourceContent{*content},
+		})
+	}
 
 	return errorResponse(
 		req.ID,

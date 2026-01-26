@@ -212,3 +212,88 @@ func TestBuildArrayExampleFallback(t *testing.T) {
 		t.Fatalf("expected nil fallback value")
 	}
 }
+
+func TestGenerateExampleInputInvalidJSON(t *testing.T) {
+	t.Parallel()
+
+	_, err := GenerateExampleInput(json.RawMessage("{invalid"))
+	if err == nil {
+		t.Fatalf("expected parse error")
+	}
+}
+
+func TestGenerateExampleInputUnsupportedSchema(t *testing.T) {
+	t.Parallel()
+
+	_, err := GenerateExampleInput(json.RawMessage(`{"type":"unknown"}`))
+	if err == nil {
+		t.Fatalf("expected unsupported schema error")
+	}
+}
+
+func TestGenerateExampleInputFromInputScopeErrors(t *testing.T) {
+	t.Parallel()
+
+	_, err := GenerateExampleInputFromInputScope(json.RawMessage(`{"root":""}`))
+	if err == nil {
+		t.Fatalf("expected missing root error")
+	}
+
+	_, err = GenerateExampleInputFromInputScope(json.RawMessage(`{"root":"Root","objects":{}}`))
+	if err == nil {
+		t.Fatalf("expected missing root object error")
+	}
+}
+
+func TestExampleValueForTypeBranches(t *testing.T) {
+	t.Parallel()
+
+	objects := map[string]interface{}{
+		"Obj": map[string]interface{}{
+			"properties": map[string]interface{}{
+				"name": map[string]interface{}{
+					"required": true,
+					"type": map[string]interface{}{
+						"type_id": "string",
+					},
+				},
+			},
+		},
+	}
+	value := exampleValueForType(map[string]interface{}{
+		"type_id": "object",
+		"id":      "Obj",
+	}, objects)
+	if _, ok := value.(map[string]interface{}); !ok {
+		t.Fatalf("expected object example")
+	}
+
+	value = exampleValueForType(map[string]interface{}{
+		"type_id": "object",
+		"properties": map[string]interface{}{
+			"count": map[string]interface{}{
+				"required": true,
+				"type": map[string]interface{}{
+					"type_id": "integer",
+				},
+			},
+		},
+	}, objects)
+	if _, ok := value.(map[string]interface{}); !ok {
+		t.Fatalf("expected inline object example")
+	}
+
+	value = exampleValueForType(map[string]interface{}{
+		"type_id": "list",
+		"items": map[string]interface{}{
+			"type_id": "boolean",
+		},
+	}, objects)
+	if list, ok := value.([]interface{}); !ok || len(list) != 1 {
+		t.Fatalf("expected list example")
+	}
+
+	if value := exampleValueForType("invalid", objects); value != nil {
+		t.Fatalf("expected nil for invalid type")
+	}
+}

@@ -1,6 +1,7 @@
 package tenant
 
 import (
+	"os"
 	"path/filepath"
 	"testing"
 )
@@ -62,5 +63,24 @@ func TestFileUsageStoreNilSafety(t *testing.T) {
 	}
 	if len(store.List()) != 0 {
 		t.Fatalf("expected nil list for nil store")
+	}
+}
+
+func TestNewFileUsageStoreValidation(t *testing.T) {
+	if _, err := NewFileUsageStore(""); err == nil {
+		t.Fatalf("expected empty path error")
+	}
+	if _, err := NewFileUsageStore("usage.json"); err == nil {
+		t.Fatalf("expected missing dir error")
+	}
+}
+
+func TestFileUsageStoreInvalidJSON(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "usage.json")
+	if err := os.WriteFile(path, []byte("{invalid"), 0o644); err != nil {
+		t.Fatalf("write usage: %v", err)
+	}
+	if _, err := NewFileUsageStore(path); err == nil {
+		t.Fatalf("expected parse error")
 	}
 }

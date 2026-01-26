@@ -75,3 +75,111 @@ func TestWorkflowInputExamplesMissingSource(t *testing.T) {
 		t.Fatalf("expected invalid params error")
 	}
 }
+
+func TestWorkflowInputExamplesInvalidArguments(t *testing.T) {
+	loader := workflow.NewLoader()
+	parser := workflow.NewParser()
+	tool := NewWorkflowInputExamplesTool(loader, parser, slog.Default())
+	_, errObj := tool.Handler(context.Background(), map[string]interface{}{
+		"bad": make(chan int),
+	})
+	if errObj == nil || errObj.Code != protocol.ErrInvalidParams {
+		t.Fatalf("expected invalid params error")
+	}
+}
+
+func TestWorkflowInputExamplesSelectorRequired(t *testing.T) {
+	root := t.TempDir()
+	content := []byte(`
+version: v0.2.0
+input:
+  root: RootObject
+  objects:
+    RootObject:
+      id: RootObject
+      properties:
+        nickname:
+          required: true
+          type:
+            type_id: string
+outputs:
+  success:
+    status: ok
+`)
+	if err := os.WriteFile(filepath.Join(root, "one.yaml"), content, 0o644); err != nil {
+		t.Fatalf("write workflow: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "two.yaml"), content, 0o644); err != nil {
+		t.Fatalf("write workflow: %v", err)
+	}
+
+	loader := workflow.NewLoader()
+	parser := workflow.NewParser()
+	tool := NewWorkflowInputExamplesTool(loader, parser, slog.Default())
+	_, errObj := tool.Handler(context.Background(), map[string]interface{}{
+		"source": map[string]interface{}{
+			"kind":     "filesystem",
+			"location": root,
+		},
+	})
+	if errObj == nil {
+		t.Fatalf("expected selector required error")
+	}
+}
+
+func TestWorkflowInputExamplesCanceledContext(t *testing.T) {
+	root := t.TempDir()
+	workflowPath := filepath.Join(root, "example.yaml")
+	content := []byte(`
+version: v0.2.0
+input:
+  root: RootObject
+  objects:
+    RootObject:
+      id: RootObject
+      properties:
+        nickname:
+          required: true
+          type:
+            type_id: string
+outputs:
+  success:
+    status: ok
+`)
+	if err := os.WriteFile(workflowPath, content, 0o644); err != nil {
+		t.Fatalf("write workflow: %v", err)
+	}
+
+	loader := workflow.NewLoader()
+	parser := workflow.NewParser()
+	tool := NewWorkflowInputExamplesTool(loader, parser, slog.Default())
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	_, errObj := tool.Handler(ctx, map[string]interface{}{
+		"source": map[string]interface{}{
+			"kind":     "filesystem",
+			"location": root,
+		},
+		"selector": map[string]interface{}{
+			"path": "example.yaml",
+		},
+	})
+	if errObj == nil {
+		t.Fatalf("expected context error")
+	}
+}
+
+func TestWorkflowInputExamplesInvalidSourceKind(t *testing.T) {
+	loader := workflow.NewLoader()
+	parser := workflow.NewParser()
+	tool := NewWorkflowInputExamplesTool(loader, parser, slog.Default())
+	_, errObj := tool.Handler(context.Background(), map[string]interface{}{
+		"source": map[string]interface{}{
+			"kind":     "invalid",
+			"location": "/tmp",
+		},
+	})
+	if errObj == nil {
+		t.Fatalf("expected invalid source error")
+	}
+}
