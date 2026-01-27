@@ -1,0 +1,7 @@
+test_config:
+  name: "Medium Load Test"
+  users: 50
+  duration: 60
+  ramp_up: 10
+  timeout: 5
+  success_threshold: 0.95

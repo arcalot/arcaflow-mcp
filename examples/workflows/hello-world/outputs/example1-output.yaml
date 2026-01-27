@@ -1,0 +1,3 @@
+output:
+  message: "Hello, World!"
+  status: "success"

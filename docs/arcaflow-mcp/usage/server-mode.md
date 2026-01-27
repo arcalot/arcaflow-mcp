@@ -4,6 +4,96 @@ Server mode exposes MCP over HTTP/SSE for multi-tenant deployments. The HTTP
 POST endpoint is wired to the JSON-RPC handler; SSE streaming provides session
 binding and relays responses when a session header is present.
 
+### Quick Start
+
+**Minimal server setup (development/testing):**
+
+```bash
+# 1. Set data directory location (change this path if needed)
+export DATA_DIR="./data"
+
+# 2. Create data directory
+mkdir -p "$DATA_DIR"
+
+# 3. Generate admin token for testing
+# IMPORTANT: For production, use a cryptographically secure token (see notes below)
+export ARCAFLOW_MCP_ADMIN_TOKEN="dev-admin-token-$(date +%s)"
+
+# 4. Configure data storage paths (all use $DATA_DIR)
+export ARCAFLOW_MCP_TOKEN_STORE_PATH="$DATA_DIR/tokens.json"
+export ARCAFLOW_MCP_TENANT_STORE_PATH="$DATA_DIR/tenants.json"
+export ARCAFLOW_MCP_AUDIT_STORE_PATH="$DATA_DIR/audit.json"
+export ARCAFLOW_MCP_USAGE_STORE_PATH="$DATA_DIR/usage.json"
+export ARCAFLOW_MCP_TENANT_WORKSPACE_ROOT="$DATA_DIR/tenants"
+
+# 5. Start server (verify you're in repository root: ls server/arcaflow-mcp)
+./server/arcaflow-mcp --mode server --address :8080 &
+
+# Wait for server to start
+sleep 2
+
+# 6. In another terminal, initialize MCP session (part 1 - handshake request)
+curl -X POST http://localhost:8080/mcp \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $ARCAFLOW_MCP_ADMIN_TOKEN" \
+  -d @- <<'EOF'
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "initialize",
+  "params": {
+    "protocolVersion": "2025-11-25",
+    "capabilities": {},
+    "clientInfo": {
+      "name": "test-client",
+      "version": "1.0"
+    }
+  }
+}
+EOF
+
+# Expected response: {"jsonrpc":"2.0","id":1,"result":{"protocolVersion":"2025-11-25",...}}
+
+# 7. Complete initialization (part 2 - notification, no id)
+curl -X POST http://localhost:8080/mcp \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $ARCAFLOW_MCP_ADMIN_TOKEN" \
+  -d @- <<'EOF'
+{
+  "jsonrpc": "2.0",
+  "method": "initialized"
+}
+EOF
+
+# 8. Now make tool calls (example: list available tools)
+curl -X POST http://localhost:8080/mcp \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $ARCAFLOW_MCP_ADMIN_TOKEN" \
+  -d @- <<'EOF'
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "method": "tools/list",
+  "params": {}
+}
+EOF
+```
+
+**Important Notes:**
+- **Authentication**: Server mode requires `ARCAFLOW_MCP_ADMIN_TOKEN` to be set
+- **Data storage**: By default, the server uses `/var/lib/arcaflow-mcp` (requires root). The example above overrides this to use `./data/` in the current directory
+- **Token security**: For development/testing, the timestamp-based token above is acceptable. For production, generate a secure token:
+  ```bash
+  # Linux/macOS: Generate secure random token
+  export ARCAFLOW_MCP_ADMIN_TOKEN="$(openssl rand -hex 32)"
+  
+  # Or use uuidgen
+  export ARCAFLOW_MCP_ADMIN_TOKEN="$(uuidgen)"
+  ```
+- **MCP Protocol State**: The Quick Start examples above establish MCP protocol state per the specification (initialize → initialized → ready). However, each separate curl command creates a new connection without SSE session binding.
+- **Session Binding**: For AI clients or multi-step workflows, use SSE session binding (see [Session Binding](#session-binding) below) to maintain state across multiple requests.
+- **Production deployments**: See [Multi-Tenancy](#multi-tenancy) and [Configuration Reference](configuration.md)
+
 ### Endpoints (partial)
 
 - `POST /mcp` handles JSON-RPC client-to-server messages (including `ping`)
@@ -25,16 +115,63 @@ binding and relays responses when a session header is present.
 
 ### Session binding
 
-Server mode uses an `Mcp-Session-Id` header to bind HTTP POST requests to an SSE
-stream:
+**When is session binding needed?**
+- **AI Clients**: Claude Desktop, Cursor, and other MCP clients automatically use SSE session binding to maintain conversation state
+- **Multi-step workflows**: When you need to maintain state across multiple tool calls (load workflow → build inputs → validate → export)
+- **Not needed for**: Single operations, admin endpoints, or independent tool calls
 
-1. Connect to `GET /mcp/events` to open the SSE stream.
-2. Read the `Mcp-Session-Id` response header (also sent as an SSE `session`
-   event).
-3. Include `Mcp-Session-Id` on `POST /mcp` requests.
+**How session binding works:**
 
-If an SSE session exists for the same tenant, `POST /mcp` requests without the
-session header are rejected with `400 Bad Request`.
+Server mode uses an `Mcp-Session-Id` header to bind HTTP POST requests to an SSE stream:
+
+1. Connect to `GET /mcp/events` to open the SSE stream
+2. Read the `Mcp-Session-Id` response header (also sent as an SSE `session` event)
+3. Include `Mcp-Session-Id` header in all subsequent `POST /mcp` requests
+
+If an SSE session exists for the same tenant, `POST /mcp` requests without the session header are rejected with `400 Bad Request`.
+
+**Example with session binding (bash):**
+
+```bash
+# Terminal 1: Open SSE stream and capture session ID
+curl -N -H "Authorization: Bearer $ARCAFLOW_MCP_ADMIN_TOKEN" \
+  http://localhost:8080/mcp/events 2>&1 | tee >(grep -m1 "Mcp-Session-Id" | cut -d: -f2 | tr -d ' ' > /tmp/session-id) &
+
+# Wait for session ID
+sleep 1
+SESSION_ID=$(cat /tmp/session-id)
+echo "Session ID: $SESSION_ID"
+
+# Terminal 2: Make requests with session binding
+# Initialize
+curl -X POST http://localhost:8080/mcp \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $ARCAFLOW_MCP_ADMIN_TOKEN" \
+  -H "Mcp-Session-Id: $SESSION_ID" \
+  -d @- <<'EOF'
+{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"test","version":"1.0"}}}
+EOF
+
+# Complete initialization
+curl -X POST http://localhost:8080/mcp \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $ARCAFLOW_MCP_ADMIN_TOKEN" \
+  -H "Mcp-Session-Id: $SESSION_ID" \
+  -d @- <<'EOF'
+{"jsonrpc":"2.0","method":"initialized"}
+EOF
+
+# Now all subsequent requests maintain state
+curl -X POST http://localhost:8080/mcp \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $ARCAFLOW_MCP_ADMIN_TOKEN" \
+  -H "Mcp-Session-Id: $SESSION_ID" \
+  -d @- <<'EOF'
+{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}
+EOF
+```
+
+**Note:** For simple testing and single operations, SSE session binding is optional. The Quick Start examples above work without it.
 
 ### Authentication
 
@@ -49,54 +186,71 @@ statistics are persisted via `usage.store_path`.
 2. Create a tenant token scoped to that tenant.
 3. Provide `Authorization: Bearer <token>` on `POST /mcp` and `GET /mcp/events`.
 
-Tenant admin example:
+**Create tenant:**
 
-```
-curl -H "Authorization: Bearer $ARCAFLOW_MCP_ADMIN_TOKEN" \
+```bash
+curl -X POST http://127.0.0.1:8080/admin/tenants \
+  -H "Authorization: Bearer $ARCAFLOW_MCP_ADMIN_TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"tenant_id":"tenant-a","display_name":"Tenant A","metadata":{"team":"platform"}}' \
-  http://127.0.0.1:8080/admin/tenants
+  -d @- <<'EOF'
+{
+  "tenant_id": "tenant-a",
+  "display_name": "Tenant A",
+  "metadata": {
+    "team": "platform"
+  }
+}
+EOF
 ```
 
-Tenant token example (tenant must already exist):
+**Create tenant token** (tenant must already exist):
 
-```
-curl -H "Authorization: Bearer $ARCAFLOW_MCP_ADMIN_TOKEN" \
+```bash
+curl -X POST http://127.0.0.1:8080/admin/tenants/tenant-a/tokens \
+  -H "Authorization: Bearer $ARCAFLOW_MCP_ADMIN_TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{}' \
-  http://127.0.0.1:8080/admin/tenants/tenant-a/tokens
+  -d @- <<'EOF'
+{}
+EOF
 ```
 
-Tenant token list example:
+**List tenant tokens:**
 
-```
-curl -H "Authorization: Bearer $ARCAFLOW_MCP_ADMIN_TOKEN" \
-  http://127.0.0.1:8080/admin/tenants/tenant-a/tokens
+```bash
+curl http://127.0.0.1:8080/admin/tenants/tenant-a/tokens \
+  -H "Authorization: Bearer $ARCAFLOW_MCP_ADMIN_TOKEN"
 ```
 
-Tenant usage example:
+**Get tenant usage:**
 
-```
-curl -H "Authorization: Bearer $ARCAFLOW_MCP_ADMIN_TOKEN" \
-  http://127.0.0.1:8080/admin/usage/tenants/tenant-a
+```bash
+curl http://127.0.0.1:8080/admin/usage/tenants/tenant-a \
+  -H "Authorization: Bearer $ARCAFLOW_MCP_ADMIN_TOKEN"
 ```
 
 Usage responses include `workspace_bytes` for current workspace size.
 
-Audit query example:
+**Query audit logs:**
 
-```
-curl -H "Authorization: Bearer $ARCAFLOW_MCP_ADMIN_TOKEN" \
-  "http://127.0.0.1:8080/admin/audit?tenant_id=tenant-a&action=mcp_request&limit=50"
+```bash
+curl "http://127.0.0.1:8080/admin/audit?tenant_id=tenant-a&action=mcp_request&limit=50" \
+  -H "Authorization: Bearer $ARCAFLOW_MCP_ADMIN_TOKEN"
 ```
 
-Tenant request example:
+**Tenant MCP request example** (using tenant token):
 
-```
-curl -H "Authorization: Bearer <tenant-token>" \
+```bash
+# Replace <tenant-token> with actual token from token creation above
+curl -X POST http://127.0.0.1:8080/mcp \
   -H "Content-Type: application/json" \
-  -d '{"jsonrpc":"2.0","id":1,"method":"ping"}' \
-  http://127.0.0.1:8080/mcp
+  -H "Authorization: Bearer <tenant-token>" \
+  -d @- <<'EOF'
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "ping"
+}
+EOF
 ```
 
 ### Rate limiting

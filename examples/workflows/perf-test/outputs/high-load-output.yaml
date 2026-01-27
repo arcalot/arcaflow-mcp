@@ -1,0 +1,5 @@
+output:
+  test_name: "High Load Test"
+  users: 100
+  duration: 60
+  message: "Running test: High Load Test with 100 users"

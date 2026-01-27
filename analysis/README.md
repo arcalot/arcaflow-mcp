@@ -1,11 +1,41 @@
 ## Python Analysis Engine
 
-This directory contains the Python analysis service:
+This directory contains the Python analysis service for workflow result analysis and optimization suggestions.
 
-- Result parsing and metrics extraction
-- Analysis and comparison logic
-- Suggestion generation
-- gRPC server interface
+## Components
+
+- **Result parsing** - Load and parse JSON, YAML, and log outputs
+- **Metrics extraction** - Extract performance metrics from results
+- **Analysis and comparison** - Multi-run comparison and statistical analysis
+- **Suggestion generation** - AI-driven optimization recommendations
+- **Historical database** - SQLite/PostgreSQL storage for result history
+- **HTTP API** - RESTful API for Go server integration
+- **gRPC interface** - gRPC service (planned, HTTP currently used)
+
+## Documentation
+
+### For Users
+- [Result Analysis Guide](../docs/arcaflow-mcp/usage/result-analysis.md) - Using analysis features
+- [Configuration Reference](../docs/arcaflow-mcp/usage/configuration.md) - Configuration options
+
+### For Developers
+- [Architecture Overview](../docs/architecture/python-engine.md) - Python engine internals
+- [Development Setup](../docs/development/setup.md) - Environment setup
+- [Testing Guide](../docs/development/testing.md) - Testing standards
+- [API Documentation](../docs/api/python-engine.md) - Python API reference
+
+## Quick Start
+
+```bash
+# Install dependencies
+poetry install
+
+# Run tests
+poetry run pytest
+
+# Start HTTP server
+poetry run python -m arcaflow_analysis.server.app --http-address 127.0.0.1:8081
+```
 
 ### gRPC service definition
 

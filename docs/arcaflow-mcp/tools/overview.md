@@ -49,5 +49,5 @@ Resource URI schemes are documented in `docs/arcaflow-mcp/tools/resources.md`.
 - `execution://` - execution results
 - `execution-log://` - execution log payloads
 
-Arcaflow MCP does not expose workflow execution tools in Phase 4. Execution
-capabilities are planned for future phases.
+Arcaflow MCP does not currently expose workflow execution tools. Execution
+capabilities are planned for a future release.

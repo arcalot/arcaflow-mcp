@@ -75,13 +75,12 @@ Run benchmarks for typical input construction operations:
 go test ./server/pkg/arcaflow/workflow -bench=. -run ^$
 ```
 
-Record results in `DEVELOPMENT_PLAN.md` and validate the `<100ms` overhead target
-for common operations.
+Document test results and validate the `<100ms` overhead target for common
+operations.
 
 ### MCP compliance checklist
 
-Use this checklist to verify MCP protocol compliance (record results in
-`DEVELOPMENT_PLAN.md`):
+Use this checklist to verify MCP protocol compliance:
 
 - JSON-RPC 2.0 parsing and validation
 - Request/response correlation by `id`
@@ -98,9 +97,9 @@ go test ./server/pkg/protocol ./server/pkg/transport/stdio
 go test ./server/test/integration -run HTTP
 ```
 
-### Phase 5 test scenarios
+### Integration test scenarios
 
-Record outcomes in `DEVELOPMENT_PLAN.md` as you execute these scenarios:
+Document test outcomes as you execute these scenarios:
 
 - Input construction (filesystem + auto-perf): load workflow, validate input,
   export JSON, and confirm namespace refs resolve.
@@ -127,8 +126,7 @@ These steps are required before completing Phase 2 exit criteria:
 
 ### Phase 5 manual MCP client validation
 
-Use an official MCP client (Claude Desktop or equivalent) and record results in
-`DEVELOPMENT_PLAN.md`:
+Use an official MCP client (Claude Desktop or equivalent) and document results:
 
 1. Start local mode: `./server/arcaflow-mcp --mode local`
 2. Connect the client to the local MCP server.

@@ -1,7 +1,6 @@
 ## Getting started
 
-This guide provides quick pointers for local and server mode usage during
-Phase 2 development.
+This guide provides quick pointers for local and server mode usage.
 
 ### Local mode (stdio)
 

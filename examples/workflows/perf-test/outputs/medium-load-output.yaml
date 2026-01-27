@@ -1,0 +1,5 @@
+output:
+  test_name: "Medium Load Test"
+  users: 50
+  duration: 60
+  message: "Running test: Medium Load Test with 50 users"

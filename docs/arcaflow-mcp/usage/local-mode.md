@@ -46,7 +46,7 @@ Example JSON-style entry (field names may vary by client):
 
 ### Supported MCP methods
 
-Phase 2 exposes core protocol methods with a minimal tool set:
+The server exposes core MCP protocol methods with workflow management tools:
 
 - `initialize` and `initialized` for capability negotiation
 - `tools/list` (includes `ping`)

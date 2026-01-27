@@ -1,0 +1,7 @@
+test_config:
+  name: "High Load Test"
+  users: 100
+  duration: 60
+  ramp_up: 15
+  timeout: 10
+  success_threshold: 0.90

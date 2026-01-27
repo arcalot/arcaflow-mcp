@@ -1,0 +1,5 @@
+output:
+  test_name: "Low Load Test"
+  users: 10
+  duration: 60
+  message: "Running test: Low Load Test with 10 users"
