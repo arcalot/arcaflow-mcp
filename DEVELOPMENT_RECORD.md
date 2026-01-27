@@ -1205,3 +1205,309 @@ Awaiting Gate Approval: YES
 
 ---
 
+
+---
+
+### Phase 3: Arcaflow Integration - Skills 1 & 2
+Status: In Progress (2026-01-22)  
+Gate Keeper: User approval to proceed to Phase 4
+
+Objectives:
+- Input construction: Parse workflows, extract JSON schemas, validate ALL inputs against schemas, export only schema-valid machine-readable JSON/YAML
+- Result analysis: Load, parse, and analyze workflow execution results
+- Suggest input optimizations based on results analysis
+- Support multi-run comparison and historical analysis
+- NOTE: Does NOT include workflow execution (Phase 2 future work)
+- **CRITICAL:** All exported inputs must be deterministic and 100% schema-validated
+- **NOTE:** Workflow schemas and plugin schemas are distinct:
+  - Workflow `input` defines the top-level schema for MCP-generated inputs.
+  - Plugin schemas define step input/output contracts for runtime execution.
+  - Input construction validates ONLY against workflow `input` unless a task explicitly
+    requires step-level validation.
+
+Tasks - Input Construction (NO EXECUTION):
+- [DONE] Implement workflow loading and discovery (2026-01-22)
+  - Outcome: Load workflows from filesystem, URLs, and git repositories.
+  - Requirements: Support multiple workflow sources, cache content, index with metadata, scan directories.
+  - Creative Freedom: Choose caching strategy, decide on indexing approach, optimize for performance.
+
+- [DONE] Create workflow parser (for EXISTING workflows) (2026-01-22)
+  - Outcome: Parse Arcaflow YAML/JSON workflows and extract machine-readable schemas.
+  - Requirements: Validate workflow syntax, extract input/output schemas (PRIMARY FOCUS), convert to JSON Schema format, handle workflow references, generate example inputs.
+  - Considerations: This is the core of input construction - schema extraction must be accurate and complete.
+
+- [DONE] Implement input validator (MANDATORY) (2026-01-22)
+  - Outcome: Deterministic validation of all inputs against workflow JSON schemas before export.
+  - Requirements: 
+    - 100% schema validation coverage - no invalid inputs can be exported
+    - Detailed error messages with correction suggestions
+    - Handle optional vs required fields, type checking and coercion
+    - Validate against Arcaflow workflow/plugin JSON schemas
+  - CRITICAL: Validation must be enforced - export blocked if validation fails.
+
+- [DONE] Build input file generator (2026-01-22)
+  - Outcome: Export only schema-validated inputs as machine-readable JSON or YAML.
+  - Requirements: 
+    - Only export inputs that pass validation (enforced, not optional)
+    - Support both JSON and YAML formats
+    - Produce deterministic, Arcaflow-compatible output files
+    - Include schema validation confirmation in export metadata
+  - Verification: All exported files must work with external Arcaflow execution (100%).
+
+Tasks - Result Analysis (Python Service):
+- [DONE] Set up Python analysis service (2026-01-22)
+  - Outcome: Fully functional gRPC service for analysis operations.
+  - Requirements: Service definition in protobuf, gRPC server implementation, health checks and monitoring.
+
+- [DONE] Implement result loader (2026-01-22)
+  - Outcome: Load workflow execution results from multiple sources.
+  - Requirements: Support JSON, YAML, and log files from filesystem, handle multiple formats, cache results efficiently.
+  - Future Enhancement: Integrate with external data store MCP servers (Horreum, Elasticsearch) to retrieve results from centralized systems.
+
+- [DONE] Create result parser (2026-01-22)
+  - Outcome: Extract structured data and metrics from results.
+  - Requirements: Parse to pandas DataFrames, extract KPIs, identify success/failure, handle incomplete data, normalize formats.
+  - Creative Freedom: Choose parsing strategies, decide on data structures for metrics.
+
+- [DONE] Build result analyzer (2026-01-22)
+  - Outcome: Analyze results against goals and identify issues.
+  - Requirements: Compare against criteria, identify bottlenecks, detect anomalies, calculate statistics, generate human-readable analysis.
+  - Considerations: Use appropriate libraries (numpy, scipy), focus on actionable insights.
+
+- [DONE] Implement multi-run comparison (2026-01-22)
+  - Outcome: Compare multiple workflow runs to identify patterns and optimal configurations.
+  - Requirements: Cross-run comparison, trend identification, input-output correlation, configuration ranking, prepare data for visualization.
+  - Creative Freedom: Choose comparison algorithms, decide on ranking metrics.
+
+- [DONE] Create suggestion engine (2026-01-22)
+  - Outcome: Generate input suggestions based on result analysis.
+  - Requirements: Rule-based suggestions initially, explain rationale, prioritize by impact, learn from historical patterns.
+  - Future: ML model integration (Phase 2+).
+
+- [DONE] Build historical database (2026-01-22)
+  - Outcome: Persistent storage of run history for pattern analysis.
+  - Requirements: Define schema, store runs with inputs/outcomes, index for queries, enable trend analysis.
+  - Creative Freedom: Choose database (SQLite for simple, PostgreSQL for production), design schema for efficient queries.
+
+- [DONE] Integration with Go server (2026-01-22)
+  - Outcome: Seamless communication between Go MCP server and Python analysis service.
+  - Requirements: Go gRPC client, error handling and retries, request/response mapping, performance optimization.
+  - Note: If added later, Python-side input validation using the Arcaflow plugin
+    SDK is optional and advisory only. Go-side validation remains the mandatory
+    enforcement gate before any input export.
+  - Implementation Note: HTTP endpoint `/analysis/summary` and Go HTTP client
+    provide the initial integration path.
+
+Tasks - Common:
+- [DONE] Implement plugin schema handler (2026-01-22)
+  - Outcome: Access and cache plugin schemas referenced by workflows.
+  - Requirements: Read schemas from workflows, fetch for reference, cache efficiently, document requirements.
+
+- [DONE] Create state manager (multi-tenant aware) (2026-01-22)
+  - Outcome: Manage session state with complete tenant isolation.
+  - Requirements: Track input construction sessions, store draft inputs, cache schemas, store results and analysis, maintain historical database - all per tenant with isolation. Session cleanup and timeout handling.
+  - Considerations: This is critical for multi-tenancy - must prevent cross-tenant data leakage.
+
+- [DONE] Add comprehensive integration tests (2026-01-22)
+  - Outcome: Integration tests validating both skills with real workflows and results.
+  - Requirements: Test with real workflow schemas (especially arcaflow-workflow-auto-perf), real execution results, suggestion generation, multi-run analysis.
+  - Considerations: Use the target workflow as primary test case.
+
+Dependencies:
+- Phase 2.75 complete (admin ops, audit persistence, quota enforcement
+  ready)
+- Sample Arcaflow workflow YAML files available
+- Sample Arcaflow execution result files available
+- Target workflow (arcaflow-workflow-auto-perf) accessible
+- gRPC or REST API between Go and Python functional
+
+Exit Criteria:
+- [DONE] Input construction: Can load workflows from multiple sources (filesystem, URL, git)
+  (2026-01-22)
+- [DONE] Input construction: Can parse workflow YAML and extract JSON schemas accurately
+  (2026-01-22)
+- [DONE] Input construction: Validates ALL inputs against schemas before export (100%
+  enforcement) (2026-01-22)
+- [DONE] Input construction: Exports only schema-valid, deterministic JSON/YAML inputs
+  (2026-01-22)
+- [DONE] Input construction: All exported inputs work with Arcaflow execution (100% success rate)
+  (2026-01-22)
+  - Validated with Arcaflow engine v0.20.0 and basic example workflow.
+- [DONE] Result analysis: Can load and parse execution results (2026-01-22)
+- [BLOCKED] Result analysis: Can analyze results against goals
+  - Deferred to Phase 4 manual validation (requires MCP tools for end-to-end flow)
+- [DONE] Result analysis: Can suggest input modifications based on analysis (2026-01-22)
+- [DONE] Result analysis: Can compare multiple runs and identify patterns (2026-01-22)
+- [DONE] Can parse and cache plugin schemas (2026-01-22)
+- [DONE] State management for input and analysis sessions functional (2026-01-22)
+- [DONE] Historical database operational (2026-01-22)
+- [DONE] Unit tests written and passing for all input construction and result analysis components (>85% coverage)
+  (2026-01-22)
+- [DONE] Integration tests passing with real workflows and results (2026-01-22)
+  - CI runs `scripts/test-integration.sh` with pinned engine and workflow.
+- [DONE] All Go code documented (godoc comments) (2026-01-22)
+- [DONE] All Python code documented (docstrings, type hints) (2026-01-22)
+- [DONE] User documentation updated for input construction and result analysis (2026-01-22)
+- [DONE] API documentation complete for analysis service (2026-01-22)
+- [DONE] Does NOT execute workflows (Phase 2 future work)
+
+Awaiting Gate Approval: NO - Approved to proceed to Phase 5 (2026-01-27)
+
+
+---
+
+### Phase 4: MCP Tools & Resources Implementation
+Status: In Progress (2026-01-22)  
+Gate Keeper: User approval to proceed to Phase 5
+
+Objectives:
+- Implement all MCP tools for input construction (NOT execution)
+- Implement MCP resources for workflow schemas and inputs
+- Connect tools/resources to Arcaflow schema layer
+- Create comprehensive tool schemas
+- Explicitly exclude execution tools (future phase)
+
+Tasks:
+- [DONE] Implement Tools - Input Construction (2026-01-22)
+  - Outcome: Complete set of MCP tools enabling conversational workflow input construction.
+  - Required Tools (PRIMARY):
+    - [DONE] `workflow_list` - Discover available workflows from various sources
+      (2026-01-22)
+    - [DONE] `workflow_load` - Load workflow from filesystem, URL, or git
+      (2026-01-22)
+    - [DONE] `workflow_describe` - Get human-readable workflow description
+      (2026-01-22)
+    - [DONE] `workflow_schema_get` - Extract input/output schemas (JSON Schema
+      format) (2026-01-22)
+    - [DONE] `workflow_input_build` - Interactively construct inputs with
+      validation (2026-01-22)
+    - [DONE] `workflow_input_validate` - Validate constructed inputs
+      (2026-01-22)
+    - [DONE] `workflow_input_export` - Export validated inputs (JSON/YAML)
+      (2026-01-22)
+  - Additional Tools (SECONDARY):
+    - [DONE] `workflow_input_examples_get` - Get example valid inputs
+      (2026-01-22)
+  - Creative Freedom: Design tool schemas, decide on error responses, optimize for LLM interaction patterns.
+    
+- [DONE] Workflow introspection enhancements (auto-perf) (2026-01-23)
+  - Outcome: Resolve workflow inputs across sub-workflows, plugin schemas, and
+    Arcaflow namespace refs.
+  - Requirements:
+    - [DONE] Schema source resolution pipeline (2026-01-23)
+      - Load sub-workflow schemas from referenced workflow files.
+      - Fetch plugin schemas by executing container images with
+        `--json-schema input`.
+      - Cache resolved schemas by path/image/step ID.
+    - [DONE] Expression-aware input shape inference (2026-01-23)
+      - Resolve Arcaflow namespace refs (e.g.,
+        `$.steps.<step>.execute.inputs.items.item`).
+      - Validate that referenced schema IDs resolve against plugin and
+        sub-workflow schemas.
+    - [DONE] Workflow schema extraction consistency (2026-01-23)
+      - `workflow_schema_get` returns resolved input schema and derived output
+        schema from `output`/`outputs` (or `outputSchema` when provided).
+      - Update examples/tests to reflect resolved schema shape.
+    - [DONE] Tool hints + error UX for schema resolution (2026-01-23)
+      - Add explicit guidance for missing container runtimes or unresolved
+        schema refs.
+    - [DONE] Manual validation workflow entry added (2026-01-23)
+      - Add manual validation for auto-perf input introspection.
+  - Notes:
+    - Plugin schema retrieval uses Arcaflow plugin flag `--json-schema input`.
+
+- [DONE] Implement Tools - Result Analysis (2026-01-23)
+  - Outcome: Complete set of MCP tools enabling result analysis and input optimization suggestions.
+  - Required Tools (PRIMARY):
+    - [DONE] `workflow_results_load` - Load execution results from files/URLs
+      (2026-01-23)
+    - [DONE] `workflow_results_parse` - Extract structured metrics and KPIs
+      (2026-01-23)
+    - [DONE] `workflow_results_analyze` - Analyze results against user-defined goals
+      (2026-01-23)
+    - [DONE] `workflow_results_compare` - Compare multiple runs, identify trends
+      (2026-01-23)
+    - [DONE] `workflow_inputs_suggest` - Generate input modification suggestions
+      (2026-01-23)
+    - [DONE] `workflow_optimization_guide` - Provide strategic optimization recommendations
+      (2026-01-23)
+  - Additional Tools (SECONDARY):
+    - [DONE] `workflow_results_metrics_extract` - Extract specific metrics from results
+      (2026-01-23)
+    - [DONE] `workflow_history_load` - Access historical run data for pattern analysis
+      (2026-01-23)
+  - Creative Freedom: Design schemas appropriate for Python analysis engine, optimize for insight generation.
+
+- [DONE] Implement Common Tools (2026-01-23)
+  - Outcome: Supporting tools for plugin information and future capabilities.
+  - Current Phase:
+    - [DONE] `plugin_schema_get` - Get plugin schema and documentation
+      (2026-01-23)
+  - Future Phases (NOT implemented now):
+    - Execution tools: `workflow_execute`, `workflow_status`, `workflow_cancel`, `workflow_results_get`
+    - Creation tools: Workflow composition and creation capabilities
+
+- [DONE] Implement MCP Resources (2026-01-23)
+  - Outcome: Resource URIs for accessing workflow schemas, examples, and results.
+  - Priority Resources:
+    - [DONE] `workflow-schema://` - Workflow input schemas (JSON Schema format
+      with examples) (2026-01-23)
+    - [DONE] `workflow-example://` - Sample valid inputs demonstrating use cases
+      (2026-01-23)
+  - Additional Resources:
+    - [DONE] `workflow://` - Full workflow definitions (2026-01-23)
+    - [DONE] `execution://` - Execution results (2026-01-23)
+    - [DONE] `plugin-schema://` - Plugin documentation (2026-01-23)
+    - [DONE] `execution-log://` - Execution logs (2026-01-23)
+  - Creative Freedom: Design URI schemes, decide on content format and structure.
+
+- [IN PROGRESS] Create tool schemas, documentation, and tests (2026-01-23)
+  - Outcome: All tools fully specified with JSON schemas, comprehensive documentation, security model, and unit tests.
+  - Requirements: Each tool has proper schema, error handling, permission model, and test coverage.
+
+Dependencies:
+- Phase 3 complete
+- MCP tool/resource spec understood
+
+Exit Criteria:
+- [DONE] All input construction tools implemented with tests and documented
+  (2026-01-23)
+- [DONE] All result analysis tools implemented with tests and documented
+  (2026-01-23)
+- [DONE] All schemas, inputs, and results resources accessible (2026-01-23)
+- [DONE] Tool schemas complete and validated (2026-01-23)
+- [DONE] End-to-end input construction workflow works with integration tests
+  (2026-01-23)
+- [DONE] End-to-end results analysis and suggestion workflow works with
+  integration tests (2026-01-23)
+- [DONE] Can generate validated input files (2026-01-23)
+- [DONE] Can provide actionable optimization suggestions (2026-01-26)
+- [DONE] Unit test coverage >85% (written concurrently with code) (2026-01-26)
+- [DONE] All tools documented (usage, parameters, examples) (2026-01-23)
+- [DONE] All resources documented (schemas, URI formats, access patterns)
+  (2026-01-23)
+- [DONE] Tool documentation includes examples (tested and verified) (2026-01-26)
+- [DONE] Explicitly does NOT include execution tools (Phase 2 future work)
+  (2026-01-23)
+- [DONE] Manual User Validation:
+  - [DONE] User can discover available MCP tools via Claude Desktop or equivalent
+    client (2026-01-22)
+  - [DONE] User can load a simple Arcaflow workflow using `workflow_load` tool
+    (2026-01-22)
+  - [DONE] User can request workflow schema via `workflow_schema_get` and
+    receive valid JSON schema (2026-01-22)
+  - [DONE] User can conversationally build workflow inputs using
+    `workflow_input_build` tool (2026-01-22)
+  - [DONE] User can validate inputs using `workflow_input_validate` and receive
+    clear feedback on errors (2026-01-22)
+  - [DONE] User can export inputs using `workflow_input_export` and receive a
+    valid JSON/YAML file (2026-01-22)
+  - [DONE] Exported input file successfully runs with external Arcaflow engine
+    (manual execution) (2026-01-23)
+  - [DONE] User can load previous execution results using `workflow_results_load` tool
+  - [DONE] User can request analysis using `workflow_results_analyze` and receive actionable suggestions
+  - [DONE] User can analyze results against explicit goals using `workflow_results_analyze`
+  - [DONE] All tool interactions feel natural in LLM conversation (not overly technical)
+
+Awaiting Gate Approval: YES
+
