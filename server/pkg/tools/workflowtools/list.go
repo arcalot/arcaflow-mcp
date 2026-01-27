@@ -3,10 +3,7 @@ package workflowtools
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"log/slog"
-	"strings"
-	"time"
 
 	"github.com/arcalot/arcaflow-mcp/server/pkg/arcaflow/workflow"
 	"github.com/arcalot/arcaflow-mcp/server/pkg/protocol"
@@ -42,8 +39,6 @@ const workflowListInputSchema = `{
   "required": ["source"],
   "additionalProperties": false
 }`
-
-const gitLoadTimeout = 60 * time.Second
 
 // ListParams defines the workflow_list tool input.
 type ListParams struct {
@@ -138,55 +133,27 @@ func NewWorkflowListTool(
 				)
 			}
 
-			index, err := loadIndex(ctx, loader, params.Source)
+			details, err := loadDetails(ctx, loader, params.Source)
 			if err != nil {
 				return protocol.ToolsCallResult{}, toolError(
 					protocol.ErrInvalidParams,
 					"workflow source load failed",
-					map[string]string{"error": err.Error()},
+					loadErrorData(err),
 				)
 			}
 
 			result := ListResult{
 				Source: ListSource{
-					Kind:     string(index.Source.Kind),
-					Location: index.Source.Location,
-					Ref:      index.Source.Ref,
-					Subdir:   index.Source.Subdir,
+					Kind:     string(details.Index.Source.Kind),
+					Location: details.Index.Source.Location,
+					Ref:      details.Index.Source.Ref,
+					Subdir:   details.Index.Source.Subdir,
 				},
-				Workflows: summarizeWorkflows(index.Workflows),
+				Workflows: summarizeWorkflows(details.Index.Workflows),
 			}
 
 			return renderJSONResult(result, logger)
 		},
-	}
-}
-
-func loadIndex(
-	ctx context.Context,
-	loader *workflow.Loader,
-	source ListSourceParams,
-) (workflow.WorkflowIndex, error) {
-	kind := strings.ToLower(strings.TrimSpace(source.Kind))
-	switch kind {
-	case string(workflow.SourceFilesystem):
-		return loader.LoadFromFilesystem(ctx, source.Location)
-	case string(workflow.SourceURL):
-		return loader.LoadFromURL(ctx, source.Location)
-	case string(workflow.SourceGit):
-		if _, hasDeadline := ctx.Deadline(); !hasDeadline {
-			timeoutCtx, cancel := context.WithTimeout(ctx, gitLoadTimeout)
-			defer cancel()
-			return loader.LoadFromGit(
-				timeoutCtx,
-				source.Location,
-				source.Ref,
-				source.Subdir,
-			)
-		}
-		return loader.LoadFromGit(ctx, source.Location, source.Ref, source.Subdir)
-	default:
-		return workflow.WorkflowIndex{}, fmt.Errorf("unsupported source kind %q", source.Kind)
 	}
 }
 

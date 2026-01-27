@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 	"testing"
+	"time"
 
 	"github.com/arcalot/arcaflow-mcp/server/pkg/analysis"
 	"github.com/arcalot/arcaflow-mcp/server/pkg/arcaflow/workflow"
@@ -24,7 +25,7 @@ func TestLoadIndexRejectsUnknownKind(t *testing.T) {
 	t.Parallel()
 
 	loader := workflow.NewLoader()
-	_, err := loadIndex(context.Background(), loader, ListSourceParams{
+	_, err := loadDetails(context.Background(), loader, ListSourceParams{
 		Kind:     "unknown",
 		Location: "/tmp",
 	})
@@ -50,6 +51,22 @@ func TestSelectWorkflowErrors(t *testing.T) {
 	})
 	if err == nil {
 		t.Fatalf("expected missing path error")
+	}
+}
+
+func TestLoadErrorDataIncludesTimeoutGuidance(t *testing.T) {
+	t.Parallel()
+
+	err := loadTimeoutError{
+		timeout: 5 * time.Second,
+		err:     context.DeadlineExceeded,
+	}
+	data := loadErrorData(err)
+	if data["timeout_seconds"] != 5 {
+		t.Fatalf("expected timeout_seconds to be 5")
+	}
+	if guidance, ok := data["retry_guidance"].(string); !ok || guidance == "" {
+		t.Fatalf("expected retry guidance")
 	}
 }
 

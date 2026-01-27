@@ -116,14 +116,22 @@ outputs:
 	loader := workflow.NewLoader()
 	parser := workflow.NewParser()
 	tool := NewWorkflowInputExamplesTool(loader, parser, slog.Default())
-	_, errObj := tool.Handler(context.Background(), map[string]interface{}{
+	result, errObj := tool.Handler(context.Background(), map[string]interface{}{
 		"source": map[string]interface{}{
 			"kind":     "filesystem",
 			"location": root,
 		},
 	})
-	if errObj == nil {
-		t.Fatalf("expected selector required error")
+	if errObj != nil {
+		t.Fatalf("expected discovery response, got %v", errObj)
+	}
+
+	var payload DiscoveryResult
+	if err := json.Unmarshal([]byte(result.Content[0].Text), &payload); err != nil {
+		t.Fatalf("unmarshal discovery: %v", err)
+	}
+	if !payload.Selection.Required {
+		t.Fatalf("expected selection to be required")
 	}
 }
 

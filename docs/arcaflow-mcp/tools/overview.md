@@ -14,7 +14,8 @@ Examples (natural language):
 
 Detailed schemas and examples are in `docs/arcaflow-mcp/tools/input-tools.md`.
 
-- `workflow_list` - discover workflows across filesystem, URL, and git sources
+- `workflow_discover` - discover workflows with selection guidance and timing
+- `workflow_list` - list workflows across filesystem, URL, and git sources
 - `workflow_load` - load a workflow document from a selected source
 - `workflow_describe` - summarize workflow metadata and steps
 - `workflow_schema_get` - resolve workflow input/output schemas

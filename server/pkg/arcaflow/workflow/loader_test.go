@@ -234,6 +234,45 @@ func TestLoadFromGit(t *testing.T) {
 	}
 }
 
+func TestLoadWithDetailsReportsGitProgress(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	cacheDir := t.TempDir()
+	client := &progressGitClient{
+		commit: "abc123",
+		files: map[string][]byte{
+			filepath.Join("workflows", "sample.yaml"): []byte("name: git"),
+		},
+	}
+	loader := NewLoader(
+		WithGitClient(client),
+		WithGitCacheDir(cacheDir),
+	)
+
+	details, err := loader.LoadWithDetails(ctx, SourceMetadata{
+		Kind:     SourceGit,
+		Location: "https://example.com/repo.git",
+		Ref:      "main",
+		Subdir:   "workflows",
+	})
+	if err != nil {
+		t.Fatalf("load workflows: %v", err)
+	}
+
+	stages := map[ProgressStage]bool{}
+	for _, event := range details.Progress {
+		stages[event.Stage] = true
+	}
+	if !stages[ProgressStageFetch] ||
+		!stages[ProgressStageCheckout] ||
+		!stages[ProgressStageScan] {
+		t.Fatalf("expected fetch, checkout, and scan progress stages")
+	}
+	if details.CacheStatus != CacheStatusMiss {
+		t.Fatalf("expected cache miss, got %s", details.CacheStatus)
+	}
+}
+
 func TestLoadFromGitPropagatesError(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
@@ -326,7 +365,7 @@ func TestLoadDirectoryUsesFingerprint(t *testing.T) {
 		t.Fatalf("write workflow: %v", err)
 	}
 	loader := NewLoader()
-	index, err := loader.loadDirectory(
+	index, _, _, err := loader.loadDirectory(
 		ctx,
 		"cache-key",
 		root,
@@ -368,11 +407,11 @@ func TestLoadDirectoryCacheHit(t *testing.T) {
 	loader := NewLoader(WithNow(func() time.Time { return now }))
 	source := SourceMetadata{Kind: SourceFilesystem, Location: root}
 
-	first, err := loader.loadDirectory(ctx, "cache-key", root, root, source)
+	first, _, _, err := loader.loadDirectory(ctx, "cache-key", root, root, source)
 	if err != nil {
 		t.Fatalf("load directory: %v", err)
 	}
-	second, err := loader.loadDirectory(ctx, "cache-key", root, root, source)
+	second, _, _, err := loader.loadDirectory(ctx, "cache-key", root, root, source)
 	if err != nil {
 		t.Fatalf("load directory: %v", err)
 	}
@@ -392,12 +431,47 @@ func (client *fakeGitClient) Sync(
 	repoURL string,
 	destDir string,
 	ref string,
+	progress ProgressReporter,
 ) (string, error) {
 	_ = ctx
 	_ = repoURL
 	_ = ref
+	_ = progress
 	if client.err != nil {
 		return "", client.err
+	}
+	for path, content := range client.files {
+		fullPath := filepath.Join(destDir, path)
+		if err := os.MkdirAll(filepath.Dir(fullPath), 0o755); err != nil {
+			return "", err
+		}
+		if err := os.WriteFile(fullPath, content, 0o644); err != nil {
+			return "", err
+		}
+	}
+	return client.commit, nil
+}
+
+type progressGitClient struct {
+	files  map[string][]byte
+	commit string
+}
+
+func (client *progressGitClient) Sync(
+	ctx context.Context,
+	repoURL string,
+	destDir string,
+	ref string,
+	progress ProgressReporter,
+) (string, error) {
+	_ = ctx
+	_ = repoURL
+	_ = ref
+	if progress != nil {
+		progress.Start(ProgressStageFetch)
+		progress.Finish(ProgressStageFetch, nil)
+		progress.Start(ProgressStageCheckout)
+		progress.Finish(ProgressStageCheckout, nil)
 	}
 	for path, content := range client.files {
 		fullPath := filepath.Join(destDir, path)

@@ -226,6 +226,9 @@ func registerDefaultTools(
 		},
 	})
 	server.RegisterTool(
+		workflowtools.NewWorkflowDiscoverTool(loader, slog.Default()),
+	)
+	server.RegisterTool(
 		workflowtools.NewWorkflowListTool(loader, slog.Default()),
 	)
 	server.RegisterTool(

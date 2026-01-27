@@ -2,6 +2,7 @@ package workflowtools
 
 import (
 	"context"
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"testing"
@@ -49,14 +50,22 @@ input:
 
 	loader := workflow.NewLoader()
 	tool := NewWorkflowLoadTool(loader, nil)
-	_, errObj := tool.Handler(context.Background(), map[string]interface{}{
+	result, errObj := tool.Handler(context.Background(), map[string]interface{}{
 		"source": map[string]interface{}{
 			"kind":     "filesystem",
 			"location": root,
 		},
 	})
-	if errObj == nil || errObj.Code != protocol.ErrInvalidParams {
-		t.Fatalf("expected selector error")
+	if errObj != nil {
+		t.Fatalf("expected discovery response, got %v", errObj)
+	}
+
+	var payload DiscoveryResult
+	if err := json.Unmarshal([]byte(result.Content[0].Text), &payload); err != nil {
+		t.Fatalf("unmarshal discovery: %v", err)
+	}
+	if !payload.Selection.Required {
+		t.Fatalf("expected selection to be required")
 	}
 }
 

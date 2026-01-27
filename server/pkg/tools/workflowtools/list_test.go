@@ -99,14 +99,14 @@ func TestLoadIndexURL(t *testing.T) {
 	t.Cleanup(server.Close)
 
 	loader := workflow.NewLoader()
-	index, err := loadIndex(context.Background(), loader, ListSourceParams{
+	details, err := loadDetails(context.Background(), loader, ListSourceParams{
 		Kind:     "url",
 		Location: server.URL,
 	})
 	if err != nil {
 		t.Fatalf("load url: %v", err)
 	}
-	if len(index.Workflows) != 1 {
+	if len(details.Index.Workflows) != 1 {
 		t.Fatalf("expected 1 workflow")
 	}
 }

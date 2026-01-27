@@ -128,21 +128,27 @@ func NewWorkflowInputExamplesTool(
 				)
 			}
 
-			index, err := loadIndex(ctx, loader, params.Source)
+			details, err := loadDetails(ctx, loader, params.Source)
 			if err != nil {
 				return protocol.ToolsCallResult{}, toolError(
 					protocol.ErrInvalidParams,
 					"workflow source load failed",
-					map[string]string{"error": err.Error()},
+					loadErrorData(err),
 				)
 			}
 
-			selected, err := selectWorkflow(index.Workflows, params.Selector)
+			selected, discovery, err := selectWorkflowWithDiscovery(
+				details,
+				params.Selector,
+			)
+			if discovery != nil && err == nil {
+				return renderJSONResult(*discovery, logger)
+			}
 			if err != nil {
 				return protocol.ToolsCallResult{}, toolError(
 					protocol.ErrInvalidParams,
 					fmt.Sprintf("workflow selection failed: %s", err.Error()),
-					map[string]string{"error": err.Error()},
+					selectionErrorData(err, discovery, details.Index.Workflows),
 				)
 			}
 

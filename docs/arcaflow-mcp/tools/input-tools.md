@@ -2,10 +2,118 @@
 
 This section will document the input construction tools and schemas.
 
+When a workflow selector is missing and multiple workflows are found, the
+workflow tools return a discovery payload with selection guidance instead of
+failing. Use `workflow_discover` to preview the same guidance proactively.
+
+### `workflow_discover`
+
+Discovers workflows available from a specified source and returns selection
+guidance, cache status, and timing information.
+
+Input schema:
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "source": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "description": "Workflow source kind: filesystem, url, or git."
+        },
+        "location": {
+          "type": "string",
+          "description": "Filesystem root, URL, or git repository URL."
+        },
+        "ref": {
+          "type": "string",
+          "description": "Optional git ref (branch, tag, or commit)."
+        },
+        "subdir": {
+          "type": "string",
+          "description": "Optional git subdirectory to scan for workflows."
+        }
+      },
+      "required": ["kind", "location"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["source"],
+  "additionalProperties": false
+}
+```
+
+Example request:
+
+```json
+{
+  "source": {
+    "kind": "git",
+    "location": "https://example.com/repo.git",
+    "ref": "main",
+    "subdir": "workflows"
+  }
+}
+```
+
+Example response:
+
+```json
+{
+  "source": {
+    "kind": "git",
+    "location": "https://example.com/repo.git",
+    "ref": "main",
+    "subdir": "workflows"
+  },
+  "workflows": [
+    {
+      "id": "b87f7e7e0f8b1d4b5b0d4b1f8d1f2cb5e1a8c7d0e14f1f2e2d4c3b5a6f7e8d9c",
+      "name": "workflow",
+      "path": "workflow.yaml",
+      "content_sha256": "fd2b8898c0b8d9f7f5f69f23f35a9b7a1a0c4e66b8f0b8f5f13c7c6bd1d6e1df"
+    }
+  ],
+  "selection": {
+    "required": true,
+    "reason": "multiple workflows found; provide selector.id or selector.path",
+    "suggested_selector": {
+      "path": "workflow.yaml"
+    },
+    "available_paths": ["workflow.yaml", "perf-test.yaml"]
+  },
+  "cache": {
+    "status": "miss",
+    "snapshot": {
+      "commit": "abc123"
+    },
+    "fetched_at": "2026-01-27T12:00:00Z"
+  },
+  "timing": {
+    "total_ms": 831,
+    "fetch_ms": 412,
+    "checkout_ms": 73,
+    "scan_ms": 118
+  },
+  "progress": [
+    {
+      "stage": "fetch",
+      "started_at": "2026-01-27T12:00:00Z",
+      "completed_at": "2026-01-27T12:00:00Z",
+      "duration_ms": 412
+    }
+  ]
+}
+```
+
 ### `workflow_list`
 
 Lists workflows available from a specified source. Use this tool to discover
-workflow IDs and metadata before loading or describing a workflow.
+workflow IDs and metadata before loading or describing a workflow. Prefer
+`workflow_discover` when you want selection guidance or timing data.
 
 Input schema:
 
@@ -77,11 +185,13 @@ Example response:
 ### `workflow_load`
 
 Loads a specific workflow document from a source. Use this after
-`workflow_list` when multiple workflows are available. If the source contains
-more than one workflow, you can omit the selector when a single `workflow.yaml`
-or `workflow.yml` is present, or when one exists at the shallowest path (for
-example, `workflow.yaml` in the repository root). Otherwise provide
-`selector.id` or `selector.path`.
+`workflow_discover` or `workflow_list` when multiple workflows are available.
+If the source contains more than one workflow, you can omit the selector when a
+single `workflow.yaml` or `workflow.yml` is present, or when one exists at the
+shallowest path (for example, `workflow.yaml` in the repository root).
+Otherwise provide `selector.id` or `selector.path`. When no selector is
+provided and multiple workflows are found, this tool returns the same discovery
+payload as `workflow_discover` to guide selection.
 
 Input schema:
 

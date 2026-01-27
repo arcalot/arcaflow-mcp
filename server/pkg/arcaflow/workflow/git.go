@@ -11,7 +11,13 @@ import (
 
 // GitClient syncs repositories for workflow discovery.
 type GitClient interface {
-	Sync(ctx context.Context, repoURL, destDir, ref string) (string, error)
+	Sync(
+		ctx context.Context,
+		repoURL string,
+		destDir string,
+		ref string,
+		progress ProgressReporter,
+	) (string, error)
 }
 
 type execGitClient struct{}
@@ -26,6 +32,7 @@ func (client *execGitClient) Sync(
 	repoURL string,
 	destDir string,
 	ref string,
+	progress ProgressReporter,
 ) (string, error) {
 	if repoURL == "" {
 		return "", fmt.Errorf("git repo url is required")
@@ -64,18 +71,33 @@ func (client *execGitClient) Sync(
 		}
 	}
 
-	if err := client.run(
+	fetchErr := client.withProgress(
+		ctx,
+		progress,
+		ProgressStageFetch,
+		func() error {
+			return client.run(
+				ctx,
+				destDir,
+				"git",
+				"fetch",
+				"--depth=1",
+				"origin",
+				fetchRef,
+			)
+		},
+	)
+	if fetchErr != nil {
+		return "", fetchErr
+	}
+
+	_, err := client.withProgressCheckout(
 		ctx,
 		destDir,
-		"git",
-		"fetch",
-		"--depth=1",
-		"origin",
-		fetchRef,
-	); err != nil {
-		return "", err
-	}
-	_, err := client.checkoutRef(ctx, destDir, defaultRef, ref == "")
+		defaultRef,
+		ref == "",
+		progress,
+	)
 	if err != nil {
 		return "", err
 	}
@@ -86,6 +108,39 @@ func (client *execGitClient) Sync(
 	}
 
 	return strings.TrimSpace(commit), nil
+}
+
+func (client *execGitClient) withProgress(
+	ctx context.Context,
+	progress ProgressReporter,
+	stage ProgressStage,
+	action func() error,
+) error {
+	if progress != nil {
+		progress.Start(stage)
+	}
+	err := action()
+	if progress != nil {
+		progress.Finish(stage, err)
+	}
+	return err
+}
+
+func (client *execGitClient) withProgressCheckout(
+	ctx context.Context,
+	destDir string,
+	ref string,
+	allowFallback bool,
+	progress ProgressReporter,
+) (string, error) {
+	if progress != nil {
+		progress.Start(ProgressStageCheckout)
+	}
+	selected, err := client.checkoutRef(ctx, destDir, ref, allowFallback)
+	if progress != nil {
+		progress.Finish(ProgressStageCheckout, err)
+	}
+	return selected, err
 }
 
 func (client *execGitClient) checkoutRef(

@@ -112,26 +112,11 @@ func (loader *Loader) LoadFromFilesystem(
 	ctx context.Context,
 	root string,
 ) (WorkflowIndex, error) {
-	if root == "" {
-		return WorkflowIndex{}, fmt.Errorf("filesystem root is required")
-	}
-
-	stat, err := os.Stat(root)
+	details, err := loader.loadFromFilesystemWithDetails(ctx, root)
 	if err != nil {
-		return WorkflowIndex{}, fmt.Errorf("stat filesystem root: %w", err)
+		return WorkflowIndex{}, err
 	}
-
-	root = filepath.Clean(root)
-	cacheKey := fmt.Sprintf("filesystem:%s", root)
-	if stat.Mode().IsRegular() {
-		return loader.loadSingleFile(ctx, cacheKey, root, stat)
-	}
-
-	source := SourceMetadata{
-		Kind:     SourceFilesystem,
-		Location: root,
-	}
-	return loader.loadDirectory(ctx, cacheKey, root, root, source)
+	return details.Index, nil
 }
 
 // LoadFromURL fetches a workflow from an HTTP endpoint.
@@ -139,18 +124,122 @@ func (loader *Loader) LoadFromURL(
 	ctx context.Context,
 	location string,
 ) (WorkflowIndex, error) {
-	if location == "" {
-		return WorkflowIndex{}, fmt.Errorf("url is required")
+	details, err := loader.loadFromURLWithDetails(ctx, location)
+	if err != nil {
+		return WorkflowIndex{}, err
 	}
-	if _, err := url.Parse(location); err != nil {
-		return WorkflowIndex{}, fmt.Errorf("parse url: %w", err)
+	return details.Index, nil
+}
+
+// LoadFromGit loads workflows from a git repository and optional subdirectory.
+func (loader *Loader) LoadFromGit(
+	ctx context.Context,
+	repoURL string,
+	ref string,
+	subdir string,
+) (WorkflowIndex, error) {
+	details, err := loader.loadFromGitWithDetails(ctx, repoURL, ref, subdir)
+	if err != nil {
+		return WorkflowIndex{}, err
+	}
+	return details.Index, nil
+}
+
+// LoadWithDetails discovers workflows and reports cache/progress metadata.
+func (loader *Loader) LoadWithDetails(
+	ctx context.Context,
+	source SourceMetadata,
+) (LoadDetails, error) {
+	switch source.Kind {
+	case SourceFilesystem:
+		return loader.loadFromFilesystemWithDetails(ctx, source.Location)
+	case SourceURL:
+		return loader.loadFromURLWithDetails(ctx, source.Location)
+	case SourceGit:
+		return loader.loadFromGitWithDetails(
+			ctx,
+			source.Location,
+			source.Ref,
+			source.Subdir,
+		)
+	default:
+		return LoadDetails{}, fmt.Errorf("unsupported source kind %q", source.Kind)
+	}
+}
+
+func (loader *Loader) loadFromFilesystemWithDetails(
+	ctx context.Context,
+	root string,
+) (LoadDetails, error) {
+	if root == "" {
+		return LoadDetails{}, fmt.Errorf("filesystem root is required")
 	}
 
+	startedAt := time.Now()
+	stat, err := os.Stat(root)
+	if err != nil {
+		return LoadDetails{}, fmt.Errorf("stat filesystem root: %w", err)
+	}
+
+	root = filepath.Clean(root)
+	cacheKey := fmt.Sprintf("filesystem:%s", root)
+	var (
+		index        WorkflowIndex
+		cacheHit     bool
+		scanDuration time.Duration
+	)
+	if stat.Mode().IsRegular() {
+		index, cacheHit, scanDuration, err = loader.loadSingleFile(
+			ctx,
+			cacheKey,
+			root,
+			stat,
+		)
+	} else {
+		source := SourceMetadata{
+			Kind:     SourceFilesystem,
+			Location: root,
+		}
+		index, cacheHit, scanDuration, err = loader.loadDirectory(
+			ctx,
+			cacheKey,
+			root,
+			root,
+			source,
+		)
+	}
+	if err != nil {
+		return LoadDetails{}, err
+	}
+
+	timing := LoadTiming{
+		Total: time.Since(startedAt),
+		Scan:  scanDuration,
+	}
+	return LoadDetails{
+		Index:       index,
+		CacheStatus: cacheStatusFromHit(cacheHit),
+		Timing:      timing,
+	}, nil
+}
+
+func (loader *Loader) loadFromURLWithDetails(
+	ctx context.Context,
+	location string,
+) (LoadDetails, error) {
+	if location == "" {
+		return LoadDetails{}, fmt.Errorf("url is required")
+	}
+	if _, err := url.Parse(location); err != nil {
+		return LoadDetails{}, fmt.Errorf("parse url: %w", err)
+	}
+
+	startedAt := time.Now()
 	cacheKey := fmt.Sprintf("url:%s", location)
 	cached, ok := loader.cache.Get(cacheKey)
 	request, err := http.NewRequestWithContext(ctx, http.MethodGet, location, nil)
 	if err != nil {
-		return WorkflowIndex{}, fmt.Errorf("build url request: %w", err)
+		return LoadDetails{}, fmt.Errorf("build url request: %w", err)
 	}
 	if ok {
 		if cached.Snapshot.ETag != "" {
@@ -164,9 +253,10 @@ func (loader *Loader) LoadFromURL(
 		}
 	}
 
+	fetchStartedAt := time.Now()
 	response, err := loader.httpClient.Do(request)
 	if err != nil {
-		return WorkflowIndex{}, fmt.Errorf("fetch url: %w", err)
+		return LoadDetails{}, fmt.Errorf("fetch url: %w", err)
 	}
 	defer func() {
 		if err := response.Body.Close(); err != nil {
@@ -177,17 +267,35 @@ func (loader *Loader) LoadFromURL(
 			)
 		}
 	}()
+	fetchDuration := time.Since(fetchStartedAt)
+
+	progress := []ProgressEvent{
+		{
+			Stage:       ProgressStageFetch,
+			StartedAt:   fetchStartedAt,
+			CompletedAt: fetchStartedAt.Add(fetchDuration),
+			Duration:    fetchDuration,
+		},
+	}
 
 	if response.StatusCode == http.StatusNotModified && ok {
-		return cached, nil
+		return LoadDetails{
+			Index:       cached,
+			CacheStatus: CacheStatusHit,
+			Timing: LoadTiming{
+				Total: time.Since(startedAt),
+				Fetch: fetchDuration,
+			},
+			Progress: progress,
+		}, nil
 	}
 	if response.StatusCode < http.StatusOK || response.StatusCode >= 300 {
-		return WorkflowIndex{}, fmt.Errorf("url status %d", response.StatusCode)
+		return LoadDetails{}, fmt.Errorf("url status %d", response.StatusCode)
 	}
 
 	body, err := io.ReadAll(response.Body)
 	if err != nil {
-		return WorkflowIndex{}, fmt.Errorf("read url body: %w", err)
+		return LoadDetails{}, fmt.Errorf("read url body: %w", err)
 	}
 
 	workflow := workflowFromContent(SourceMetadata{
@@ -206,30 +314,50 @@ func (loader *Loader) LoadFromURL(
 	}
 	loader.cache.Set(cacheKey, index)
 
-	return index, nil
+	return LoadDetails{
+		Index:       index,
+		CacheStatus: CacheStatusMiss,
+		Timing: LoadTiming{
+			Total: time.Since(startedAt),
+			Fetch: fetchDuration,
+		},
+		Progress: progress,
+	}, nil
 }
 
-// LoadFromGit loads workflows from a git repository and optional subdirectory.
-func (loader *Loader) LoadFromGit(
+func (loader *Loader) loadFromGitWithDetails(
 	ctx context.Context,
 	repoURL string,
 	ref string,
 	subdir string,
-) (WorkflowIndex, error) {
+) (LoadDetails, error) {
 	if repoURL == "" {
-		return WorkflowIndex{}, fmt.Errorf("git repo url is required")
+		return LoadDetails{}, fmt.Errorf("git repo url is required")
 	}
 
+	startedAt := time.Now()
 	cacheKey := fmt.Sprintf("git:%s:%s:%s", repoURL, ref, subdir)
 	repoDir := filepath.Join(loader.gitCache, hashString(cacheKey))
-	commit, err := loader.gitClient.Sync(ctx, repoURL, repoDir, ref)
+	recorder := newProgressRecorder()
+	commit, err := loader.gitClient.Sync(
+		ctx,
+		repoURL,
+		repoDir,
+		ref,
+		recorder,
+	)
 	if err != nil {
-		return WorkflowIndex{}, err
+		return LoadDetails{}, err
 	}
 
 	if cached, ok := loader.cache.Get(cacheKey); ok {
 		if cached.Snapshot.Commit == commit {
-			return cached, nil
+			return LoadDetails{
+				Index:       cached,
+				CacheStatus: CacheStatusHit,
+				Timing:      timingFromProgress(time.Since(startedAt), recorder),
+				Progress:    recorder.events,
+			}, nil
 		}
 	}
 
@@ -243,15 +371,44 @@ func (loader *Loader) LoadFromGit(
 		Ref:      ref,
 		Subdir:   subdir,
 	}
-	index, err := loader.loadDirectory(ctx, cacheKey, scanRoot, repoDir, source)
+	if recorder != nil {
+		recorder.Start(ProgressStageScan)
+	}
+	index, cacheHit, scanDuration, err := loader.loadDirectory(
+		ctx,
+		cacheKey,
+		scanRoot,
+		repoDir,
+		source,
+	)
+	if recorder != nil {
+		recorder.Finish(ProgressStageScan, err)
+	}
 	if err != nil {
-		return WorkflowIndex{}, err
+		return LoadDetails{}, err
 	}
 	index.Source = source
 	index.Snapshot.Commit = commit
 	loader.cache.Set(cacheKey, index)
 
-	return index, nil
+	timing := timingFromProgress(time.Since(startedAt), recorder)
+	if timing.Scan == 0 {
+		timing.Scan = scanDuration
+	}
+
+	return LoadDetails{
+		Index:       index,
+		CacheStatus: cacheStatusFromHit(cacheHit),
+		Timing:      timing,
+		Progress:    recorder.events,
+	}, nil
+}
+
+func cacheStatusFromHit(hit bool) CacheStatus {
+	if hit {
+		return CacheStatusHit
+	}
+	return CacheStatusMiss
 }
 
 func (loader *Loader) loadSingleFile(
@@ -259,17 +416,24 @@ func (loader *Loader) loadSingleFile(
 	cacheKey string,
 	path string,
 	info os.FileInfo,
-) (WorkflowIndex, error) {
+) (WorkflowIndex, bool, time.Duration, error) {
+	startedAt := time.Now()
 	if ctx.Err() != nil {
-		return WorkflowIndex{}, ctx.Err()
+		return WorkflowIndex{}, false, time.Since(startedAt), ctx.Err()
 	}
 	if !isWorkflowFile(path) {
-		return WorkflowIndex{}, fmt.Errorf("not a workflow file: %s", path)
+		return WorkflowIndex{}, false, time.Since(startedAt), fmt.Errorf(
+			"not a workflow file: %s",
+			path,
+		)
 	}
 
 	content, err := os.ReadFile(path)
 	if err != nil {
-		return WorkflowIndex{}, fmt.Errorf("read workflow file: %w", err)
+		return WorkflowIndex{}, false, time.Since(startedAt), fmt.Errorf(
+			"read workflow file: %w",
+			err,
+		)
 	}
 
 	workflow := workflowFromContent(SourceMetadata{
@@ -290,12 +454,12 @@ func (loader *Loader) loadSingleFile(
 
 	if cached, ok := loader.cache.Get(cacheKey); ok {
 		if cached.Snapshot.FilesystemFingerprint == index.Snapshot.FilesystemFingerprint {
-			return cached, nil
+			return cached, true, time.Since(startedAt), nil
 		}
 	}
 
 	loader.cache.Set(cacheKey, index)
-	return index, nil
+	return index, false, time.Since(startedAt), nil
 }
 
 func (loader *Loader) loadDirectory(
@@ -304,15 +468,17 @@ func (loader *Loader) loadDirectory(
 	scanRoot string,
 	relativeBase string,
 	source SourceMetadata,
-) (WorkflowIndex, error) {
+) (WorkflowIndex, bool, time.Duration, error) {
 	if ctx.Err() != nil {
-		return WorkflowIndex{}, ctx.Err()
+		return WorkflowIndex{}, false, 0, ctx.Err()
 	}
 
+	scanStartedAt := time.Now()
 	fingerprint, workflows, err := scanDirectory(ctx, scanRoot, relativeBase, source)
 	if err != nil {
-		return WorkflowIndex{}, err
+		return WorkflowIndex{}, false, time.Since(scanStartedAt), err
 	}
+	scanDuration := time.Since(scanStartedAt)
 
 	index := WorkflowIndex{
 		Source: source,
@@ -325,12 +491,12 @@ func (loader *Loader) loadDirectory(
 
 	if cached, ok := loader.cache.Get(cacheKey); ok {
 		if cached.Snapshot.FilesystemFingerprint == fingerprint {
-			return cached, nil
+			return cached, true, scanDuration, nil
 		}
 	}
 
 	loader.cache.Set(cacheKey, index)
-	return index, nil
+	return index, false, scanDuration, nil
 }
 
 func scanDirectory(
@@ -469,4 +635,67 @@ func parseHTTPTime(value string) time.Time {
 		return time.Time{}
 	}
 	return parsed.UTC()
+}
+
+type progressRecorder struct {
+	events []ProgressEvent
+	active map[ProgressStage]time.Time
+}
+
+func newProgressRecorder() *progressRecorder {
+	return &progressRecorder{
+		active: make(map[ProgressStage]time.Time),
+	}
+}
+
+func (recorder *progressRecorder) Start(stage ProgressStage) {
+	if recorder == nil {
+		return
+	}
+	if _, exists := recorder.active[stage]; exists {
+		return
+	}
+	recorder.active[stage] = time.Now()
+}
+
+func (recorder *progressRecorder) Finish(stage ProgressStage, err error) {
+	if recorder == nil {
+		return
+	}
+	startedAt, ok := recorder.active[stage]
+	if !ok {
+		startedAt = time.Now()
+	}
+	completedAt := time.Now()
+	event := ProgressEvent{
+		Stage:       stage,
+		StartedAt:   startedAt,
+		CompletedAt: completedAt,
+		Duration:    completedAt.Sub(startedAt),
+	}
+	if err != nil {
+		event.Error = err.Error()
+	}
+	recorder.events = append(recorder.events, event)
+	delete(recorder.active, stage)
+}
+
+func timingFromProgress(total time.Duration, recorder *progressRecorder) LoadTiming {
+	timing := LoadTiming{
+		Total: total,
+	}
+	if recorder == nil {
+		return timing
+	}
+	for _, event := range recorder.events {
+		switch event.Stage {
+		case ProgressStageFetch:
+			timing.Fetch = event.Duration
+		case ProgressStageCheckout:
+			timing.Checkout = event.Duration
+		case ProgressStageScan:
+			timing.Scan = event.Duration
+		}
+	}
+	return timing
 }

@@ -3,7 +3,7 @@
 **Version:** 1.2.1  
 **Last Updated:** 2026-01-27  
 **Language:** Go for MCP server core, Python for analysis engine  
-**Current Phase:** Phase 6 - Workflow Discovery UX (Not Started)
+**Current Phase:** Phase 6 - Workflow Discovery UX (Complete - Gate Approved)
 
 **Historical Record:** Completed phases are archived in `DEVELOPMENT_RECORD.md` with full details. This document contains concise summaries for completed work and full details for current and future phases.
 
@@ -1054,52 +1054,18 @@ sequenceDiagram
 ---
 
 ### Phase 6: Workflow Discovery UX
-Status: Not Started  
+Status: COMPLETE (2026-01-27)  
 Gate Keeper: User approval to proceed to Phase 7
 
-Objectives:
-- Improve workflow discovery UX for long-running git sources
-- Provide clearer, actionable selection guidance
-- Standardize discovery output across tools
+Outcome Summary:
+- Added `workflow_discover` with selection guidance, cache info, and timing.
+- Standardized selection flow across workflow tools with discovery payloads.
+- Added progress milestones and timeout guidance for git discovery.
+- Updated documentation and tests for discovery UX.
 
-Tasks:
-- [ ] Add `workflow_discover` tool
-  - Outcome: Single entry point for discovery with clear progress metadata.
-  - Requirements:
-    - Returns workflow list, suggested selector, cache status, and timing metrics
-    - Exposes source metadata (ref, subdir, commit) when available
-    - Supports filesystem, URL, and git sources
-    - Includes deterministic ordering for stable UX
-- [ ] Standardize selection flow in workflow tools
-  - Outcome: All tools guide users through discovery/selection consistently.
-  - Requirements:
-    - `workflow_describe`, `workflow_load`, `workflow_schema_get`, etc. either
-      accept selectors or return a discovery payload when selector is missing
-    - Error messages always include available workflow paths/IDs
-- [ ] Add progress feedback and timeouts
-  - Outcome: Long-running git operations report progress and fail fast.
-  - Requirements:
-    - Git operations emit progress milestones (fetch, checkout, scan)
-    - Default timeout with clear retry guidance
-    - Cache hit/miss surfaced in discovery results
-- [ ] Documentation + tests
-  - Outcome: UX documented and validated.
-  - Requirements:
-    - Tool docs updated with discovery flow examples
-    - Unit tests for discovery output, selection hints, and timeout behavior
+Full Details: See DEVELOPMENT_RECORD.md
 
-Dependencies:
-- Phase 5 complete
-
-Exit Criteria:
-- [ ] `workflow_discover` available with examples
-- [ ] All workflow tools provide consistent selection guidance
-- [ ] Discovery results include progress and cache info
-- [ ] Timeouts and retry guidance verified
-- [ ] Tests added for discovery + selection UX
-- [ ] Documentation updated with new discovery flow
-
-Awaiting Gate Approval: NO
+Awaiting Gate Approval: NO - Approved to proceed to Phase 7 (2026-01-27)
 
 ---
 

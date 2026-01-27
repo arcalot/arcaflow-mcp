@@ -144,21 +144,27 @@ func NewWorkflowLoadTool(
 				)
 			}
 
-			index, err := loadIndex(ctx, loader, params.Source)
+			details, err := loadDetails(ctx, loader, params.Source)
 			if err != nil {
 				return protocol.ToolsCallResult{}, toolError(
 					protocol.ErrInvalidParams,
 					"workflow source load failed",
-					map[string]string{"error": err.Error()},
+					loadErrorData(err),
 				)
 			}
 
-			selected, err := selectWorkflow(index.Workflows, params.Selector)
+			selected, discovery, err := selectWorkflowWithDiscovery(
+				details,
+				params.Selector,
+			)
+			if discovery != nil && err == nil {
+				return renderJSONResult(*discovery, logger)
+			}
 			if err != nil {
 				return protocol.ToolsCallResult{}, toolError(
 					protocol.ErrInvalidParams,
 					fmt.Sprintf("workflow selection failed: %s", err.Error()),
-					map[string]string{"error": err.Error()},
+					selectionErrorData(err, discovery, details.Index.Workflows),
 				)
 			}
 
@@ -241,6 +247,22 @@ func normalizeSelector(selector LoadSelectorParams) LoadSelectorParams {
 }
 
 func availableWorkflowPaths(workflows []workflow.Workflow) string {
+	paths := availableWorkflowPathsList(workflows)
+	if len(paths) == 0 {
+		return "none"
+	}
+	return strings.Join(paths, ", ")
+}
+
+func availableWorkflowIDs(workflows []workflow.Workflow) string {
+	ids := availableWorkflowIDsList(workflows)
+	if len(ids) == 0 {
+		return "none"
+	}
+	return strings.Join(ids, ", ")
+}
+
+func availableWorkflowPathsList(workflows []workflow.Workflow) []string {
 	paths := make([]string, 0, len(workflows))
 	for _, item := range workflows {
 		if item.Path != "" {
@@ -249,25 +271,19 @@ func availableWorkflowPaths(workflows []workflow.Workflow) string {
 			paths = append(paths, item.Name)
 		}
 	}
-	if len(paths) == 0 {
-		return "none"
-	}
 	sort.Strings(paths)
-	return strings.Join(paths, ", ")
+	return paths
 }
 
-func availableWorkflowIDs(workflows []workflow.Workflow) string {
+func availableWorkflowIDsList(workflows []workflow.Workflow) []string {
 	ids := make([]string, 0, len(workflows))
 	for _, item := range workflows {
 		if item.ID != "" {
 			ids = append(ids, item.ID)
 		}
 	}
-	if len(ids) == 0 {
-		return "none"
-	}
 	sort.Strings(ids)
-	return strings.Join(ids, ", ")
+	return ids
 }
 
 func autoSelectPrimaryWorkflow(

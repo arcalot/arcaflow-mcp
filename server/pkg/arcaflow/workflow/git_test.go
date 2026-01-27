@@ -12,10 +12,10 @@ import (
 func TestExecGitClientInputValidation(t *testing.T) {
 	t.Parallel()
 	client := &execGitClient{}
-	if _, err := client.Sync(context.Background(), "", "dest", ""); err == nil {
+	if _, err := client.Sync(context.Background(), "", "dest", "", nil); err == nil {
 		t.Fatalf("expected error for missing repo url")
 	}
-	if _, err := client.Sync(context.Background(), "repo", "", ""); err == nil {
+	if _, err := client.Sync(context.Background(), "repo", "", "", nil); err == nil {
 		t.Fatalf("expected error for missing dest dir")
 	}
 }
@@ -58,7 +58,7 @@ func TestExecGitClientSyncLocalRepo(t *testing.T) {
 
 	expected := strings.TrimSpace(runGitOutput(t, repoDir, "rev-parse", "HEAD"))
 	client := &execGitClient{}
-	commit, err := client.Sync(ctx, repoDir, destDir, "main")
+	commit, err := client.Sync(ctx, repoDir, destDir, "main", nil)
 	if err != nil {
 		t.Fatalf("sync repo: %v", err)
 	}
@@ -91,7 +91,7 @@ func TestExecGitClientSyncUsesDefaultRef(t *testing.T) {
 
 	expected := strings.TrimSpace(runGitOutput(t, repoDir, "rev-parse", "HEAD"))
 	client := &execGitClient{}
-	commit, err := client.Sync(ctx, repoDir, destDir, "")
+	commit, err := client.Sync(ctx, repoDir, destDir, "", nil)
 	if err != nil {
 		t.Fatalf("sync repo: %v", err)
 	}
