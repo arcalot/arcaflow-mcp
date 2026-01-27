@@ -1,6 +1,6 @@
 # Arcaflow MCP Server - Development Plan
 
-**Version:** 1.2.1  
+**Version:** 1.2.2  
 **Last Updated:** 2026-01-27  
 **Language:** Go for MCP server core, Python for analysis engine  
 **Current Phase:** Phase 6 - Workflow Discovery UX (Complete - Gate Approved)
@@ -1074,104 +1074,253 @@ Status: Not Started
 Gate Keeper: User approval to proceed to Phase 8
 
 Objectives:
-- Create comprehensive user documentation
-- Build example workflows and use cases
-- Document API and architecture
-- Create getting started guide
+- Create comprehensive documentation for both user and developer audiences
+- Establish clear entrypoints and navigation paths
+- Build working examples and tutorials
+- Ensure all documentation is procedural, clear, and well cross-linked
+
+Documentation Audiences:
+- End Users: Installing and using the MCP server (both deployment modes)
+- Workflow Operators: Building inputs and analyzing results conversationally
+- Developers: Contributing to the codebase
+- System Administrators: Deploying and maintaining server mode
 
 Tasks:
+
+- [ ] Establish README.md as repository documentation entrypoint
+  - Outcome: README.md serves as the primary navigation hub for all repository documentation.
+  - Requirements:
+    - Project overview with clear purpose statement
+    - Quick start section for both local and server modes (procedural steps)
+    - Clear "Documentation" section with organized links to:
+      - User documentation (local mode setup, server mode setup)
+      - Developer documentation (setup, contributing, architecture)
+      - Tool reference (link to tools overview)
+      - Examples and tutorials (with descriptions)
+      - API documentation (godoc, Python docs)
+    - Installation section with step-by-step instructions for both modes
+    - Usage examples showing typical workflows
+    - Link to external Arcaflow docs (when integrated)
+    - Contributing section linking to CONTRIBUTING.md
+    - License and community links
+    - Version compatibility matrix with Arcaflow
+    - Troubleshooting quick reference (link to detailed guides)
+  - Cross-linking: README must link to all major documentation sections in both paths
+  - Audience: Both users (quick start) and developers (contributing)
+
 - [ ] Complete user-facing documentation (for Arcaflow integration)
   - Outcome: Comprehensive user documentation in `docs/arcaflow-mcp/` ready for integration with main Arcaflow docs.
+  - Audience: End users and workflow operators (non-developers)
   - Requirements:
-    - Complete all sections in `docs/arcaflow-mcp/` directory structure
-    - `getting-started.md` - Installation and quick start for both modes
-    - `concepts/` - Architecture, skills, deployment modes (user perspective)
-    - `usage/local-mode.md` - Claude Desktop setup, MCP client configuration
-    - `usage/server-mode.md` - Server deployment and usage
-    - `usage/input-construction.md` - Input construction guide
-    - `usage/result-analysis.md` - Result analysis guide
-    - `usage/configuration.md` - Full configuration reference
-    - `deployment/` - Docker, Kubernetes, authentication, TLS guides
-    - `tools/` - Complete tool reference documentation (all MCP tools)
-    - `examples/` - Working examples with tested code
-    - Troubleshooting guide
-  - Considerations:
-    - Follow Material for MkDocs format and Arcaflow documentation style
-    - Include version compatibility matrix with Arcaflow
-    - Prepare for future migration to https://arcalot.io/arcaflow/
-    - All code examples must be tested and functional
+    - `index.md` - Landing page with clear navigation to all sections
+    - `getting-started.md` - Step-by-step installation and setup for both modes
+      - Prerequisites checklist
+      - Local mode: Installation → Configuration → Verification (procedural)
+      - Server mode: Deployment → Configuration → Verification (procedural)
+      - First workflow example (simple, working)
+      - Links to detailed guides for each mode
+    - `concepts/` - User-oriented explanations
+      - `architecture.md` - High-level system overview (user perspective)
+      - `capabilities.md` - What the server can do (input construction, result analysis)
+      - `deployment-modes.md` - Local vs Server mode explained
+      - `multi-tenancy.md` - Multi-user usage patterns
+    - `usage/` - Procedural how-to guides
+      - `local-mode.md` - Claude Desktop setup, MCP client configuration (step-by-step)
+      - `server-mode.md` - Server deployment and usage (step-by-step)
+      - `input-construction.md` - Building workflow inputs conversationally (procedures)
+      - `result-analysis.md` - Analyzing results and optimization (procedures)
+      - `configuration.md` - Complete configuration reference (all options documented)
+    - `deployment/` - Deployment guides (procedural)
+      - `container.md` - Podman/Docker deployment (step-by-step)
+      - `kubernetes.md` - Kubernetes deployment (step-by-step)
+      - `authentication.md` - Auth setup and configuration (procedures)
+      - `tls.md` - TLS configuration (procedures)
+    - `tools/` - Tool reference (complete, clear examples)
+      - `overview.md` - Tool catalog with purpose of each tool
+      - `input-tools.md` - Input construction tools (all tools documented)
+      - `result-tools.md` - Result analysis tools (all tools documented)
+    - `examples/` - Working examples with step-by-step instructions
+      - `basic-workflow.md` - Simple end-to-end example
+      - `iterative-optimization.md` - Optimization cycle example
+      - `multi-run-comparison.md` - Comparison example
+    - `troubleshooting.md` - Common issues and solutions (procedural fixes)
+  - Format: Material for MkDocs matching Arcaflow style
+  - Cross-linking: Every page links to related topics, back to index, and to README.md
+  - Procedural: All guides written as numbered steps with clear outcomes
+  - All code examples tested and verified working
 
 - [ ] Complete project documentation (permanent in repo)
-  - Outcome: Comprehensive technical and developer documentation for contributors and maintainers.
+  - Outcome: Comprehensive technical documentation for contributors and maintainers.
+  - Audience: Developers, contributors, system administrators
   - Requirements:
-    - `docs/architecture/` - Complete system architecture
-      - `overview.md` - High-level system design
-      - `go-server.md` - Go MCP server internals
-      - `python-engine.md` - Python analysis engine internals
-      - `inter-service.md` - Go-Python communication details
-      - `data-flow.md` - Data flow diagrams and sequences
-    - `docs/adr/` - All major decisions documented as ADRs
+    - `docs/architecture/` - Technical architecture documentation
+      - `README.md` - Architecture docs index with navigation
+      - `overview.md` - System design, component interaction, technology choices
+      - `go-server.md` - Go MCP server internals (packages, data flow)
+      - `python-engine.md` - Python analysis engine internals (modules, algorithms)
+      - `inter-service.md` - Go-Python communication (gRPC/REST, contracts)
+      - `data-flow.md` - Detailed data flow with sequence diagrams
+    - `docs/adr/` - Architecture Decision Records
+      - `README.md` - ADR index with summary of all decisions
+      - Document all major decisions (language choice, monorepo, deployment modes, etc.)
+      - Each ADR follows standard format (context, decision, consequences)
     - `docs/api/` - API documentation
-      - Links to godoc for Go components
-      - Links to generated Python docs (Sphinx or similar)
-      - gRPC protocol documentation
+      - `README.md` - API docs index with navigation
+      - `go-server.md` - Go API overview with links to godoc
+      - `python-engine.md` - Python API overview with links to generated docs
+      - `grpc-protocol.md` - gRPC service contracts and message formats
     - `docs/development/` - Development guides
-      - `setup.md` - Complete development environment setup
-      - `testing.md` - Testing guidelines and practices
-      - `debugging.md` - Debugging guide
-      - `release-process.md` - How to create releases
-    - Enhanced `CONTRIBUTING.md` with complete development workflow
-    - `docs/CHANGELOG.md` - Complete version history
-  - Considerations:
-    - Focus on technical depth for contributors
-    - Include implementation details not appropriate for user docs
-    - Maintain as project evolves (living documentation)
+      - `README.md` - Development docs index with navigation
+      - `setup.md` - Complete dev environment setup (step-by-step)
+      - `testing.md` - Testing guidelines (unit, integration, e2e)
+      - `debugging.md` - Debugging guide (common issues, tools)
+      - `release-process.md` - How to create releases (procedural)
+    - `CONTRIBUTING.md` - Complete contribution workflow
+      - How to set up dev environment (link to docs/development/setup.md)
+      - Code standards and best practices (link to AGENTS.md)
+      - Testing requirements (link to docs/development/testing.md)
+      - PR process and review guidelines
+      - Code of conduct (link to CODE_OF_CONDUCT.md)
+    - `CHANGELOG.md` - Version history
+      - Semantic versioning
+      - Each version with date, changes, breaking changes, migration notes
+  - Format: Standard Markdown (GitHub-first)
+  - Cross-linking: Every doc links to related docs, back to section README, and to root README.md
+  - Technical depth: Implementation details, design rationale, code examples
 
-- [ ] Create tutorials and examples (Focus on Skills 1 & 2)
-  - Outcome: Working examples demonstrating all primary use cases.
-  - Required Tutorials:
-    1. Conversational Input Construction: Discover workflow, extract schema, build inputs conversationally, validate, export
-    2. Results Analysis and Optimization: Load results, analyze against goals, generate optimization suggestions
-    3. Iterative Optimization: Multiple cycles of input → external execution → analysis → refined input
-    4. Multi-Run Comparison: Compare multiple configurations, identify optimal settings
-  - Complete Example: Full workflow using arcaflow-workflow-auto-perf demonstrating Skills 1 & 2
-  - Deployment Examples: Local mode (Claude Desktop), server mode (Docker/K8s with auth)
-  - Varied Complexity: Simple single-step and complex multi-step workflows
-  - Creative Freedom: Design engaging tutorial narratives, choose specific example scenarios.
+- [ ] Create tutorials and examples
+  - Outcome: Working, tested examples demonstrating all primary use cases.
+  - Audience: Both users and developers
+  - Requirements:
+    - Tutorial 1: Conversational Input Construction
+      - Discover workflow from git repository
+      - Extract and understand schema
+      - Build inputs through conversation
+      - Validate inputs
+      - Export to file
+      - Step-by-step with expected outputs
+    - Tutorial 2: Results Analysis and Optimization
+      - Load execution results
+      - Analyze against defined goals
+      - Generate optimization suggestions
+      - Understand recommendations
+      - Step-by-step with example results
+    - Tutorial 3: Iterative Optimization
+      - Build initial inputs
+      - Run workflow externally
+      - Analyze results
+      - Refine inputs based on analysis
+      - Repeat cycle
+      - Multi-iteration example showing convergence
+    - Tutorial 4: Multi-Run Comparison
+      - Load multiple result sets
+      - Compare across configurations
+      - Identify patterns and optimal settings
+      - Export comparison reports
+    - Complete Example: arcaflow-workflow-auto-perf
+      - Full end-to-end workflow
+      - Both input construction and result analysis
+      - Real-world complexity
+    - Deployment Examples:
+      - Local mode with Claude Desktop (verified working)
+      - Server mode with Docker Compose (verified working)
+      - Server mode with Kubernetes (verified working)
+    - Varied Complexity:
+      - Simple single-step workflow (hello world)
+      - Medium multi-step workflow
+      - Complex workflow with sub-workflows
+  - Format: All examples in `docs/arcaflow-mcp/examples/` and/or separate `examples/` directory
+  - All examples must be tested and working
+  - Include expected inputs, outputs, and conversation transcripts
 
 - [ ] Create demo workflows
-  - Outcome: Simple demo workflows for testing and learning.
-  - Requirements: Hello World, data processing, performance testing examples.
+  - Outcome: Simple Arcaflow workflows for testing and learning.
+  - Requirements:
+    - `examples/workflows/hello-world.yaml` - Minimal workflow
+    - `examples/workflows/data-processing.yaml` - Data transformation example
+    - `examples/workflows/perf-test.yaml` - Performance testing example
+    - Each workflow with:
+      - README explaining purpose
+      - Example input files
+      - Expected output examples
+      - Usage instructions
+  - All workflows tested with Arcaflow engine
 
-- [ ] Update README.md and create CHANGELOG.md
-  - Outcome: Comprehensive project README and version changelog.
+- [ ] Verify documentation quality
+  - Outcome: All documentation meets quality standards.
+  - Requirements:
+    - Every procedural guide has numbered steps
+    - Every step has a clear expected outcome
+    - All cross-links verified working
+    - No broken internal links
+    - All code examples tested
+    - Consistent terminology throughout
+    - Clear navigation from every page
+    - Both user and developer paths clearly marked
 
 Dependencies:
 - Phase 6 complete
 - All features finalized
 
 Exit Criteria:
-- [ ] User-facing documentation complete in `docs/arcaflow-mcp/`:
-  - All sections written and reviewed
-  - All code examples tested and verified working
+
+Documentation Completeness:
+- [ ] README.md serves as effective entrypoint with clear navigation to all docs
+- [ ] User-facing documentation in `docs/arcaflow-mcp/` complete:
+  - All sections written, reviewed, and tested
+  - All code examples verified working
   - Ready for integration into main Arcaflow docs at https://arcalot.io/arcaflow/
 - [ ] Project documentation complete:
-  - Architecture docs comprehensive and up-to-date
-  - All major ADRs documented
-  - API documentation generated and linked
-  - Development guides complete
-- [ ] Both documentation sets build successfully with MkDocs
-- [ ] Tutorials and examples tested and working
-- [ ] README comprehensive with links to both doc sets
+  - Architecture docs comprehensive and current
+  - All major ADRs documented with rationale
+  - API documentation generated and properly linked
+  - Development guides complete and tested
+- [ ] Both documentation sets build successfully
+  - MkDocs build for user-facing docs succeeds
+  - All Markdown renders correctly on GitHub
+- [ ] Tutorials and examples all tested and working
 - [ ] CHANGELOG.md complete and up-to-date
-- [ ] Manual User Validation:
-  - [ ] New user can follow getting started guide and successfully set up local mode within 15 minutes
-  - [ ] New user can follow getting started guide and successfully set up server mode within 30 minutes
-  - [ ] All tutorial examples can be completed successfully by following documentation alone
-  - [ ] Tool reference documentation is clear and enables tool usage without external help
-  - [ ] Troubleshooting guide resolves common issues effectively
-  - [ ] Code examples in documentation all run without modification
-  - [ ] External reviewer confirms documentation is comprehensive and clear
+
+Documentation Quality:
+- [ ] Cross-linking comprehensive:
+  - README links to all major sections
+  - Every doc page links to related pages
+  - Clear navigation paths between user and developer docs
+  - No broken links (verified)
+- [ ] Procedural clarity:
+  - All "how-to" guides use numbered steps
+  - Every step has expected outcome
+  - Prerequisites stated clearly
+  - Success criteria explicit
+- [ ] Audience targeting:
+  - User docs focus on procedures and concepts (no code internals)
+  - Developer docs include technical depth and implementation details
+  - Clear labeling of audience for each doc section
+- [ ] Code examples:
+  - All examples tested and verified working
+  - Examples include expected outputs
+  - Range of complexity levels represented
+
+Manual User Validation:
+- [ ] New user (non-developer) validation:
+  - Can follow README and find getting started guide within 1 minute
+  - Can set up local mode successfully within 15 minutes using only docs
+  - Can set up server mode successfully within 30 minutes using only docs
+  - Can complete Tutorial 1 (Input Construction) successfully
+  - Can complete Tutorial 2 (Result Analysis) successfully
+- [ ] New developer validation:
+  - Can follow README and find development setup within 1 minute
+  - Can set up dev environment successfully within 20 minutes using only docs
+  - Can run tests successfully following testing guide
+  - Can understand architecture by reading architecture docs
+  - Can navigate from README to any specific doc topic within 3 clicks
+- [ ] Documentation quality review:
+  - All tutorial examples can be completed by following docs alone
+  - Tool reference documentation enables tool usage without external help
+  - Troubleshooting guide resolves common issues effectively
+  - Cross-links all work and aid navigation
+  - External reviewer confirms documentation is clear and comprehensive
+  - Terminology consistent throughout all docs
 
 Awaiting Gate Approval: NO
 
@@ -1443,6 +1592,17 @@ Clear messaging - User understands:
 ## Plan Changelog
 
 Purpose: Track significant changes to this plan itself (not development progress).
+
+### 2026-01-27 - Enhanced Phase 7 Documentation Scope (v1.2.2)
+- Established README.md as explicit documentation entrypoint with dedicated task
+- Added "Documentation Audiences" section defining all target personas
+- Made cross-linking requirements explicit throughout all documentation tasks
+- Required procedural guidance (numbered steps, expected outcomes) for all how-to guides
+- Enhanced both user-facing (Arcaflow integration) and project documentation requirements
+- Added dedicated "Verify documentation quality" task
+- Split exit criteria into: Completeness, Quality, and Manual User Validation sections
+- Added specific validation for navigation (3-click rule), procedural clarity, and audience targeting
+- Ensured both user and developer paths are clearly marked and comprehensively documented
 
 ### 2026-01-27 - Further Condensed Completed Phases (v1.2.1)
 - Collapsed Phases 3 and 4 (both complete) to concise summaries
