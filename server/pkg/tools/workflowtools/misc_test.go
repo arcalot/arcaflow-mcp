@@ -53,6 +53,65 @@ func TestSelectWorkflowErrors(t *testing.T) {
 	}
 }
 
+func TestSelectWorkflowAutoSelectsWorkflowYaml(t *testing.T) {
+	t.Parallel()
+
+	workflows := []workflow.Workflow{
+		{ID: "id-1", Path: "workflow.yaml", Name: "primary"},
+		{ID: "id-2", Path: "extra.yaml", Name: "extra"},
+	}
+	selected, err := selectWorkflow(workflows, LoadSelectorParams{})
+	if err != nil {
+		t.Fatalf("expected auto-select, got %v", err)
+	}
+	if selected.Path != "workflow.yaml" {
+		t.Fatalf("expected workflow.yaml, got %s", selected.Path)
+	}
+}
+
+func TestSelectWorkflowPrefersShallowWorkflowYaml(t *testing.T) {
+	t.Parallel()
+
+	workflows := []workflow.Workflow{
+		{ID: "id-1", Path: "archive/workflow.yaml", Name: "archived"},
+		{ID: "id-2", Path: "workflow.yaml", Name: "primary"},
+	}
+	selected, err := selectWorkflow(workflows, LoadSelectorParams{})
+	if err != nil {
+		t.Fatalf("expected auto-select, got %v", err)
+	}
+	if selected.Path != "workflow.yaml" {
+		t.Fatalf("expected workflow.yaml, got %s", selected.Path)
+	}
+}
+
+func TestSelectWorkflowAutoSelectsParent(t *testing.T) {
+	t.Parallel()
+
+	parent := workflow.Workflow{
+		ID:   "parent",
+		Path: "parent.yaml",
+		Content: []byte(
+			"version: v0.2.0\n" +
+				"steps:\n" +
+				"  child:\n" +
+				"    workflow: child.yaml\n",
+		),
+	}
+	child := workflow.Workflow{
+		ID:      "child",
+		Path:    "child.yaml",
+		Content: []byte("version: v0.2.0\nsteps: {}\n"),
+	}
+	selected, err := selectWorkflow([]workflow.Workflow{child, parent}, LoadSelectorParams{})
+	if err != nil {
+		t.Fatalf("expected auto-select, got %v", err)
+	}
+	if selected.Path != "parent.yaml" {
+		t.Fatalf("expected parent.yaml, got %s", selected.Path)
+	}
+}
+
 func TestBuildOptimizationGuidancePaths(t *testing.T) {
 	t.Parallel()
 

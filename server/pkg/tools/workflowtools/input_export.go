@@ -166,7 +166,7 @@ func NewWorkflowInputExportTool(
 			if err != nil {
 				return protocol.ToolsCallResult{}, toolError(
 					protocol.ErrInvalidParams,
-					"workflow selection failed",
+					fmt.Sprintf("workflow selection failed: %s", err.Error()),
 					map[string]string{"error": err.Error()},
 				)
 			}

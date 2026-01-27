@@ -77,7 +77,11 @@ Example response:
 ### `workflow_load`
 
 Loads a specific workflow document from a source. Use this after
-`workflow_list` when multiple workflows are available.
+`workflow_list` when multiple workflows are available. If the source contains
+more than one workflow, you can omit the selector when a single `workflow.yaml`
+or `workflow.yml` is present, or when one exists at the shallowest path (for
+example, `workflow.yaml` in the repository root). Otherwise provide
+`selector.id` or `selector.path`.
 
 Input schema:
 
@@ -275,6 +279,12 @@ Example response:
 
 Provides a human-readable summary of a workflow, including high-level metadata
 and a step overview.
+
+If the source contains multiple workflows, provide `selector.id` or
+`selector.path`. When a single `workflow.yaml` or `workflow.yml` exists, or a
+single shallowest `workflow.yaml`/`workflow.yml` is found, the tool selects it
+automatically. If not, the tool error message includes available workflow paths
+to help you pick the right selector.
 
 Input schema:
 

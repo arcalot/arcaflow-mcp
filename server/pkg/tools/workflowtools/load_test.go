@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"log/slog"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"testing"
@@ -47,6 +49,67 @@ func TestWorkflowLoadByPath(t *testing.T) {
 	}
 }
 
+func TestWorkflowLoadFromURL(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("version: v0.1\nsteps: {}\n"))
+	}))
+	t.Cleanup(server.Close)
+
+	loader := workflow.NewLoader(workflow.WithHTTPClient(server.Client()))
+	tool := NewWorkflowLoadTool(loader, slog.Default())
+	result, errObj := tool.Handler(context.Background(), map[string]interface{}{
+		"source": map[string]interface{}{
+			"kind":     "url",
+			"location": server.URL,
+		},
+	})
+	if errObj != nil {
+		t.Fatalf("expected no error, got %v", errObj)
+	}
+
+	var payload LoadResult
+	if err := json.Unmarshal([]byte(result.Content[0].Text), &payload); err != nil {
+		t.Fatalf("unmarshal result: %v", err)
+	}
+	if payload.Workflow.Content == "" {
+		t.Fatalf("expected workflow content")
+	}
+}
+
+func TestWorkflowLoadFromGit(t *testing.T) {
+	fake := &fakeGitClient{
+		commit: "abc123",
+		files: map[string][]byte{
+			filepath.Join("workflows", "sample.yaml"): []byte("version: v0.1\nsteps: {}\n"),
+		},
+	}
+	loader := workflow.NewLoader(
+		workflow.WithGitClient(fake),
+		workflow.WithGitCacheDir(t.TempDir()),
+	)
+	tool := NewWorkflowLoadTool(loader, slog.Default())
+	result, errObj := tool.Handler(context.Background(), map[string]interface{}{
+		"source": map[string]interface{}{
+			"kind":     "git",
+			"location": "https://example.com/repo.git",
+			"ref":      "main",
+			"subdir":   "workflows",
+		},
+	})
+	if errObj != nil {
+		t.Fatalf("expected no error, got %v", errObj)
+	}
+
+	var payload LoadResult
+	if err := json.Unmarshal([]byte(result.Content[0].Text), &payload); err != nil {
+		t.Fatalf("unmarshal result: %v", err)
+	}
+	if payload.Workflow.Content == "" {
+		t.Fatalf("expected workflow content")
+	}
+}
+
 func TestWorkflowLoadRequiresSelectorForMultiple(t *testing.T) {
 	root := t.TempDir()
 	firstPath := filepath.Join(root, "first.yaml")
@@ -73,6 +136,32 @@ func TestWorkflowLoadRequiresSelectorForMultiple(t *testing.T) {
 	if errObj.Code != protocol.ErrInvalidParams {
 		t.Fatalf("expected invalid params error")
 	}
+}
+
+type fakeGitClient struct {
+	files  map[string][]byte
+	commit string
+}
+
+func (client *fakeGitClient) Sync(
+	ctx context.Context,
+	repoURL string,
+	destDir string,
+	ref string,
+) (string, error) {
+	_ = ctx
+	_ = repoURL
+	_ = ref
+	for path, content := range client.files {
+		fullPath := filepath.Join(destDir, path)
+		if err := os.MkdirAll(filepath.Dir(fullPath), 0o755); err != nil {
+			return "", err
+		}
+		if err := os.WriteFile(fullPath, content, 0o644); err != nil {
+			return "", err
+		}
+	}
+	return client.commit, nil
 }
 
 func TestWorkflowLoadUnknownID(t *testing.T) {

@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/arcalot/arcaflow-mcp/server/pkg/arcaflow/workflow"
@@ -155,7 +157,7 @@ func NewWorkflowLoadTool(
 			if err != nil {
 				return protocol.ToolsCallResult{}, toolError(
 					protocol.ErrInvalidParams,
-					"workflow selection failed",
+					fmt.Sprintf("workflow selection failed: %s", err.Error()),
 					map[string]string{"error": err.Error()},
 				)
 			}
@@ -199,7 +201,14 @@ func selectWorkflow(
 		if len(workflows) == 1 {
 			return workflows[0], nil
 		}
-		return workflow.Workflow{}, fmt.Errorf("workflow selector required")
+		if selected, ok := autoSelectPrimaryWorkflow(workflows); ok {
+			return selected, nil
+		}
+		return workflow.Workflow{}, fmt.Errorf(
+			"multiple workflows found; provide selector.id or selector.path. "+
+				"Available: %s",
+			availableWorkflowPaths(workflows),
+		)
 	}
 	if selector.ID != "" {
 		for _, item := range workflows {
@@ -207,18 +216,169 @@ func selectWorkflow(
 				return item, nil
 			}
 		}
-		return workflow.Workflow{}, fmt.Errorf("workflow id not found")
+		return workflow.Workflow{}, fmt.Errorf(
+			"workflow id %q not found. Available: %s",
+			selector.ID,
+			availableWorkflowIDs(workflows),
+		)
 	}
 	for _, item := range workflows {
 		if item.Path == selector.Path || item.Name == selector.Path {
 			return item, nil
 		}
 	}
-	return workflow.Workflow{}, fmt.Errorf("workflow path not found")
+	return workflow.Workflow{}, fmt.Errorf(
+		"workflow path %q not found. Available: %s",
+		selector.Path,
+		availableWorkflowPaths(workflows),
+	)
 }
 
 func normalizeSelector(selector LoadSelectorParams) LoadSelectorParams {
 	selector.ID = strings.TrimSpace(selector.ID)
 	selector.Path = strings.TrimSpace(selector.Path)
 	return selector
+}
+
+func availableWorkflowPaths(workflows []workflow.Workflow) string {
+	paths := make([]string, 0, len(workflows))
+	for _, item := range workflows {
+		if item.Path != "" {
+			paths = append(paths, item.Path)
+		} else if item.Name != "" {
+			paths = append(paths, item.Name)
+		}
+	}
+	if len(paths) == 0 {
+		return "none"
+	}
+	sort.Strings(paths)
+	return strings.Join(paths, ", ")
+}
+
+func availableWorkflowIDs(workflows []workflow.Workflow) string {
+	ids := make([]string, 0, len(workflows))
+	for _, item := range workflows {
+		if item.ID != "" {
+			ids = append(ids, item.ID)
+		}
+	}
+	if len(ids) == 0 {
+		return "none"
+	}
+	sort.Strings(ids)
+	return strings.Join(ids, ", ")
+}
+
+func autoSelectPrimaryWorkflow(
+	workflows []workflow.Workflow,
+) (workflow.Workflow, bool) {
+	if selected, ok := selectWorkflowByFilename(
+		workflows,
+		map[string]struct{}{"workflow.yaml": {}, "workflow.yml": {}},
+	); ok {
+		return selected, true
+	}
+	if selected, ok := selectParentWorkflow(workflows); ok {
+		return selected, true
+	}
+	return workflow.Workflow{}, false
+}
+
+func selectWorkflowByFilename(
+	workflows []workflow.Workflow,
+	names map[string]struct{},
+) (workflow.Workflow, bool) {
+	var matches []workflow.Workflow
+	for _, item := range workflows {
+		if item.Path == "" {
+			continue
+		}
+		base := strings.ToLower(filepath.Base(item.Path))
+		if _, ok := names[base]; ok {
+			matches = append(matches, item)
+		}
+	}
+	if len(matches) == 1 {
+		return matches[0], true
+	}
+	if len(matches) > 1 {
+		selected, ok := selectShallowestWorkflow(matches)
+		if ok {
+			return selected, true
+		}
+	}
+	return workflow.Workflow{}, false
+}
+
+func selectParentWorkflow(
+	workflows []workflow.Workflow,
+) (workflow.Workflow, bool) {
+	referenced := map[string]struct{}{}
+	for _, item := range workflows {
+		root, err := workflow.ParseDocument(item.Content)
+		if err != nil {
+			continue
+		}
+		steps, _ := root["steps"].(map[string]interface{})
+		for _, step := range steps {
+			stepMap, ok := step.(map[string]interface{})
+			if !ok {
+				continue
+			}
+			ref, ok := stepMap["workflow"].(string)
+			if !ok || strings.TrimSpace(ref) == "" {
+				continue
+			}
+			referenced[filepath.Clean(ref)] = struct{}{}
+		}
+	}
+	var candidates []workflow.Workflow
+	for _, item := range workflows {
+		if item.Path == "" {
+			continue
+		}
+		if _, ok := referenced[filepath.Clean(item.Path)]; ok {
+			continue
+		}
+		candidates = append(candidates, item)
+	}
+	if len(candidates) == 1 {
+		return candidates[0], true
+	}
+	return workflow.Workflow{}, false
+}
+
+func selectShallowestWorkflow(
+	workflows []workflow.Workflow,
+) (workflow.Workflow, bool) {
+	var (
+		selected workflow.Workflow
+		depth    = -1
+		tie      = false
+	)
+	for _, item := range workflows {
+		currentDepth := pathDepth(item.Path)
+		if depth == -1 || currentDepth < depth {
+			selected = item
+			depth = currentDepth
+			tie = false
+			continue
+		}
+		if currentDepth == depth {
+			tie = true
+		}
+	}
+	if tie {
+		return workflow.Workflow{}, false
+	}
+	return selected, depth >= 0
+}
+
+func pathDepth(path string) int {
+	if path == "" {
+		return 0
+	}
+	cleaned := filepath.ToSlash(filepath.Clean(path))
+	return strings.Count(cleaned, "/")
 }

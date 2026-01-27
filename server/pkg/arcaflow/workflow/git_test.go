@@ -67,6 +67,39 @@ func TestExecGitClientSyncLocalRepo(t *testing.T) {
 	}
 }
 
+func TestExecGitClientSyncUsesDefaultRef(t *testing.T) {
+	t.Parallel()
+
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not available")
+	}
+
+	ctx := context.Background()
+	repoDir := t.TempDir()
+	destDir := t.TempDir()
+
+	runGit(t, repoDir, "init", "-b", "main")
+	runGit(t, repoDir, "config", "user.email", "test@example.com")
+	runGit(t, repoDir, "config", "user.name", "Test User")
+
+	filePath := filepath.Join(repoDir, "README.md")
+	if err := os.WriteFile(filePath, []byte("hello"), 0o644); err != nil {
+		t.Fatalf("write file: %v", err)
+	}
+	runGit(t, repoDir, "add", "README.md")
+	runGit(t, repoDir, "commit", "-m", "init")
+
+	expected := strings.TrimSpace(runGitOutput(t, repoDir, "rev-parse", "HEAD"))
+	client := &execGitClient{}
+	commit, err := client.Sync(ctx, repoDir, destDir, "")
+	if err != nil {
+		t.Fatalf("sync repo: %v", err)
+	}
+	if commit != expected {
+		t.Fatalf("expected commit %s, got %s", expected, commit)
+	}
+}
+
 func runGit(t *testing.T, dir string, args ...string) {
 	t.Helper()
 	cmd := exec.Command("git", args...)

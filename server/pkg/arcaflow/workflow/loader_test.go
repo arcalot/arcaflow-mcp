@@ -3,6 +3,7 @@ package workflow
 import (
 	"bytes"
 	"context"
+	"errors"
 	"io"
 	"net/http"
 	"os"
@@ -136,6 +137,63 @@ func TestLoadFromURLUsesETagCache(t *testing.T) {
 	}
 }
 
+func TestLoadFromURLRejectsBadStatus(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+
+	client := &http.Client{
+		Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+			return &http.Response{
+				StatusCode: http.StatusServiceUnavailable,
+				Header:     make(http.Header),
+				Body:       io.NopCloser(bytes.NewBuffer(nil)),
+				Request:    req,
+			}, nil
+		}),
+	}
+
+	loader := NewLoader(WithHTTPClient(client))
+	if _, err := loader.LoadFromURL(ctx, "https://example.com/workflow.yaml"); err == nil {
+		t.Fatalf("expected status error")
+	}
+}
+
+func TestLoadFromURLErrorsOnTransportFailure(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+
+	client := &http.Client{
+		Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+			return nil, errors.New("network failure")
+		}),
+	}
+
+	loader := NewLoader(WithHTTPClient(client))
+	if _, err := loader.LoadFromURL(ctx, "https://example.com/workflow.yaml"); err == nil {
+		t.Fatalf("expected transport error")
+	}
+}
+
+func TestLoadFromURLRespectsCanceledContext(t *testing.T) {
+	t.Parallel()
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	client := &http.Client{
+		Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+			if err := req.Context().Err(); err != nil {
+				return nil, err
+			}
+			return nil, errors.New("unexpected request")
+		}),
+	}
+
+	loader := NewLoader(WithHTTPClient(client))
+	if _, err := loader.LoadFromURL(ctx, "https://example.com/workflow.yaml"); err == nil {
+		t.Fatalf("expected context cancellation error")
+	}
+}
+
 func TestLoadFromGit(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
@@ -173,6 +231,27 @@ func TestLoadFromGit(t *testing.T) {
 	}
 	if index.Snapshot.Commit != fake.commit {
 		t.Fatalf("expected commit %s, got %s", fake.commit, index.Snapshot.Commit)
+	}
+}
+
+func TestLoadFromGitPropagatesError(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+
+	fake := &fakeGitClient{
+		err: errors.New("sync failure"),
+	}
+	loader := NewLoader(
+		WithGitClient(fake),
+		WithGitCacheDir(t.TempDir()),
+	)
+	if _, err := loader.LoadFromGit(
+		ctx,
+		"https://example.com/repo.git",
+		"main",
+		"",
+	); err == nil {
+		t.Fatalf("expected git sync error")
 	}
 }
 
@@ -305,6 +384,7 @@ func TestLoadDirectoryCacheHit(t *testing.T) {
 type fakeGitClient struct {
 	files  map[string][]byte
 	commit string
+	err    error
 }
 
 func (client *fakeGitClient) Sync(
@@ -316,6 +396,9 @@ func (client *fakeGitClient) Sync(
 	_ = ctx
 	_ = repoURL
 	_ = ref
+	if client.err != nil {
+		return "", client.err
+	}
 	for path, content := range client.files {
 		fullPath := filepath.Join(destDir, path)
 		if err := os.MkdirAll(filepath.Dir(fullPath), 0o755); err != nil {

@@ -33,8 +33,13 @@ func (client *execGitClient) Sync(
 	if destDir == "" {
 		return "", fmt.Errorf("git destination directory is required")
 	}
-	if ref == "" {
-		ref = "HEAD"
+	defaultRef := ref
+	if defaultRef == "" {
+		defaultRef = "origin/HEAD"
+	}
+	fetchRef := ref
+	if fetchRef == "" {
+		fetchRef = "HEAD"
 	}
 
 	if err := os.MkdirAll(destDir, 0o755); err != nil {
@@ -59,10 +64,19 @@ func (client *execGitClient) Sync(
 		}
 	}
 
-	if err := client.run(ctx, destDir, "git", "fetch", "--all", "--tags"); err != nil {
+	if err := client.run(
+		ctx,
+		destDir,
+		"git",
+		"fetch",
+		"--depth=1",
+		"origin",
+		fetchRef,
+	); err != nil {
 		return "", err
 	}
-	if err := client.run(ctx, destDir, "git", "checkout", ref); err != nil {
+	_, err := client.checkoutRef(ctx, destDir, defaultRef, ref == "")
+	if err != nil {
 		return "", err
 	}
 
@@ -72,6 +86,33 @@ func (client *execGitClient) Sync(
 	}
 
 	return strings.TrimSpace(commit), nil
+}
+
+func (client *execGitClient) checkoutRef(
+	ctx context.Context,
+	workingDir string,
+	ref string,
+	allowFallback bool,
+) (string, error) {
+	if err := client.run(ctx, workingDir, "git", "checkout", ref); err == nil {
+		return ref, nil
+	} else if !allowFallback {
+		return "", err
+	}
+
+	fallbacks := []string{"FETCH_HEAD", "origin/main", "origin/master"}
+	var lastErr error
+	for _, fallback := range fallbacks {
+		if err := client.run(ctx, workingDir, "git", "checkout", fallback); err == nil {
+			return fallback, nil
+		} else {
+			lastErr = err
+		}
+	}
+	if lastErr != nil {
+		return "", lastErr
+	}
+	return "", fmt.Errorf("git checkout failed for %s and fallbacks", ref)
 }
 
 func (client *execGitClient) run(

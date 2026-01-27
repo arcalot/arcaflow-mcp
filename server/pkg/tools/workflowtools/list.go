@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"strings"
+	"time"
 
 	"github.com/arcalot/arcaflow-mcp/server/pkg/arcaflow/workflow"
 	"github.com/arcalot/arcaflow-mcp/server/pkg/protocol"
@@ -41,6 +42,8 @@ const workflowListInputSchema = `{
   "required": ["source"],
   "additionalProperties": false
 }`
+
+const gitLoadTimeout = 60 * time.Second
 
 // ListParams defines the workflow_list tool input.
 type ListParams struct {
@@ -171,6 +174,16 @@ func loadIndex(
 	case string(workflow.SourceURL):
 		return loader.LoadFromURL(ctx, source.Location)
 	case string(workflow.SourceGit):
+		if _, hasDeadline := ctx.Deadline(); !hasDeadline {
+			timeoutCtx, cancel := context.WithTimeout(ctx, gitLoadTimeout)
+			defer cancel()
+			return loader.LoadFromGit(
+				timeoutCtx,
+				source.Location,
+				source.Ref,
+				source.Subdir,
+			)
+		}
 		return loader.LoadFromGit(ctx, source.Location, source.Ref, source.Subdir)
 	default:
 		return workflow.WorkflowIndex{}, fmt.Errorf("unsupported source kind %q", source.Kind)

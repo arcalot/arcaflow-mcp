@@ -3,6 +3,7 @@ package workflowtools
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log/slog"
 
 	"github.com/arcalot/arcaflow-mcp/server/pkg/arcaflow/workflow"
@@ -155,7 +156,7 @@ func NewWorkflowInputValidateTool(
 			if err != nil {
 				return protocol.ToolsCallResult{}, toolError(
 					protocol.ErrInvalidParams,
-					"workflow selection failed",
+					fmt.Sprintf("workflow selection failed: %s", err.Error()),
 					map[string]string{"error": err.Error()},
 				)
 			}

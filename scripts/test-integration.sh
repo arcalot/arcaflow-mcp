@@ -55,7 +55,7 @@ if [[ ! -f "${engine_config}" ]]; then
   cat > "${engine_config}" <<'EOF'
 deployers:
   image:
-    deployer_name: docker
+    deployer_name: podman
 log:
   level: info
 logged_outputs:

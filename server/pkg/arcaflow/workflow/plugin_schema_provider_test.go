@@ -2,6 +2,7 @@ package workflow
 
 import (
 	"context"
+	"errors"
 	"os"
 	"path/filepath"
 	"testing"
@@ -59,6 +60,26 @@ func TestContainerPluginSchemaProviderInvalidJSON(t *testing.T) {
 	_, err := provider.InputJSONSchema(context.Background(), "image", "")
 	if err == nil {
 		t.Fatalf("expected json error")
+	}
+}
+
+func TestContainerPluginSchemaProviderHonorsContextCancel(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	script := []byte("#!/bin/sh\necho '{\"type\":\"object\"}'\n")
+	path := filepath.Join(t.TempDir(), "runtime.sh")
+	if err := os.WriteFile(path, script, 0o755); err != nil {
+		t.Fatalf("write script: %v", err)
+	}
+
+	provider := NewContainerPluginSchemaProvider().WithRuntime(path)
+	_, err := provider.InputJSONSchema(ctx, "image", "")
+	if err == nil {
+		t.Fatalf("expected context cancellation error")
+	}
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("expected context cancellation, got %v", err)
 	}
 }
 
