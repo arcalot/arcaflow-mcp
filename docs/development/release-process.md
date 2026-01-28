@@ -63,26 +63,25 @@ Arcaflow MCP follows [SemVer 2.0.0](https://semver.org/):
 
 ### Step 1: Update Version Numbers
 
-**Go server version:**
+**Unified version (required):**
 
-Edit `server/pkg/version/version.go`:
-```go
-package version
-
-const (
-    Version = "0.2.0"  // Update this
-    Commit  = ""       // Filled by build
-)
+Edit `VERSION` in repository root:
+```bash
+echo "0.2.0" > VERSION
 ```
 
-**Python analysis version:**
+This single file is used by both Go server and Python analysis engine at runtime.
+
+**Python package metadata (keep in sync):**
 
 Edit `analysis/pyproject.toml`:
 ```toml
 [tool.poetry]
 name = "arcaflow-analysis"
-version = "0.2.0"  # Update this
+version = "0.2.0"  # Keep in sync with VERSION file
 ```
+
+**Note:** The `pyproject.toml` version is metadata only. The runtime version comes from the root `VERSION` file.
 
 ### Step 2: Update CHANGELOG
 

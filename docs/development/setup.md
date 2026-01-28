@@ -10,20 +10,36 @@ This guide walks you through setting up a complete development environment for b
 
 ### Required Tools
 
+> **Version Requirements:** This project aligns with [Arcalot organization standards](https://github.com/arcalot). Current version requirements are defined in GitHub Organization variables:
+> - `ARCALOT_GO_VERSION` (matches `arcaflow-engine` main branch)
+> - `ARCALOT_PYTHON_VERSION` (primary Python version)
+> - `ARCALOT_PYTHON_SUPPORTED_VERSIONS` (all supported Python versions)
+> 
+> See CI workflow files (`.github/workflows/ci.yml`) for exact current values.
+
 **Go Development:**
-- Go 1.23.0 (exact version, Arcaflow standard)
+- Go (see `ARCALOT_GO_VERSION`)
 - git
 - make (optional, for build automation)
 
 **Python Development:**
-- Python 3.12 (exact version, Arcaflow standard)
-- Poetry (Python dependency management)
+- Python (see `ARCALOT_PYTHON_SUPPORTED_VERSIONS`)
+- Poetry (latest stable)
 - pip
 
 **Code Quality:**
-- golangci-lint (for Go linting)
+- golangci-lint (latest stable)
 - Black (for Python formatting, installed via Poetry)
 - pytest (for Python testing, installed via Poetry)
+
+**Checking Your Environment:**
+```bash
+# Verify required tools are installed
+go version
+python3 --version
+poetry --version
+golangci-lint --version
+```
 
 ### Install Prerequisites
 
@@ -32,39 +48,51 @@ This guide walks you through setting up a complete development environment for b
 # Go and development tools
 sudo dnf install golang git make
 
-# Verify Go version (must be 1.23.0)
-go version
-
 # Python and Poetry
-sudo dnf install python3.12 python3-pip
+sudo dnf install python3 python3-pip
 curl -sSL https://install.python-poetry.org | python3 -
 
 # golangci-lint
 curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | \
   sh -s -- -b $(go env GOPATH)/bin
+
+# Verify installations
+go version
+python3 --version
+poetry --version
 ```
 
 **Ubuntu/Debian:**
 ```bash
-# Go and development tools (may need manual install for 1.23.0)
-# Check: https://go.dev/dl/ for Go 1.23.0 tarball if package manager has older version
+# Go (may need manual install for specific version)
+# See https://go.dev/dl/ for latest versions
+sudo apt install golang-go || {
+  echo "Install Go manually from https://go.dev/dl/"
+}
 
 # Python and Poetry
-sudo apt install python3.12 python3-pip
+sudo apt install python3 python3-pip
 curl -sSL https://install.python-poetry.org | python3 -
 
-# golangci-lint  
+# golangci-lint
 curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | \
   sh -s -- -b $(go env GOPATH)/bin
+
+# Verify installations
+go version
+python3 --version
+poetry --version
 ```
 
 **macOS:**
 ```bash
 # Using Homebrew
-brew install go python@3.12 poetry golangci-lint git
+brew install go python3 poetry golangci-lint git
 
-# Verify Go version
-go version  # Must show go1.23.0
+# Verify installations
+go version
+python3 --version
+poetry --version
 ```
 
 ---

@@ -20,5 +20,7 @@ if [[ -f "${server_dir}/go.mod" ]]; then
 fi
 
 if [[ -f "${analysis_dir}/pyproject.toml" ]]; then
-  (cd "${analysis_dir}" && poetry run ruff check .)
+  echo "Running Python linters (black, flake8)..."
+  (cd "${analysis_dir}" && poetry run black --check .)
+  (cd "${analysis_dir}" && poetry run flake8 .)
 fi

@@ -118,8 +118,10 @@ class _AnalysisHandler(BaseHTTPRequestHandler):
         workflow_id = request.get("workflow_id")
         input_payload = request.get("input_payload")
         metrics = request.get("metrics")
-        if not workflow_id or not isinstance(input_payload, dict) or not isinstance(
-            metrics, dict
+        if (
+            not workflow_id
+            or not isinstance(input_payload, dict)
+            or not isinstance(metrics, dict)
         ):
             self.send_error(HTTPStatus.BAD_REQUEST)
             return

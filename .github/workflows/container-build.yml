@@ -2,30 +2,43 @@ name: container-build
 
 on:
   push:
+    branches:
+      - main
+      - initial-development
     paths:
-      - "deploy/container/**"
-      - "scripts/build_multiarch.sh"
+      - "analysis/**"
+      - "server/**"
       - ".github/workflows/container-build.yml"
   pull_request:
     paths:
-      - "deploy/container/**"
-      - "scripts/build_multiarch.sh"
+      - "analysis/**"
+      - "server/**"
       - ".github/workflows/container-build.yml"
-  release:
-    types: [published]
   workflow_dispatch: {}
+  # Allow this workflow to be called by other workflows (e.g., release.yml)
+  workflow_call:
+    inputs:
+      tag_override:
+        description: 'Override tag (for releases, e.g., "1.0.0")'
+        required: false
+        type: string
+      push_images:
+        description: 'Force push images (for releases)'
+        required: false
+        type: boolean
+        default: false
 
 concurrency:
   group: container-${{ github.ref }}
   cancel-in-progress: true
 
 env:
-  IMAGE_REPO: ${{ vars.IMAGE_REPO }}
+  IMAGE_REPO: ${{ vars.IMAGE_REPO || 'quay.io/arcalot' }}
   OCI_REVISION: ${{ github.sha }}
 
 jobs:
   build:
-    name: Build multi-arch container images
+    name: Build multi-arch container images (development)
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -34,108 +47,206 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Check containerfiles
-        id: check_files
-        run: |
-          if ls deploy/container/Containerfile.* >/dev/null 2>&1; then
-            echo "found=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "found=false" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Skip when containerfiles missing
-        if: steps.check_files.outputs.found != 'true'
-        run: |
-          echo "No containerfiles present; skipping build."
-          exit 0
-
-      - name: Compute tag
+      - name: Compute tag and push strategy
         id: compute_tag
         run: |
-          if [ "${{ github.event_name }}" = "release" ]; then
-            VERSION="${{ github.event.release.tag_name }}"
-            echo "tag=${VERSION}" >> "$GITHUB_OUTPUT"
-            echo "expires=" >> "$GITHUB_OUTPUT"
-            echo "push_alias=latest" >> "$GITHUB_OUTPUT"
-            echo "push_main=false" >> "$GITHUB_OUTPUT"
+          # Check if called from another workflow with tag override (e.g., release)
+          if [ -n "${{ inputs.tag_override }}" ]; then
+            echo "tag=${{ inputs.tag_override }}" >> "$GITHUB_OUTPUT"
+            echo "expires=never" >> "$GITHUB_OUTPUT"
+            echo "should_push=${{ inputs.push_images }}" >> "$GITHUB_OUTPUT"
           elif [ "${{ github.event_name }}" = "pull_request" ]; then
             PR_NUM="${{ github.event.pull_request.number }}"
             SHORT_SHA="${GITHUB_SHA:0:7}"
             echo "tag=pr-${PR_NUM}-${SHORT_SHA}" >> "$GITHUB_OUTPUT"
             echo "expires=14d" >> "$GITHUB_OUTPUT"
-            echo "push_main=false" >> "$GITHUB_OUTPUT"
-            echo "push_alias=" >> "$GITHUB_OUTPUT"
+            echo "should_push=false" >> "$GITHUB_OUTPUT"
           else
             SHORT_SHA="${GITHUB_SHA:0:7}"
-            echo "tag=${SHORT_SHA}" >> "$GITHUB_OUTPUT"
-            if [ "${{ github.ref_name }}" = "main" ]; then
-              echo "push_main=true" >> "$GITHUB_OUTPUT"
+            BRANCH="${{ github.ref_name }}"
+            echo "tag=${BRANCH}-${SHORT_SHA}" >> "$GITHUB_OUTPUT"
+            if [ "${BRANCH}" = "main" ]; then
               echo "expires=90d" >> "$GITHUB_OUTPUT"
+              echo "should_push=true" >> "$GITHUB_OUTPUT"
             else
-              echo "push_main=false" >> "$GITHUB_OUTPUT"
               echo "expires=30d" >> "$GITHUB_OUTPUT"
+              echo "should_push=false" >> "$GITHUB_OUTPUT"
             fi
-            echo "push_alias=" >> "$GITHUB_OUTPUT"
           fi
-
-      - name: Check registry configuration
-        if: steps.check_files.outputs.found == 'true'
-        env:
-          QUAY_USERNAME: ${{ secrets.QUAY_USERNAME }}
-          QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
-        run: |
-          if [ -z "${IMAGE_REPO}" ]; then
-            echo "IMAGE_REPO GitHub variable is required." >&2
-            exit 1
-          fi
-          if [ -z "${QUAY_USERNAME}" ] || [ -z "${QUAY_PASSWORD}" ]; then
-            echo "QUAY_USERNAME and QUAY_PASSWORD secrets are required." >&2
-            exit 1
-          fi
-
+      
       - name: Install buildah/podman/qemu
-        if: steps.check_files.outputs.found == 'true'
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends podman buildah qemu-user-static
-
-      - name: Enable binfmt (best-effort)
-        if: steps.check_files.outputs.found == 'true'
+      
+      - name: Enable binfmt for multi-arch
         run: |
           podman run --privileged --rm tonistiigi/binfmt --install all || true
-
-      - name: Build multi-arch images and push
-        if: steps.check_files.outputs.found == 'true'
+      
+      - name: Login to Quay.io
+        if: steps.compute_tag.outputs.should_push == 'true'
         env:
-          TAG: ${{ steps.compute_tag.outputs.tag }}
-          EXPIRES: ${{ steps.compute_tag.outputs.expires }}
-          PUSH_ALIAS: ${{ steps.compute_tag.outputs.push_alias }}
           QUAY_USERNAME: ${{ secrets.QUAY_USERNAME }}
           QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
         run: |
-          for file in deploy/container/Containerfile.*; do
-            name="$(basename "$file" | cut -d. -f2-)"
-            if [ "${{ steps.compute_tag.outputs.push_main }}" = "true" ]; then
-              PUSH_MAIN="--push-main"
+          if [ -n "${QUAY_USERNAME}" ] && [ -n "${QUAY_PASSWORD}" ]; then
+            echo "$QUAY_PASSWORD" | podman login -u "$QUAY_USERNAME" --password-stdin quay.io
+            echo "$QUAY_PASSWORD" | buildah login -u "$QUAY_USERNAME" --password-stdin quay.io
+          else
+            echo "WARNING: QUAY credentials not found, will only build locally" >&2
+          fi
+      
+      - name: Build Go MCP Server (development)
+        env:
+          TAG: ${{ steps.compute_tag.outputs.tag }}
+          EXPIRES: ${{ steps.compute_tag.outputs.expires }}
+          SHOULD_PUSH: ${{ steps.compute_tag.outputs.should_push }}
+        run: |
+          # Create multi-arch manifest
+          buildah manifest rm "${IMAGE_REPO}/arcaflow-mcp-server:${TAG}" 2>/dev/null || true
+          buildah manifest create "${IMAGE_REPO}/arcaflow-mcp-server:${TAG}"
+          
+          # Build for amd64 (context is repo root to access VERSION)
+          buildah bud \
+            --override-arch amd64 \
+            --override-os linux \
+            -f server/Containerfile \
+            -t "${IMAGE_REPO}/arcaflow-mcp-server:${TAG}-amd64" \
+            --label "quay.expires-after=${EXPIRES}" \
+            --label "org.opencontainers.image.revision=${OCI_REVISION}" \
+            .
+          
+          buildah manifest add "${IMAGE_REPO}/arcaflow-mcp-server:${TAG}" \
+            "containers-storage:${IMAGE_REPO}/arcaflow-mcp-server:${TAG}-amd64"
+          
+          # Build for arm64 (context is repo root to access VERSION)
+          buildah bud \
+            --override-arch arm64 \
+            --override-os linux \
+            -f server/Containerfile \
+            -t "${IMAGE_REPO}/arcaflow-mcp-server:${TAG}-arm64" \
+            --label "quay.expires-after=${EXPIRES}" \
+            --label "org.opencontainers.image.revision=${OCI_REVISION}" \
+            .
+          
+          buildah manifest add "${IMAGE_REPO}/arcaflow-mcp-server:${TAG}" \
+            "containers-storage:${IMAGE_REPO}/arcaflow-mcp-server:${TAG}-arm64"
+          
+          # Tag local runnable image
+          CURRENT_ARCH=$(uname -m)
+          case "$CURRENT_ARCH" in
+            x86_64) LOCAL_TAG="${TAG}-amd64" ;;
+            aarch64|arm64) LOCAL_TAG="${TAG}-arm64" ;;
+            *) LOCAL_TAG="${TAG}-amd64" ;;
+          esac
+          podman tag "${IMAGE_REPO}/arcaflow-mcp-server:${LOCAL_TAG}" \
+            "${IMAGE_REPO}/arcaflow-mcp-server:${TAG}-local"
+          
+          # Push if requested
+          if [ "${SHOULD_PUSH}" = "true" ]; then
+            # For release tags (v1.0.0), push multiple tags
+            if [[ "${TAG}" =~ ^v([0-9]+\.[0-9]+\.[0-9]+.*)$ ]]; then
+              VERSION="${BASH_REMATCH[1]}"
+              echo "Release detected, pushing multiple tags..."
+              
+              # Push version without v prefix (1.0.0)
+              buildah manifest push --all \
+                "${IMAGE_REPO}/arcaflow-mcp-server:${TAG}" \
+                "docker://${IMAGE_REPO}/arcaflow-mcp-server:${VERSION}"
+              
+              # Push version with v prefix (v1.0.0)
+              buildah manifest push --all \
+                "${IMAGE_REPO}/arcaflow-mcp-server:${TAG}" \
+                "docker://${IMAGE_REPO}/arcaflow-mcp-server:${TAG}"
+              
+              # Push latest tag
+              buildah manifest push --all \
+                "${IMAGE_REPO}/arcaflow-mcp-server:${TAG}" \
+                "docker://${IMAGE_REPO}/arcaflow-mcp-server:latest"
             else
-              PUSH_MAIN=""
+              # Development/branch build - single tag
+              buildah manifest push --all \
+                "${IMAGE_REPO}/arcaflow-mcp-server:${TAG}" \
+                "docker://${IMAGE_REPO}/arcaflow-mcp-server:${TAG}"
             fi
-            if [ -n "${PUSH_ALIAS}" ]; then
-              PUSH_ALIAS_FLAG="--push-alias ${PUSH_ALIAS}"
+          fi
+      
+      - name: Build Python Analysis Engine (development)
+        env:
+          TAG: ${{ steps.compute_tag.outputs.tag }}
+          EXPIRES: ${{ steps.compute_tag.outputs.expires }}
+          SHOULD_PUSH: ${{ steps.compute_tag.outputs.should_push }}
+        run: |
+          # Create multi-arch manifest
+          buildah manifest rm "${IMAGE_REPO}/arcaflow-mcp-analysis:${TAG}" 2>/dev/null || true
+          buildah manifest create "${IMAGE_REPO}/arcaflow-mcp-analysis:${TAG}"
+          
+          # Build for amd64 (context is repo root to access LICENSE/README)
+          buildah bud \
+            --override-arch amd64 \
+            --override-os linux \
+            -f analysis/Containerfile \
+            -t "${IMAGE_REPO}/arcaflow-mcp-analysis:${TAG}-amd64" \
+            --label "quay.expires-after=${EXPIRES}" \
+            --label "org.opencontainers.image.revision=${OCI_REVISION}" \
+            .
+          
+          buildah manifest add "${IMAGE_REPO}/arcaflow-mcp-analysis:${TAG}" \
+            "containers-storage:${IMAGE_REPO}/arcaflow-mcp-analysis:${TAG}-amd64"
+          
+          # Build for arm64 (context is repo root to access LICENSE/README)
+          buildah bud \
+            --override-arch arm64 \
+            --override-os linux \
+            -f analysis/Containerfile \
+            -t "${IMAGE_REPO}/arcaflow-mcp-analysis:${TAG}-arm64" \
+            --label "quay.expires-after=${EXPIRES}" \
+            --label "org.opencontainers.image.revision=${OCI_REVISION}" \
+            .
+          
+          buildah manifest add "${IMAGE_REPO}/arcaflow-mcp-analysis:${TAG}" \
+            "containers-storage:${IMAGE_REPO}/arcaflow-mcp-analysis:${TAG}-arm64"
+          
+          # Tag local runnable image
+          CURRENT_ARCH=$(uname -m)
+          case "$CURRENT_ARCH" in
+            x86_64) LOCAL_TAG="${TAG}-amd64" ;;
+            aarch64|arm64) LOCAL_TAG="${TAG}-arm64" ;;
+            *) LOCAL_TAG="${TAG}-amd64" ;;
+          esac
+          podman tag "${IMAGE_REPO}/arcaflow-mcp-analysis:${LOCAL_TAG}" \
+            "${IMAGE_REPO}/arcaflow-mcp-analysis:${TAG}-local"
+          
+          # Push if requested
+          if [ "${SHOULD_PUSH}" = "true" ]; then
+            # For release tags (v1.0.0), push multiple tags
+            if [[ "${TAG}" =~ ^v([0-9]+\.[0-9]+\.[0-9]+.*)$ ]]; then
+              VERSION="${BASH_REMATCH[1]}"
+              echo "Release detected, pushing multiple tags..."
+              
+              # Push version without v prefix (1.0.0)
+              buildah manifest push --all \
+                "${IMAGE_REPO}/arcaflow-mcp-analysis:${TAG}" \
+                "docker://${IMAGE_REPO}/arcaflow-mcp-analysis:${VERSION}"
+              
+              # Push version with v prefix (v1.0.0)
+              buildah manifest push --all \
+                "${IMAGE_REPO}/arcaflow-mcp-analysis:${TAG}" \
+                "docker://${IMAGE_REPO}/arcaflow-mcp-analysis:${TAG}"
+              
+              # Push latest tag
+              buildah manifest push --all \
+                "${IMAGE_REPO}/arcaflow-mcp-analysis:${TAG}" \
+                "docker://${IMAGE_REPO}/arcaflow-mcp-analysis:latest"
             else
-              PUSH_ALIAS_FLAG=""
+              # Development/branch build - single tag
+              buildah manifest push --all \
+                "${IMAGE_REPO}/arcaflow-mcp-analysis:${TAG}" \
+                "docker://${IMAGE_REPO}/arcaflow-mcp-analysis:${TAG}"
             fi
-            scripts/build_multiarch.sh \
-              --tag "${TAG}" \
-              --expires "${EXPIRES}" \
-              --file "${file}" \
-              --context deploy/container \
-              --name "arcaflow-mcp-${name}" \
-              --push ${PUSH_MAIN} ${PUSH_ALIAS_FLAG}
-          done
-
+          fi
+      
       - name: Install Trivy
-        if: steps.check_files.outputs.found == 'true'
         run: |
           wget -qO- https://aquasecurity.github.io/trivy-repo/deb/public.key | \
             sudo gpg --dearmor -o /usr/share/keyrings/trivy.gpg
@@ -144,20 +255,41 @@ jobs:
             sudo tee /etc/apt/sources.list.d/trivy.list
           sudo apt-get update
           sudo apt-get install -y trivy
-
-      - name: Start Podman socket for Trivy
-        if: steps.check_files.outputs.found == 'true'
-        run: |
-          systemctl --user start podman.socket
-          systemctl --user status podman.socket
-
+      
       - name: Scan images with Trivy
-        if: steps.check_files.outputs.found == 'true'
         env:
           TAG: ${{ steps.compute_tag.outputs.tag }}
         run: |
-          for file in deploy/container/Containerfile.*; do
-            name="$(basename "$file" | cut -d. -f2-)"
-            image="${IMAGE_REPO}/arcaflow-mcp-${name}:${TAG}-local"
-            scripts/trivy_scan.sh "$image"
-          done
+          # Determine current architecture for scanning
+          CURRENT_ARCH=$(uname -m)
+          case "$CURRENT_ARCH" in
+            x86_64) SCAN_TAG="${TAG}-amd64" ;;
+            aarch64|arm64) SCAN_TAG="${TAG}-arm64" ;;
+            *) SCAN_TAG="${TAG}-amd64" ;;
+          esac
+          
+          # Export images to OCI archive for reliable scanning
+          # Trivy has difficulty accessing buildah's containers-storage directly
+          mkdir -p /tmp/image-archives
+          
+          echo "Exporting Go MCP Server image..."
+          podman save -o /tmp/image-archives/server.tar \
+            "${IMAGE_REPO}/arcaflow-mcp-server:${SCAN_TAG}"
+          
+          echo "Exporting Python Analysis Engine image..."
+          podman save -o /tmp/image-archives/analysis.tar \
+            "${IMAGE_REPO}/arcaflow-mcp-analysis:${SCAN_TAG}"
+          
+          echo "::group::Scanning Go MCP Server (${SCAN_TAG})"
+          trivy image \
+            --severity HIGH,CRITICAL \
+            --exit-code 0 \
+            --input /tmp/image-archives/server.tar
+          echo "::endgroup::"
+          
+          echo "::group::Scanning Python Analysis Engine (${SCAN_TAG})"
+          trivy image \
+            --severity HIGH,CRITICAL \
+            --exit-code 0 \
+            --input /tmp/image-archives/analysis.tar
+          echo "::endgroup::"

@@ -38,6 +38,7 @@ cd server && go mod download && cd ..
 ## Documentation Index
 
 - **[Development Setup](setup.md)** - Complete environment setup (step-by-step)
+- **[Version Management](version-management.md)** - How versions are managed across the project
 - **[Testing Guide](testing.md)** - Testing standards and practices
 - **[Debugging Guide](debugging.md)** - Common issues and debugging tools
 - **[Release Process](release-process.md)** - Creating releases

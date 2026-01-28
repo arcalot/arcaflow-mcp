@@ -58,22 +58,22 @@ quay.io/arcalot/arcaflow-mcp-analysis:v1.0.0
 
 ### Building from Source
 
-**Go Server:**
+**Go Server (build from repo root):**
 
 ```bash
-cd server
-podman build -t arcaflow-mcp-server:local -f Containerfile .
+# Build from repository root to access VERSION file
+podman build -t arcaflow-mcp-server:local -f server/Containerfile .
 # Or with Docker:
-# docker build -t arcaflow-mcp-server:local -f Containerfile .
+# docker build -t arcaflow-mcp-server:local -f server/Containerfile .
 ```
 
 **Python Analysis Engine:**
 
 ```bash
-cd analysis
-podman build -t arcaflow-mcp-analysis:local -f Containerfile .
+# Build from repository root (context needs access to LICENSE/README)
+podman build -t arcaflow-mcp-analysis:local -f analysis/Containerfile .
 # Or with Docker:
-# docker build -t arcaflow-mcp-analysis:local -f Containerfile .
+# docker build -t arcaflow-mcp-analysis:local -f analysis/Containerfile .
 ```
 
 **Containerfiles:**

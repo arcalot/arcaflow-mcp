@@ -1,6 +1,6 @@
 module github.com/arcalot/arcaflow-mcp/server
 
-go 1.23.0
+go 1.24.3
 
 require (
 	go.flow.arcalot.io/pluginsdk v0.14.3

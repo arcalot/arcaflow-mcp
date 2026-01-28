@@ -248,11 +248,14 @@ Any MCP-compatible client:
 ### What languages and versions are required?
 
 **Runtime Requirements:**
-- Go 1.23.0 (exact version, Arcaflow standard)
-- Python 3.12 (exact version, Arcaflow standard)
-- Poetry 1.8.3
+- Go (see `ARCALOT_GO_VERSION` GitHub Organization variable)
+- Python (see `ARCALOT_PYTHON_SUPPORTED_VERSIONS` GitHub Organization variable)
+- Poetry (latest stable)
 
-**Why exact versions?**
+**Finding current versions:**
+Check [project README](../../README.md#prerequisites) or `.github/workflows/ci.yml` for exact current versions.
+
+**Why specific versions?**
 - Aligns with Arcaflow project standards
 - Ensures compatibility with Arcaflow workflows
 - Reproducible builds

@@ -1,8 +1,8 @@
 # Arcaflow MCP Server
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-[![Go Version](https://img.shields.io/badge/Go-1.23.0-blue.svg)](https://go.dev/doc/install)
-[![Python Version](https://img.shields.io/badge/Python-3.12-blue.svg)](https://www.python.org/downloads/)
+[![Go Version](https://img.shields.io/badge/Go-1.24.3-blue.svg)](https://go.dev/doc/install)
+[![Python Version](https://img.shields.io/badge/Python-3.12%20%7C%203.13-blue.svg)](https://www.python.org/downloads/)
 
 A Model Context Protocol (MCP) server that enables natural language conversations
 with AI agents to build, validate, and optimize Arcaflow workflow inputs, and
@@ -57,6 +57,15 @@ graph LR
 **When do you need both components?**
 - **Input Construction Only**: Go server is sufficient
 - **Result Analysis**: Both Go server AND Python engine required
+
+## Prerequisites
+
+- **Go** (version defined in `ARCALOT_GO_VERSION` org variable)
+- **Python** (versions defined in `ARCALOT_PYTHON_SUPPORTED_VERSIONS` org variable)
+- **Poetry** (Python dependency management)
+- **Docker/Podman** (optional, for containerized deployment)
+
+**Current version requirements:** See `.github/workflows/ci.yml` or [Version Management](docs/development/version-management.md)
 - **Full Workflow**: Both components for complete input → execute → analyze cycle
 
 **Communication**: The Go server communicates with the Python engine via HTTP REST API (default: `http://localhost:8081`)

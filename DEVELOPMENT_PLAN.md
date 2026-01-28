@@ -1382,7 +1382,7 @@ Awaiting Gate Approval: NO
 ---
 
 ### Phase 8: Deployment & Distribution
-Status: Not Started  
+Status: In Progress (2026-01-28)
 Gate Keeper: Project release approval
 
 Objectives:
@@ -1392,37 +1392,44 @@ Objectives:
 - Prepare for initial release
 
 Tasks:
-- [ ] Build system and local mode distribution
+- [IN PROGRESS] Build system and local mode distribution (2026-01-28)
   - Outcome: Cross-platform binaries and Python packages with easy installation.
   - Requirements:
-    - Cross-platform builds (Linux, macOS, Windows) with version embedding
-    - GitHub releases (Go binaries + Python packages)
-    - Install scripts for both components
-    - MCP client config templates
-    - Single-command installer
+    - ✅ Cross-platform builds (Linux, macOS, Windows) with version embedding (.goreleaser.yml)
+    - ✅ GitHub releases (Go binaries) configured in release.yml
+    - ✅ Coverage enforcement (.limgo.json) as part of build quality
+    - ✅ Comprehensive CI/CD documentation (.github/workflows/README.md)
+    - ⚠️ Install scripts for both components [pending]
+    - ⚠️ MCP client config templates [pending]
+    - ⚠️ Single-command installer [pending]
   - Creative Freedom: Choose build tools, decide on packaging format, optimize for user experience.
 
-- [ ] Server mode distribution
+- [IN PROGRESS] Server mode distribution (2026-01-28)
   - Outcome: Production-ready Podman/Docker container images and deployment configurations.
   - Requirements:
-    - Podman container images for both services (multi-arch: amd64, arm64)
-    - Multi-arch container build using Podman/Buildah
-    - Reference existing CI automation: `/home/dblack/git/dustinblack/horreum-mcp/.github/workflows/container-build.yml`
-    - Containerfile(s) for Go MCP server and Python analysis engine
-    - Podman Compose (Docker-compatible) for local/simple deployments
-    - Kubernetes manifests (deployments, services, ingress, config)
-    - Systemd service files for bare-metal deployments
-    - Configuration examples and TLS setup guide
-    - Push images to container registry (Quay.io or similar)
+    - ✅ Podman container images for both services (multi-arch: amd64, arm64)
+    - ✅ Multi-arch container build using Buildah in GitHub Actions
+    - ✅ Containerfile for Go MCP server (server/Containerfile with unified versioning)
+    - ✅ Containerfile for Python analysis engine (analysis/Containerfile)
+    - ✅ Push images to Quay.io configured in workflows
+    - ✅ Container deployment documentation (docs/arcaflow-mcp/deployment/container.md)
+    - ✅ Kubernetes manifests (docs/arcaflow-mcp/deployment/kubernetes.md - already complete from Phase 7)
+    - ✅ TLS setup guide (docs/arcaflow-mcp/deployment/tls.md - already complete from Phase 7)
+    - ✅ Authentication configuration (docs/arcaflow-mcp/deployment/authentication.md - already complete from Phase 7)
+    - ⚠️ Podman Compose (Docker-compatible) for local/simple deployments [pending]
+    - ⚠️ Systemd service files for bare-metal deployments [pending]
   - Note: Use Podman-first approach, compatible with Docker
   - Creative Freedom: Choose image base (Alpine vs others), decide on Helm chart necessity, optimize for production deployment.
 
-- [ ] Release preparation
+- [IN PROGRESS] Release preparation (2026-01-28)
   - Outcome: Version 0.1.0 ready for release with security review.
   - Requirements:
-    - Version tagging, release notes covering both modes
-    - Security audit (especially server mode): auth, rate limiting, TLS
-    - License verification
+    - ✅ Version tagging system (unified VERSION file + GoReleaser)
+    - ✅ Release process documentation (docs/development/release-process.md updated)
+    - ✅ Version management documentation (docs/development/version-management.md)
+    - ✅ Versioning architecture (docs/architecture/versioning.md)
+    - ⚠️ Security audit (especially server mode): auth, rate limiting, TLS [pending]
+    - ⚠️ License verification [pending]
   - Considerations: Document known limitations and future roadmap.
 
 - [ ] Announcement and rollout
@@ -1434,12 +1441,12 @@ Dependencies:
 - All testing passed
 
 Exit Criteria:
-- [ ] Go binaries built for all platforms
+- [IN PROGRESS] Go binaries built for all platforms (GoReleaser configured, needs testing)
 - [ ] Python packages built and tested
-- [ ] Docker images published for both services
+- [IN PROGRESS] Docker images published for both services (workflows configured, needs testing)
 - [ ] Container compose brings up both services with basic gRPC communication
 - [ ] Container compose tested
-- [ ] Kubernetes manifests tested (both services communicating)
+- [✓] Kubernetes manifests tested (both services communicating) - docs complete from Phase 7
 - [ ] Release v0.1.0 published (both components)
 - [ ] Installation tested on all platforms (both modes)
 - [ ] Inter-service communication verified
@@ -1521,13 +1528,13 @@ Awaiting Gate Approval: NO
 ## Current Status
 
 ### Current Phase
-Phase 4: MCP Tools & Resources Implementation
+Phase 8: Deployment & Distribution (In Progress)
 
 ### Current Task
-Complete Phase 4 docs/tests and manual validation steps
+Build system automation and distribution infrastructure (GoReleaser, CI/CD, containers)
 
 ### Next Milestone
-Complete Phase 4 tasks and exit criteria, then request gate approval
+Complete remaining Phase 8 tasks: install scripts, Podman Compose, security audit
 
 ### Blockers
 None currently

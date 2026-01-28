@@ -34,34 +34,32 @@ developers and maintainers. For user-oriented architecture information, see
 
 ### High-Level System Architecture
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                     AI Agents / Clients                     │
-│           (Claude Desktop, API clients, etc.)               │
-└────────────────────┬────────────────────────────────────────┘
-                     │
-                     │ stdio (local) / HTTP+SSE (server)
-                     │
-┌────────────────────▼────────────────────────────────────────┐
-│               MCP Server Core (Go)                          │
-│  ┌─────────────────────────────────────────────────────┐   │
-│  │ Transport Layer (stdio + HTTP/SSE)                  │   │
-│  │ Authentication & Multi-tenancy                      │   │
-│  │ Protocol Handler (JSON-RPC 2.0)                     │   │
-│  │ Workflow Tools (load, validate, export)             │   │
-│  └─────────────────────────────────────────────────────┘   │
-└────────────────────┬────────────────────────────────────────┘
-                     │
-                     │ gRPC / REST
-                     │
-┌────────────────────▼────────────────────────────────────────┐
-│            Analysis Engine (Python)                         │
-│  ┌─────────────────────────────────────────────────────┐   │
-│  │ Result Parser & Metrics Extractor                   │   │
-│  │ Pattern Analyzer & Suggestion Generator             │   │
-│  │ Historical Database (SQLite/PostgreSQL)             │   │
-│  └─────────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────────┘
+```mermaid
+graph TB
+    subgraph clients["AI Agents / Clients"]
+        CLIENT["Claude Desktop, API clients, etc."]
+    end
+
+    subgraph server["MCP Server Core (Go)"]
+        TRANSPORT["Transport Layer<br/>(stdio + HTTP/SSE)"]
+        AUTH["Authentication & Multi-tenancy"]
+        PROTOCOL["Protocol Handler<br/>(JSON-RPC 2.0)"]
+        TOOLS["Workflow Tools<br/>(load, validate, export)"]
+    end
+
+    subgraph engine["Analysis Engine (Python)"]
+        PARSER["Result Parser &<br/>Metrics Extractor"]
+        ANALYZER["Pattern Analyzer &<br/>Suggestion Generator"]
+        DB["Historical Database<br/>(SQLite/PostgreSQL)"]
+    end
+
+    CLIENT -->|"stdio (local)<br/>HTTP+SSE (server)"| TRANSPORT
+    TRANSPORT --> AUTH
+    AUTH --> PROTOCOL
+    PROTOCOL --> TOOLS
+    TOOLS -->|"gRPC or REST"| PARSER
+    PARSER --> ANALYZER
+    ANALYZER --> DB
 ```
 
 See [Architecture Overview](overview.md) for detailed diagrams.

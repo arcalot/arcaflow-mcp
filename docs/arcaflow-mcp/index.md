@@ -164,15 +164,17 @@ Deploy as a shared service for teams to build inputs and analyze results togethe
 ## Requirements
 
 - **Local Mode:**
-  - Go 1.23.0 (for building from source)
+  - Go (for building from source, see [project README](../../README.md#prerequisites))
   - MCP-compatible AI client (Claude Desktop, Cursor, etc.)
   - Arcaflow Engine 0.20.0+ (optional, for workflow execution)
 
 - **Server Mode:**
-  - Go 1.23.0 (for building from source)
-  - Python 3.12 with Poetry (for analysis engine)
+  - Go (for building from source)
+  - Python with Poetry (for analysis engine)
   - Linux/macOS (tested on Fedora, Ubuntu, macOS)
   - Podman or Docker (optional, for containerized deployment)
+
+**Version requirements:** See [project README](../../README.md#prerequisites) for current versions aligned with Arcalot standards.
 
 ## License
 
