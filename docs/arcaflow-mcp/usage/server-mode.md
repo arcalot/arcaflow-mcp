@@ -108,7 +108,7 @@ EOF
   ```
 - **MCP Protocol State**: The Quick Start examples above establish MCP protocol state per the specification (initialize → initialized → ready). However, each separate curl command creates a new connection without SSE session binding.
 - **Session Binding**: For AI clients or multi-step workflows, use SSE session binding (see [Session Binding](#session-binding) below) to maintain state across multiple requests.
-- **Production deployments**: See [Multi-Tenancy](#multi-tenancy), [Container Deployment](../deployment/container.md), and [Kubernetes Deployment](../deployment/kubernetes.md)
+- **Production deployments**: See [Multi-Tenancy Concepts](../concepts/multi-tenancy.md), [Container Deployment](../deployment/container.md), and [Kubernetes Deployment](../deployment/kubernetes.md)
 
 ### Endpoints (partial)
 

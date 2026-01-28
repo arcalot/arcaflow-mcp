@@ -242,7 +242,7 @@ Planned for future releases:
 - **Advanced Visualization** - Graphical charts and dashboards
 - **Real-time Monitoring** - Stream execution progress and metrics
 
-See [Roadmap](../getting-started.md#roadmap) for details.
+See [Getting Started Guide](../getting-started.md) for current feature status and roadmap.
 
 ---
 

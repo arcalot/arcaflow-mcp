@@ -28,7 +28,10 @@ nav:
       - Overview: tools/overview.md
       - Input construction tools: tools/input-tools.md
       - Result analysis tools: tools/result-tools.md
+      - Resources: tools/resources.md
   - Examples:
       - Basic workflow: examples/basic-workflow.md
       - Iterative optimization: examples/iterative-optimization.md
       - Multi-run comparison: examples/multi-run-comparison.md
+  - Troubleshooting: troubleshooting.md
+  - FAQ: faq.md

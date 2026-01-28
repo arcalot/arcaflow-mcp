@@ -687,7 +687,7 @@ parallel: 5
 - URL: <2s (depending on network)
 - Git: <10s for first load, <2s cached
 
-**Related:** [Performance Tuning](usage/configuration.md#performance)
+**Related:** [Configuration Reference](usage/configuration.md)
 
 ---
 
