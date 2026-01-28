@@ -1104,8 +1104,14 @@ Progress Summary (as of 2026-01-28):
 - **Deployment Guides:** Authentication and TLS complete (1,305 lines total) ✓
   - Authentication setup (691 lines)
   - TLS configuration (614 lines)
+- **Development Guides:** All 5 guides complete (2,867 lines total) ✓
+  - Setup guide (546 lines)
+  - Testing guide (137 lines)
+  - Debugging guide (862 lines)
+  - Release process (705 lines)
+  - Development README (617 lines)
 - **MCP Protocol:** All examples updated with complete handshake and copy-paste safe commands ✓
-- **Remaining Work:** Container/K8s deployment guide enhancement, project documentation enhancement
+- **Remaining Work:** Architecture/API documentation enhancement, container/K8s guide enhancement
 
 Tasks:
 
@@ -1193,12 +1199,12 @@ Tasks:
       - `go-server.md` - Go API overview with links to godoc
       - `python-engine.md` - Python API overview with links to generated docs
       - `grpc-protocol.md` - gRPC service contracts and message formats
-    - `docs/development/` - Development guides
-      - `README.md` - Development docs index with navigation
-      - `setup.md` - Complete dev environment setup (step-by-step)
-      - `testing.md` - Testing guidelines (unit, integration, e2e)
-      - `debugging.md` - Debugging guide (common issues, tools)
-      - `release-process.md` - How to create releases (procedural)
+    - `docs/development/` - Development guides [MOSTLY COMPLETE]
+      - `README.md` - Development docs index with navigation ✓ (2026-01-27)
+      - `setup.md` - Complete dev environment setup (step-by-step) ✓ (2026-01-28)
+      - `testing.md` - Testing guidelines (unit, integration, e2e) ✓ (2026-01-27)
+      - `debugging.md` - Debugging guide (common issues, tools) ✓ (2026-01-28)
+      - `release-process.md` - How to create releases (procedural) ✓ (2026-01-28)
     - `CONTRIBUTING.md` - Complete contribution workflow
       - How to set up dev environment (link to docs/development/setup.md)
       - Code standards and best practices (link to AGENTS.md)
@@ -1290,17 +1296,22 @@ Exit Criteria:
 
 Documentation Completeness:
 - [✓] README.md serves as effective entrypoint with clear navigation to all docs (2026-01-28)
-- [IN PROGRESS] User-facing documentation in `docs/arcaflow-mcp/` complete:
+- [MOSTLY COMPLETE] User-facing documentation in `docs/arcaflow-mcp/` complete:
   - Core sections complete: index, tutorials, FAQ, troubleshooting, usage guides ✓
-  - Concept docs need expansion (currently stubs)
-  - Deployment guides partially complete (container/k8s have content, auth/TLS are stubs)
+  - Concept docs complete: all 4 expanded from stubs (2,819 lines total) ✓ (2026-01-28)
+  - Deployment guides: Auth and TLS complete (1,305 lines), container/K8s need enhancement
   - All code examples verified working ✓
-  - Ready for integration into main Arcaflow docs at https://arcalot.io/arcaflow/ [pending concept/deployment completion]
+  - Ready for integration into main Arcaflow docs at https://arcalot.io/arcaflow/ [pending container/K8s enhancement]
 - [IN PROGRESS] Project documentation complete:
-  - Architecture docs: Navigation complete, individual docs need enhancement
+  - Architecture docs: Navigation complete, individual docs need enhancement [mostly stubs]
   - All major ADRs documented with rationale [ADR-001 complete, others pending]
-  - API documentation: Navigation complete, reference docs need enhancement
-  - Development guides: Navigation complete, individual guides need enhancement
+  - API documentation: Navigation complete, reference docs need enhancement [mostly stubs]
+  - Development guides: All complete ✓ (2026-01-28)
+    - Setup guide (546 lines) ✓
+    - Testing guide (137 lines) ✓
+    - Debugging guide (862 lines) ✓
+    - Release process (705 lines) ✓
+    - Development README (617 lines) ✓
 - [ ] Both documentation sets build successfully
   - MkDocs build for user-facing docs succeeds [needs testing]
   - All Markdown renders correctly on GitHub ✓
