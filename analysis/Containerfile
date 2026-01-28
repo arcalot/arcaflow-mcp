@@ -1,0 +1,84 @@
+# Containerfile for Arcaflow MCP Analysis Engine (Python)
+#
+# This builds a container image for the Python analysis engine component.
+# The engine provides result parsing, statistical analysis, and optimization suggestions.
+#
+# Build:
+#   podman build -t quay.io/arcalot/arcaflow-mcp-analysis:latest -f analysis/Containerfile analysis/
+#   docker build -t quay.io/arcalot/arcaflow-mcp-analysis:latest -f analysis/Containerfile analysis/
+#
+# Run:
+#   podman run -p 8081:8081 quay.io/arcalot/arcaflow-mcp-analysis:latest
+#
+
+# Package path for this module relative to repo root
+ARG package=arcaflow_analysis
+
+# STAGE 1 -- Build module dependencies and run tests
+FROM quay.io/arcalot/python-base:3.12 AS build
+ARG package
+
+WORKDIR /app
+
+# Install Poetry for dependency management
+RUN pip install --no-cache-dir poetry==1.8.3
+
+# Copy dependency manifests (cached layer)
+COPY poetry.lock pyproject.toml ./
+
+# Convert dependencies from poetry to static requirements.txt
+# This allows final image to not need poetry installed
+RUN poetry config virtualenvs.create false \
+ && poetry install --without dev --no-root \
+ && poetry export -f requirements.txt --output requirements.txt --without-hashes
+
+# Copy application code
+COPY ${package}/ /app/${package}/
+COPY tests/ /app/tests/
+COPY LICENSE README.md ./
+
+# Run tests to validate build
+ENV PYTHONPATH=/app
+RUN python -m pytest tests/ -v
+
+# STAGE 2 -- Build final runtime image
+FROM quay.io/arcalot/python-base:3.12
+ARG package
+
+WORKDIR /app
+
+# Copy requirements and application code from build stage
+COPY --from=build /app/requirements.txt ./
+COPY --from=build /app/${package}/ /app/${package}/
+COPY --from=build /app/LICENSE /app/README.md ./
+
+# Install all dependencies from generated requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Create data directory for SQLite database
+RUN mkdir -p /var/lib/arcaflow-analysis
+
+# Create non-root user and set ownership
+RUN useradd -m -u 1000 arcaflow \
+ && chown -R arcaflow:arcaflow /app /var/lib/arcaflow-analysis
+
+USER arcaflow
+
+# Expose analysis engine HTTP port
+EXPOSE 8081
+
+# Health check endpoint
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8081/health')" || exit 1
+
+# OCI labels following Arcalot conventions
+LABEL org.opencontainers.image.source="https://github.com/arcalot/arcaflow-mcp"
+LABEL org.opencontainers.image.licenses="Apache-2.0"
+LABEL org.opencontainers.image.vendor="Arcalot project"
+LABEL org.opencontainers.image.authors="Arcalot contributors"
+LABEL org.opencontainers.image.title="Arcaflow MCP Analysis Engine"
+LABEL org.opencontainers.image.description="Python analysis engine for Arcaflow workflow result analysis and optimization"
+
+# Start the HTTP server
+ENTRYPOINT ["python", "-m", "arcaflow_analysis.server.http_server"]
+CMD []

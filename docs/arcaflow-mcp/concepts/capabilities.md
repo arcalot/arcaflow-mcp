@@ -4,11 +4,17 @@
 
 Arcaflow MCP provides two primary capabilities for working with Arcaflow workflows through natural language conversation: **Input Construction** and **Result Analysis**.
 
+**Component Architecture:**
+- **Input Construction** → Handled by **Go MCP Server** (always required)
+- **Result Analysis** → Handled by **Python Analysis Engine** (required for result analysis features)
+
 ---
 
 ## Input Construction
 
 Build valid, schema-compliant workflow inputs through conversational AI interaction.
+
+**Provided by:** Go MCP Server
 
 ### Core Features
 
@@ -88,6 +94,10 @@ See [Tutorial: Input Construction](../examples/basic-workflow.md) for a complete
 ## Result Analysis
 
 Analyze workflow execution results and get AI-powered optimization suggestions.
+
+**Provided by:** Python Analysis Engine (communicates with Go MCP Server via HTTP)
+
+**Requirements:** Both components must be running for result analysis features to work.
 
 ### Core Features
 

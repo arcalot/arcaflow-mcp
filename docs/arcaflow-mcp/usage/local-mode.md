@@ -3,7 +3,31 @@
 Local mode runs the MCP server over stdio using MCP Content-Length framing. It
 is intended for desktop MCP clients that launch the server as a subprocess.
 
-### Start the server
+### Prerequisites
+
+**For input construction only:**
+- Go MCP server (built from `server/`)
+
+**For result analysis features:**
+- Go MCP server (built from `server/`)
+- Python analysis engine (running on `localhost:8081`)
+
+### Start the Python analysis engine (optional but recommended)
+
+The Python analysis engine provides result analysis, comparison, and optimization features.
+Start it before launching your MCP client:
+
+```bash
+cd analysis
+poetry install
+poetry run python -m arcaflow_analysis.server.http_server &
+```
+
+The engine will listen on `http://localhost:8081` by default.
+
+**Note:** If you skip this step, input construction features will still work, but result analysis tools will return errors.
+
+### Start the Go MCP server
 
 Most desktop MCP clients launch local servers on-demand. In that case, the
 client configuration should point to this command and the client will manage
@@ -23,7 +47,7 @@ same:
 - **Command:** The executable path, for example `./server/arcaflow-mcp`.
 - **Arguments:** `--mode local` (plus `--config` if you use a config file).
 - **Working directory:** The repo root so relative paths resolve correctly.
-- **Environment:** Optional overrides such as `ARCAFLOW_MCP_LOG_LEVEL=debug`.
+- **Environment:** **Required** `ARCAFLOW_MCP_ANALYSIS_HTTP_URL=http://localhost:8081` for result analysis features, plus optional overrides such as `ARCAFLOW_MCP_LOG_LEVEL=debug`.
 
 After saving the configuration, the client should start the server on demand
 and complete MCP initialization automatically. If the client expects a JSON
@@ -39,6 +63,7 @@ Example JSON-style entry (field names may vary by client):
   "args": ["--mode", "local"],
   "cwd": "/path/to/arcaflow-mcp",
   "env": {
+    "ARCAFLOW_MCP_ANALYSIS_HTTP_URL": "http://localhost:8081",
     "ARCAFLOW_MCP_LOG_LEVEL": "info"
   }
 }
@@ -79,6 +104,7 @@ Cursor (`~/.cursor/mcp.json`):
       "args": ["--mode", "local"],
       "cwd": "/path/to/arcaflow-mcp",
       "env": {
+        "ARCAFLOW_MCP_ANALYSIS_HTTP_URL": "http://localhost:8081",
         "ARCAFLOW_MCP_LOG_LEVEL": "info"
       },
       "trust": true
@@ -86,3 +112,5 @@ Cursor (`~/.cursor/mcp.json`):
   }
 }
 ```
+
+**Important:** Make sure the Python analysis engine is running on `localhost:8081` before starting your MCP client, or result analysis features will fail.

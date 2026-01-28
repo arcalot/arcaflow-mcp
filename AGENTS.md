@@ -167,7 +167,7 @@ License: Apache 2.0
     user-refinement of the output schema.
   - `outputs` must be a map with at least one item (not `{}` and not a list).
   - For engine execution, prefer example workflows from
-    `/home/dblack/git/arcalot/arcaflow-workflows`.
+    `https://github.com/arcalot/arcaflow-workflows`.
 - Distinguish workflow schemas from plugin schemas:
   - Workflow schemas define the top-level `input` scope for the workflow itself.
   - Plugin schemas define step input/output contracts for each plugin.

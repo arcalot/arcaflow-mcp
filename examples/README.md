@@ -163,14 +163,25 @@ export ARCAFLOW_MCP_AUDIT_STORE_PATH="$DATA_DIR/audit.json"
 export ARCAFLOW_MCP_USAGE_STORE_PATH="$DATA_DIR/usage.json"
 export ARCAFLOW_MCP_TENANT_WORKSPACE_ROOT="$DATA_DIR/tenants"
 
-# Step 5: Start server (in background or separate terminal)
+# Step 5: Start Python analysis engine (required for result analysis features)
+cd "$REPO_DIR/analysis"
+poetry install
+poetry run python -m arcaflow_analysis.server.http_server &
+ANALYSIS_PID=$!
+cd "$REPO_DIR"
+
+# Wait for analysis engine to start
+sleep 2
+
+# Step 6: Start Go MCP server (connects to analysis engine)
+export ARCAFLOW_MCP_ANALYSIS_HTTP_URL="http://localhost:8081"
 arcaflow-mcp --mode server --address :8080 &
 ARCAFLOW_MCP_PID=$!
 
 # Wait for server to start
 sleep 2
 
-# Step 6: Initialize MCP session (part 1 - REQUIRED handshake)
+# Step 7: Initialize MCP session (part 1 - REQUIRED handshake)
 curl -X POST http://localhost:8080/mcp \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $ARCAFLOW_MCP_ADMIN_TOKEN" \
@@ -190,7 +201,7 @@ curl -X POST http://localhost:8080/mcp \
 }
 EOF
 
-# Step 7: Complete initialization (part 2 - notification, no id field)
+# Step 8: Complete initialization (part 2 - notification, no id field)
 curl -X POST http://localhost:8080/mcp \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $ARCAFLOW_MCP_ADMIN_TOKEN" \
@@ -201,7 +212,7 @@ curl -X POST http://localhost:8080/mcp \
 }
 EOF
 
-# Step 8: Load workflow using absolute path (now this will work!)
+# Step 9: Load workflow using absolute path (now this will work!)
 curl -X POST http://localhost:8080/mcp \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $ARCAFLOW_MCP_ADMIN_TOKEN" \
@@ -225,11 +236,12 @@ curl -X POST http://localhost:8080/mcp \
 }
 EOF
 
-# Step 9: Cleanup
-kill $ARCAFLOW_MCP_PID
+# Step 10: Cleanup (kill both processes)
+kill $ARCAFLOW_MCP_PID $ANALYSIS_PID
 ```
 
 **Important Notes:**
+- **Two components required**: Server mode needs both the Go MCP server and Python analysis engine running
 - **MCP server in your executable path**: All commands assume the `arcaflow-mcp` binary is in your `$PATH`
 - **Token must match**: The token in the curl command must match `ARCAFLOW_MCP_ADMIN_TOKEN`
 - **Absolute paths**: Workflow locations must be absolute paths; `$PWD` expands to current directory

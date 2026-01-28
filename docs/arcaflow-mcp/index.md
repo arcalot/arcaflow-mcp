@@ -41,22 +41,32 @@ Arcaflow MCP bridges the gap between natural language AI assistants (like Claude
 ### For Desktop AI Users (Local Mode)
 
 ```bash
-# 1. Build the server
+# 1. Build the Go MCP server
 cd server && go build -o arcaflow-mcp ./cmd/arcaflow-mcp
 
-# 2. Configure your AI client (e.g., Claude Desktop)
-# Add to MCP configuration:
+# 2. Start Python analysis engine (for result analysis features)
+cd ../analysis
+poetry install
+poetry run python -m arcaflow_analysis.server.http_server &
+
+# 3. Configure your AI client (e.g., Claude Desktop)
+# Add to MCP configuration (~/.config/Claude/claude_desktop_config.json):
 {
   "mcpServers": {
     "arcaflow": {
       "command": "/path/to/arcaflow-mcp",
-      "args": ["--mode", "local"]
+      "args": ["--mode", "local"],
+      "env": {
+        "ARCAFLOW_MCP_ANALYSIS_HTTP_URL": "http://localhost:8081"
+      }
     }
   }
 }
 
-# 3. Start conversing with your AI about Arcaflow workflows!
+# 4. Start conversing with your AI about Arcaflow workflows!
 ```
+
+**Note:** The Python analysis engine is required for result analysis features. Input construction works without it.
 
 **Next Steps:** [Local Mode Setup Guide](usage/local-mode.md)
 
@@ -74,7 +84,14 @@ export ARCAFLOW_MCP_AUDIT_STORE_PATH="$DATA_DIR/audit.json"
 export ARCAFLOW_MCP_USAGE_STORE_PATH="$DATA_DIR/usage.json"
 export ARCAFLOW_MCP_TENANT_WORKSPACE_ROOT="$DATA_DIR/tenants"
 
-# Start server
+# Start Python analysis engine
+cd analysis
+poetry install
+poetry run python -m arcaflow_analysis.server.http_server &
+cd ..
+
+# Start Go MCP server (connects to analysis engine)
+export ARCAFLOW_MCP_ANALYSIS_HTTP_URL="http://localhost:8081"
 ./arcaflow-mcp --mode server --address :8080
 ```
 

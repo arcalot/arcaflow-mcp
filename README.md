@@ -25,6 +25,42 @@ machine-readable Arcaflow workflows. It provides:
 **Key Principle:** Produce deterministic, schema-validated JSON/YAML inputs
 guaranteed to work with Arcaflow workflows and plugins.
 
+## Architecture
+
+Arcaflow MCP uses a **hybrid two-component architecture**:
+
+```mermaid
+graph LR
+    Client[AI Client<br/>Claude, Cursor, etc.]
+    
+    subgraph "Arcaflow MCP"
+        Go[Go MCP Server<br/>Protocol & Input Construction]
+        Python[Python Analysis Engine<br/>Result Analysis & Optimization]
+    end
+    
+    Workflows[(Workflow<br/>Files)]
+    Results[(Execution<br/>Results)]
+    
+    Client <-->|MCP Protocol| Go
+    Go -->|Load/Validate| Workflows
+    Go <-->|HTTP| Python
+    Python -->|Analyze| Results
+```
+
+**Component Responsibilities:**
+
+| Component | Purpose | Required For |
+|-----------|---------|--------------|
+| **Go MCP Server** | MCP protocol handler, workflow loading, input validation | Input construction (always required) |
+| **Python Analysis Engine** | Result parsing, statistical analysis, optimization suggestions | Result analysis (optional for input-only workflows) |
+
+**When do you need both components?**
+- **Input Construction Only**: Go server is sufficient
+- **Result Analysis**: Both Go server AND Python engine required
+- **Full Workflow**: Both components for complete input → execute → analyze cycle
+
+**Communication**: The Go server communicates with the Python engine via HTTP REST API (default: `http://localhost:8081`)
+
 ## Quick Start
 
 ### For End Users
@@ -33,14 +69,22 @@ Choose your deployment mode:
 
 **Local Mode** (Recommended for desktop AI clients):
 ```bash
-# 1. Build the server
+# 1. Build the Go MCP server
 cd server && go build -o arcaflow-mcp ./cmd/arcaflow-mcp
 
-# 2. Configure your MCP client (Claude Desktop, etc.)
+# 2. Start Python analysis engine (for result analysis features)
+cd ../analysis
+poetry install
+poetry run python -m arcaflow_analysis.server.http_server &
+
+# 3. Configure your MCP client (Claude Desktop, etc.)
+# Add ARCAFLOW_MCP_ANALYSIS_HTTP_URL=http://localhost:8081 to env
 # See: docs/arcaflow-mcp/usage/local-mode.md
 
-# 3. Client launches server automatically
+# 4. Client launches server automatically
 ```
+
+**Note:** Python engine is required for result analysis. Input construction works without it.
 
 **Server Mode** (For multi-user deployments):
 ```bash
@@ -60,14 +104,21 @@ export ARCAFLOW_MCP_AUDIT_STORE_PATH="$DATA_DIR/audit.json"
 export ARCAFLOW_MCP_USAGE_STORE_PATH="$DATA_DIR/usage.json"
 export ARCAFLOW_MCP_TENANT_WORKSPACE_ROOT="$DATA_DIR/tenants"
 
-# 5. Start the server
+# 5. Start Python analysis engine
+cd analysis
+poetry install
+poetry run python -m arcaflow_analysis.server.http_server &
+cd ..
+
+# 6. Start Go MCP server
+export ARCAFLOW_MCP_ANALYSIS_HTTP_URL="http://localhost:8081"
 ./server/arcaflow-mcp --mode server --address 127.0.0.1:8080
 
-# 5. Connect AI clients via HTTP/SSE
+# 7. Connect AI clients via HTTP/SSE
 # See: docs/arcaflow-mcp/usage/server-mode.md
 ```
 
-**Note:** For production, generate a secure token: `openssl rand -hex 32`
+**Note:** Both components required for full functionality. For production, generate a secure token: `openssl rand -hex 32`
 
 📖 **Detailed Setup**: See [Getting Started Guide](docs/arcaflow-mcp/getting-started.md)
 

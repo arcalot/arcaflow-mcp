@@ -26,13 +26,25 @@ export ARCAFLOW_MCP_AUDIT_STORE_PATH="$DATA_DIR/audit.json"
 export ARCAFLOW_MCP_USAGE_STORE_PATH="$DATA_DIR/usage.json"
 export ARCAFLOW_MCP_TENANT_WORKSPACE_ROOT="$DATA_DIR/tenants"
 
-# 5. Start server (verify you're in repository root: ls server/arcaflow-mcp)
+# 5. Start Python analysis engine (required for result analysis features)
+cd analysis
+poetry install
+poetry run python -m arcaflow_analysis.server.http_server &
+ANALYSIS_PID=$!
+cd ..
+
+# Wait for analysis engine to start
+sleep 2
+
+# 6. Start Go MCP server (verify you're in repository root: ls server/arcaflow-mcp)
+export ARCAFLOW_MCP_ANALYSIS_HTTP_URL="http://localhost:8081"
 ./server/arcaflow-mcp --mode server --address :8080 &
+SERVER_PID=$!
 
 # Wait for server to start
 sleep 2
 
-# 6. In another terminal, initialize MCP session (part 1 - handshake request)
+# 7. In another terminal, initialize MCP session (part 1 - handshake request)
 curl -X POST http://localhost:8080/mcp \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $ARCAFLOW_MCP_ADMIN_TOKEN" \
@@ -54,7 +66,7 @@ EOF
 
 # Expected response: {"jsonrpc":"2.0","id":1,"result":{"protocolVersion":"2025-11-25",...}}
 
-# 7. Complete initialization (part 2 - notification, no id)
+# 8. Complete initialization (part 2 - notification, no id)
 curl -X POST http://localhost:8080/mcp \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $ARCAFLOW_MCP_ADMIN_TOKEN" \
@@ -65,7 +77,7 @@ curl -X POST http://localhost:8080/mcp \
 }
 EOF
 
-# 8. Now make tool calls (example: list available tools)
+# 9. Now make tool calls (example: list available tools)
 curl -X POST http://localhost:8080/mcp \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $ARCAFLOW_MCP_ADMIN_TOKEN" \
@@ -80,6 +92,10 @@ EOF
 ```
 
 **Important Notes:**
+- **Two Components Required**: Server mode requires both the Go MCP server AND the Python analysis engine
+  - Go server handles protocol, input construction
+  - Python engine handles result analysis, optimization suggestions
+  - They communicate via HTTP (default: `localhost:8081`)
 - **Authentication**: Server mode requires `ARCAFLOW_MCP_ADMIN_TOKEN` to be set
 - **Data storage**: By default, the server uses `/var/lib/arcaflow-mcp` (requires root). The example above overrides this to use `./data/` in the current directory
 - **Token security**: For development/testing, the timestamp-based token above is acceptable. For production, generate a secure token:
@@ -92,7 +108,7 @@ EOF
   ```
 - **MCP Protocol State**: The Quick Start examples above establish MCP protocol state per the specification (initialize → initialized → ready). However, each separate curl command creates a new connection without SSE session binding.
 - **Session Binding**: For AI clients or multi-step workflows, use SSE session binding (see [Session Binding](#session-binding) below) to maintain state across multiple requests.
-- **Production deployments**: See [Multi-Tenancy](#multi-tenancy) and [Configuration Reference](configuration.md)
+- **Production deployments**: See [Multi-Tenancy](#multi-tenancy), [Container Deployment](../deployment/container.md), and [Kubernetes Deployment](../deployment/kubernetes.md)
 
 ### Endpoints (partial)
 
