@@ -37,12 +37,24 @@ First, we need to tell the MCP server which workflow we want to work with. Workf
 - Git repositories
 - HTTP URLs
 
+### Using the Built-In Example Workflows
+
+The Arcaflow MCP repository includes example workflows in `examples/workflows/`:
+- **hello-world/** - Simple single-input workflow (perfect for this tutorial)
+- **data-processing/** - More complex workflow with multiple inputs
+- **perf-test/** - Advanced workflow for performance testing
+
 ### Example Conversation:
 
 **You:**
 ```
 Load the hello-world workflow from /path/to/arcaflow-mcp/examples/workflows/hello-world
 ```
+
+**Replace `/path/to/arcaflow-mcp`** with your actual installation path, such as:
+- `/home/user/arcaflow-mcp` (Linux)
+- `/Users/user/arcaflow-mcp` (macOS)
+- `C:\Users\user\arcaflow-mcp` (Windows)
 
 **AI (using `workflow_load` tool):**
 ```

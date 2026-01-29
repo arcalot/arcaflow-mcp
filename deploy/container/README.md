@@ -2,19 +2,34 @@
 
 This directory contains deployment configurations for running Arcaflow MCP in containers.
 
+> **🚨 Pre-Release Note (Before v0.1.0)**: Container tags change with each commit to main.
+> 
+> **Get current tag:**
+> ```bash
+> export TAG=$(curl -s https://raw.githubusercontent.com/arcalot/arcaflow-mcp/main/scripts/get-container-tag.sh | bash)
+> echo "Current tag: $TAG"
+> ```
+> 
+> After v0.1.0, use `:latest` or version tags like `:v1.0.0`
+
 ## Quick Start
 
 ### Using Docker Compose
 
 ```bash
-# Generate admin token
+# Step 1: Get current development tag (before v0.1.0)
+export TAG=$(curl -s https://raw.githubusercontent.com/arcalot/arcaflow-mcp/main/scripts/get-container-tag.sh | bash)
+echo "Using tag: $TAG"
+
+# Step 2: Generate admin token
 export ARCAFLOW_MCP_ADMIN_TOKEN="$(openssl rand -base64 32)"
 echo "Admin token: $ARCAFLOW_MCP_ADMIN_TOKEN"
+echo "IMPORTANT: Save this token for API access!"
 
-# Optional: Create workflow directory if you plan to mount workflows
+# Step 3: Optional - Create workflow directory if you plan to mount workflows
 mkdir -p ./workflows
 
-# Start both components
+# Step 4: Start both components
 docker compose up -d
 
 # Check status
@@ -109,14 +124,68 @@ curl -s 'https://quay.io/api/v1/repository/arcalot/arcaflow-mcp-server/tag/?limi
 
 ## Verifying Deployment
 
-```bash
-# Check component health
-curl http://localhost:8081/health  # Analysis engine
-curl http://localhost:8080/health  # MCP server
+### Quick Health Checks
 
-# View logs
-docker compose logs analysis
-docker compose logs mcp-server
+```bash
+# Check Analysis Engine (Component 1)
+curl http://localhost:8081/health
+# Expected: {"status":"healthy"}
+
+# Check MCP Server (Component 2)
+curl http://localhost:8080/health
+# Expected: {"status":"healthy","version":"..."}
+
+# View logs if needed
+docker compose logs -f analysis    # Analysis engine logs
+docker compose logs -f mcp-server  # MCP server logs
+```
+
+### Complete MCP Protocol Test
+
+Verify the MCP server is working with a complete handshake:
+
+```bash
+# Step 1: Initialize
+curl -X POST http://localhost:8080/mcp \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $ARCAFLOW_MCP_ADMIN_TOKEN" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"test","version":"1.0"}}}'
+
+# Expected: {"jsonrpc":"2.0","id":1,"result":{"protocolVersion":"2025-11-25",...}}
+
+# Step 2: Complete initialization
+curl -X POST http://localhost:8080/mcp \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $ARCAFLOW_MCP_ADMIN_TOKEN" \
+  -d '{"jsonrpc":"2.0","method":"initialized"}'
+
+# Step 3: List tools (verifies server is ready)
+curl -X POST http://localhost:8080/mcp \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $ARCAFLOW_MCP_ADMIN_TOKEN" \
+  -d '{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}'
+
+# Expected: {"jsonrpc":"2.0","id":2,"result":{"tools":[...]}}
+```
+
+### Troubleshooting Health Checks
+
+**If health checks fail:**
+
+```bash
+# Check container status
+docker compose ps
+
+# Check detailed logs
+docker compose logs analysis --tail 50
+docker compose logs mcp-server --tail 50
+
+# Check if ports are bound
+sudo lsof -i :8080
+sudo lsof -i :8081
+
+# Restart if needed
+docker compose restart
 ```
 
 ## Stopping Services

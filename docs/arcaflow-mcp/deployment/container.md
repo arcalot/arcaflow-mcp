@@ -42,20 +42,33 @@ Containerization provides:
 
 ```bash
 # Go MCP Server
-quay.io/arcalot/arcaflow-mcp-server:latest
-quay.io/arcalot/arcaflow-mcp-server:v1.0.0
+quay.io/arcalot/arcaflow-mcp-server:<tag>
 
 # Python Analysis Engine
-quay.io/arcalot/arcaflow-mcp-analysis:latest
-quay.io/arcalot/arcaflow-mcp-analysis:v1.0.0
+quay.io/arcalot/arcaflow-mcp-analysis:<tag>
 ```
+
+> **🚨 Pre-Release Container Tags (Before v0.1.0)**
+>
+> We're currently in active development. Container tags change with each commit.
+>
+> **Get the current tag:**
+> ```bash
+> export TAG=$(curl -s https://raw.githubusercontent.com/arcalot/arcaflow-mcp/main/scripts/get-container-tag.sh | bash)
+> echo "Current tag: $TAG"
+> # Example output: main-abc1234
+> ```
+>
+> **After v0.1.0 release**, use stable tags:
+> - `:latest` - Latest stable build
+> - `:v1.0.0`, `:v1.0.1` - Specific version releases
 
 ### Image Tags
 
-**Available Tags:**
-- `latest`: Latest build from main branch
+**Available Tag Types:**
+- `latest`: Latest build from main branch (after v0.1.0)
 - `v1.0.0`, `v1.0.1`, etc.: Specific releases (after v0.1.0)
-- `main-<sha>`: Specific commit builds (7-char SHA)
+- `main-<sha>`: Specific commit builds (7-char SHA) - current development
 
 **For Production**: Use specific version tags (e.g., `v1.0.0`) once available. The `latest` tag tracks the main branch and may include breaking changes.
 

@@ -11,22 +11,36 @@ is intended for desktop MCP clients that launch the server as a subprocess.
 
 **Building from Source:**
 
-**For input construction only:**
-- Go MCP server (built from `server/`)
+**Component requirements based on your needs:**
 
-**For result analysis features:**
-- Go MCP server (built from `server/`)
-- Python analysis engine (running on `localhost:8081`)
+| Your Goal | Components Required |
+|-----------|-------------------|
+| Build workflow inputs only | Go MCP server |
+| Analyze workflow results | Go MCP server + Python analysis engine |
+| Complete workflow lifecycle | Go MCP server + Python analysis engine |
 
-### Start the Python analysis engine (optional but recommended)
+**Startup Order:** Python analysis engine MUST start BEFORE the Go MCP server (if using result analysis).
+
+---
+
+## Setup Steps
+
+### Step 1: Start the Python Analysis Engine (If Needed)
+
+**Required for:** Result analysis, optimization suggestions, multi-run comparison
+
+**Skip if:** You only need to build workflow inputs
 
 The Python analysis engine provides result analysis, comparison, and optimization features.
 
 **Using Containers:**
 
 ```bash
-# Pull image (use latest development tag before v0.1.0)
-export TAG="main-abc1234"  # See Getting Started guide for current tag
+# Get current development tag (before v0.1.0 release)
+export TAG=$(curl -s https://raw.githubusercontent.com/arcalot/arcaflow-mcp/main/scripts/get-container-tag.sh | bash)
+echo "Using tag: $TAG"
+
+# Pull image
 podman pull quay.io/arcalot/arcaflow-mcp-analysis:${TAG}
 
 # Start analysis engine
@@ -35,8 +49,12 @@ podman run -d \
   -p 8081:8081 \
   quay.io/arcalot/arcaflow-mcp-analysis:${TAG}
 
-# Verify it's running
+# Wait for startup
+sleep 2
+
+# Verify it's running and healthy
 curl http://localhost:8081/health
+# Expected: {"status":"healthy"}
 ```
 
 **Building from Source:**
@@ -45,13 +63,31 @@ curl http://localhost:8081/health
 cd analysis
 poetry install
 poetry run python -m arcaflow_analysis.server.http_server &
+
+# Save PID for cleanup later
+ANALYSIS_PID=$!
+echo "Analysis engine PID: $ANALYSIS_PID"
+
+# Wait for startup
+sleep 2
+
+# Verify it's running
+curl http://localhost:8081/health
+# Expected: {"status":"healthy"}
 ```
 
-The engine will listen on `http://localhost:8081` by default.
+The engine listens on `http://localhost:8081` by default.
+
+**Troubleshooting:**
+- If health check fails, check logs: `podman logs arcaflow-analysis`
+- If port 8081 is in use: `sudo lsof -i :8081`
+- For source build: Check for Python errors in terminal
 
 **Note:** If you skip this step, input construction features will still work, but result analysis tools will return errors.
 
-### Start the Go MCP server
+---
+
+### Step 2: Configure the MCP Client to Launch Go MCP Server
 
 Most desktop MCP clients launch local servers on-demand.
 
@@ -188,3 +224,79 @@ Cursor (`~/.cursor/mcp.json`):
 ```
 
 **Important:** Make sure the Python analysis engine is running on `localhost:8081` before starting your MCP client, or result analysis features will fail.
+
+---
+
+## Verify Your Setup
+
+### Test the Connection
+
+After configuring your MCP client:
+
+1. **Start your AI client** (Claude Desktop, Cursor, etc.)
+
+2. **Test basic connectivity:**
+   ```
+   "Can you see the Arcaflow MCP server? List the available tools."
+   ```
+
+3. **Expected response:** AI should list Arcaflow tools including:
+   - `workflow_load`
+   - `workflow_schema_get`
+   - `workflow_input_build`
+   - `workflow_input_validate`
+   - `workflow_input_export`
+   - And more...
+
+4. **Test with example workflow:**
+   ```
+   "Load the hello-world workflow from /path/to/arcaflow-mcp/examples/workflows/hello-world"
+   ```
+
+### Common Connection Issues
+
+**"MCP server not responding"**
+- Verify binary/container path in configuration is correct
+- Check that analysis engine is running (if using result analysis)
+- Restart AI client after configuration changes
+- Check AI client logs for error messages
+
+**"Analysis engine not reachable"**
+```bash
+# Verify analysis engine is running
+curl http://localhost:8081/health
+
+# Check what's using port 8081
+sudo lsof -i :8081
+
+# Check container status (if using containers)
+podman ps | grep arcaflow-analysis
+```
+
+---
+
+## Cleanup and Shutdown
+
+### Stop the Analysis Engine
+
+**If using containers:**
+```bash
+podman stop arcaflow-analysis
+podman rm arcaflow-analysis
+```
+
+**If built from source:**
+```bash
+# If you saved the PID
+kill $ANALYSIS_PID
+
+# Or find and kill the process
+ps aux | grep "arcaflow_analysis"
+kill <PID>
+```
+
+### Stop the MCP Server
+
+The MCP server is launched and managed by your AI client. When you close the AI client, the server stops automatically.
+
+For manual testing, press Ctrl+C to stop the server.

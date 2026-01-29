@@ -6,16 +6,28 @@ This guide will get you up and running with Arcaflow MCP in minutes.
 
 **Arcaflow MCP uses TWO components that work together:**
 
-| Component | Purpose |
-|-----------|---------|
-| **Go MCP Server** | MCP protocol handler, workflow loading, input validation |
-| **Python Analysis Engine** | Result parsing, analysis, optimization suggestions |
+| Component | Purpose | Required For |
+|-----------|---------|--------------|
+| **Go MCP Server** | MCP protocol handler, workflow loading, input validation | **Always required** |
+| **Python Analysis Engine** | Result parsing, analysis, optimization suggestions | **Only for result analysis** |
+
+**Component Dependencies:**
+
+```
+Your Goal                     → Components Needed
+─────────────────────────────────────────────────
+Build workflow inputs         → Go Server ONLY
+Analyze workflow results      → Go Server + Python Engine (both)
+Complete workflow lifecycle   → Go Server + Python Engine (both)
+```
 
 **Why two components?**
 - **Go server**: Fast, efficient protocol handling and workflow operations
 - **Python engine**: Rich data analysis and ML libraries for result optimization
 
-**Both are required** for full functionality (input construction + result analysis).
+**Startup Order Matters:**
+1. **Start Python Analysis Engine FIRST** (if needed for result analysis)
+2. **Then start/configure Go MCP Server** (connects to analysis engine at http://localhost:8081)
 
 ## Choose Your Path
 
@@ -33,6 +45,35 @@ Pick the deployment method that best fits your needs:
 
 The fastest way to try Arcaflow MCP is using pre-built container images for **both components**.
 
+> **🚨 Pre-Release Container Tags (Before v0.1.0)**
+>
+> We're currently in active development. Container tags change with each commit to main.
+>
+> **Get the current tag** (recommended - ensures version alignment):
+> ```bash
+> # Automatically matches your repo/docs version
+> export TAG=$(curl -s https://raw.githubusercontent.com/arcalot/arcaflow-mcp/main/scripts/get-container-tag.sh | bash)
+> echo "Current tag: $TAG"
+> ```
+>
+> **Why use the helper script?**
+> - **Version alignment**: If you cloned the repo, uses YOUR git commit (e.g., `main-abc1234`)
+> - **Single source**: Uses GitHub commit as source of truth, not quay.io registry
+> - **Predictable**: Always returns the tag that SHOULD match your documentation
+>
+> **Alternative - Query quay.io directly** (simpler but may mismatch your docs):
+> ```bash
+> # Gets latest available tag from quay.io (might be newer than your docs version)
+> export TAG=$(curl -s 'https://quay.io/api/v1/repository/arcalot/arcaflow-mcp-server/tag/' | \
+>   jq -r '.tags[] | select(.name | startswith("main-")) | .name' | sort -V | tail -1)
+> ```
+> 
+> The script provides **version alignment**: your docs match your container. With quay.io, you get "latest available" which might be newer.
+>
+> **After v0.1.0 release**, use stable tags:
+> - `:latest` - Latest stable build
+> - `:v1.0.0` - Specific version releases
+
 ### Prerequisites
 
 - **Container Runtime**: Podman or Docker
@@ -43,11 +84,14 @@ The fastest way to try Arcaflow MCP is using pre-built container images for **bo
 **Pull Latest Images:**
 
 ```bash
+# Get current development tag (before v0.1.0)
+export TAG=$(curl -s https://raw.githubusercontent.com/arcalot/arcaflow-mcp/main/scripts/get-container-tag.sh | bash)
+
 # Pull COMPONENT 1: Go MCP Server
-podman pull quay.io/arcalot/arcaflow-mcp-server:latest
+podman pull quay.io/arcalot/arcaflow-mcp-server:${TAG}
 
 # Pull COMPONENT 2: Python Analysis Engine
-podman pull quay.io/arcalot/arcaflow-mcp-analysis:latest
+podman pull quay.io/arcalot/arcaflow-mcp-analysis:${TAG}
 ```
 
 **Finding Specific Version Tags:**
@@ -82,9 +126,12 @@ For use with Claude Desktop, Cursor, or other MCP-compatible clients.
 
 **Setup: Start BOTH components**
 
-**Component 1 - Start Python Analysis Engine (Background Service):**
+**Component 1 - Start Python Analysis Engine FIRST (Background Service):**
 
 ```bash
+# Get current tag (if not already set)
+export TAG=${TAG:-$(curl -s https://raw.githubusercontent.com/arcalot/arcaflow-mcp/main/scripts/get-container-tag.sh | bash)}
+
 # Create network for component communication
 podman network create arcaflow 2>/dev/null || true
 
@@ -93,18 +140,25 @@ podman run -d \
   --name arcaflow-analysis \
   --network arcaflow \
   -p 8081:8081 \
-  quay.io/arcalot/arcaflow-mcp-analysis:latest
+  quay.io/arcalot/arcaflow-mcp-analysis:${TAG}
 
-# Verify it's running
+# Wait a moment for startup
+sleep 2
+
+# Verify it's running and healthy
 curl http://localhost:8081/health
 # Expected: {"status":"healthy"}
 ```
+
+**⚠️ Important**: The analysis engine MUST be running before starting the Go MCP server.
 
 **Component 2 - Configure MCP Client to Launch Go MCP Server:**
 
 The AI client will start the Go MCP server on-demand. It connects to the analysis engine.
 
 Add to your MCP client configuration (e.g., `~/.config/Claude/claude_desktop_config.json`):
+
+**Note**: Replace `${TAG}` with the actual tag you pulled (e.g., `main-abc1234`):
 
 ```json
 {
@@ -117,7 +171,7 @@ Add to your MCP client configuration (e.g., `~/.config/Claude/claude_desktop_con
         "--rm",
         "--network", "arcaflow",
         "-e", "ARCAFLOW_MCP_ANALYSIS_HTTP_URL=http://arcaflow-analysis:8081",
-        "quay.io/arcalot/arcaflow-mcp-server:latest",
+        "quay.io/arcalot/arcaflow-mcp-server:main-abc1234",
         "--mode", "local"
       ]
     }
@@ -125,7 +179,28 @@ Add to your MCP client configuration (e.g., `~/.config/Claude/claude_desktop_con
 }
 ```
 
-**Both components are now connected!** The MCP server communicates with the analysis engine at http://arcaflow-analysis:8081.
+**Alternative using host network** (if arcaflow network doesn't work):
+
+```json
+{
+  "mcpServers": {
+    "arcaflow": {
+      "command": "podman",
+      "args": [
+        "run",
+        "-i",
+        "--rm",
+        "--network", "host",
+        "-e", "ARCAFLOW_MCP_ANALYSIS_HTTP_URL=http://localhost:8081",
+        "quay.io/arcalot/arcaflow-mcp-server:main-abc1234",
+        "--mode", "local"
+      ]
+    }
+  }
+}
+```
+
+**Both components are now connected!** The MCP server communicates with the analysis engine.
 
 **Next Steps**: See [Local Mode Setup](usage/local-mode.md) for detailed configuration.
 
@@ -362,30 +437,202 @@ export ARCAFLOW_MCP_ANALYSIS_HTTP_URL="http://localhost:8081"
 
 ---
 
-## First Steps
+## Verify Your Setup
 
-Once running, try these example tasks:
+After deployment, verify both components are working correctly.
 
-### 1. Discover Workflows
+### Quick Health Check
 
-```
-"Find Arcaflow workflows in this git repository: 
-https://github.com/arcalot/arcaflow-workflows"
-```
+**For Container Deployments:**
 
-### 2. Build Workflow Inputs
+```bash
+# Check Analysis Engine (if using result analysis features)
+curl http://localhost:8081/health
+# Expected: {"status":"healthy"}
 
-```
-"Help me build inputs for the hello-world workflow"
-```
-
-### 3. Analyze Results
-
-```
-"Analyze these workflow results and suggest optimizations"
+# Check MCP Server (server mode only)
+curl http://localhost:8080/health
+# Expected: {"status":"healthy","version":"..."}
 ```
 
-**Learn More**: See [Tutorials](examples/basic-workflow.md) for complete walkthroughs.
+**For Local Mode (Claude Desktop):**
+
+Open your AI client and try:
+```
+"Can you see the Arcaflow MCP server?"
+```
+
+The AI should list Arcaflow tools if connection is successful.
+
+### Full MCP Protocol Test (Server Mode)
+
+Test the complete MCP handshake:
+
+```bash
+# Step 1: Initialize MCP session
+curl -X POST http://localhost:8080/mcp \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $ARCAFLOW_MCP_ADMIN_TOKEN" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"test","version":"1.0"}}}'
+
+# Expected: {"jsonrpc":"2.0","id":1,"result":{"protocolVersion":"2025-11-25",...}}
+
+# Step 2: Complete initialization
+curl -X POST http://localhost:8080/mcp \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $ARCAFLOW_MCP_ADMIN_TOKEN" \
+  -d '{"jsonrpc":"2.0","method":"initialized"}'
+
+# Step 3: List available tools (verifies server is ready)
+curl -X POST http://localhost:8080/mcp \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $ARCAFLOW_MCP_ADMIN_TOKEN" \
+  -d '{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}'
+
+# Expected: {"jsonrpc":"2.0","id":2,"result":{"tools":[...]}}
+```
+
+---
+
+## Your First Workflow
+
+Now that your server is running, let's load and work with a real workflow.
+
+### Using Built-In Example Workflows
+
+The Arcaflow MCP repository includes example workflows in the `examples/workflows/` directory:
+
+- **hello-world/** - Simple single-input workflow (perfect for first test)
+- **data-processing/** - More complex workflow with multiple inputs
+- **perf-test/** - Advanced workflow for performance testing
+
+### Complete First-Time Workflow
+
+**For Claude Desktop (Local Mode):**
+
+1. **Load the example workflow:**
+   ```
+   "Load the hello-world workflow from <your-path>/arcaflow-mcp/examples/workflows/hello-world"
+   ```
+
+2. **Ask about the schema:**
+   ```
+   "What inputs does this workflow require?"
+   ```
+
+3. **Build inputs conversationally:**
+   ```
+   "Build inputs for this workflow. Use the name 'Alice'"
+   ```
+
+4. **Validate:**
+   ```
+   "Validate these inputs"
+   ```
+
+5. **Export for use:**
+   ```
+   "Export these inputs to /tmp/hello-inputs.yaml"
+   ```
+
+**You've just built your first workflow input!** The exported file is ready to use with Arcaflow Engine.
+
+### For Server Mode (curl):
+
+Complete example loading the hello-world workflow:
+
+```bash
+# Set workflow path (adjust to your installation location)
+WORKFLOW_DIR="/path/to/arcaflow-mcp/examples/workflows/hello-world"
+
+# Initialize MCP (required handshake)
+curl -X POST http://localhost:8080/mcp \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $ARCAFLOW_MCP_ADMIN_TOKEN" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"test","version":"1.0"}}}'
+
+curl -X POST http://localhost:8080/mcp \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $ARCAFLOW_MCP_ADMIN_TOKEN" \
+  -d '{"jsonrpc":"2.0","method":"initialized"}'
+
+# Load workflow
+curl -X POST http://localhost:8080/mcp \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $ARCAFLOW_MCP_ADMIN_TOKEN" \
+  -d @- <<EOF
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "method": "tools/call",
+  "params": {
+    "name": "workflow_load",
+    "arguments": {
+      "source": {
+        "kind": "filesystem",
+        "location": "$WORKFLOW_DIR"
+      },
+      "selector": {
+        "path": "workflow.yaml"
+      }
+    }
+  }
+}
+EOF
+```
+
+### Need More Workflows?
+
+**Full Arcaflow Workflows Repository:**
+
+```bash
+# Clone the official workflows repository
+git clone https://github.com/arcalot/arcaflow-workflows
+cd arcaflow-workflows
+
+# Explore available workflows
+ls -la
+```
+
+Then load any workflow with your AI client or MCP server.
+
+---
+
+## Cleanup and Shutdown
+
+### Stopping Services
+
+**For Docker Compose:**
+```bash
+docker compose stop          # Stop containers (preserves data)
+docker compose down          # Stop and remove containers
+docker compose down -v       # Stop, remove containers AND volumes (deletes data)
+```
+
+**For Podman Compose:**
+```bash
+podman-compose stop
+podman-compose down
+```
+
+**For Background Processes (built from source):**
+```bash
+# If you started analysis engine in background:
+ps aux | grep "arcaflow_analysis"
+kill <PID>
+
+# Or if you saved the PID:
+kill $ANALYSIS_PID
+```
+
+**For Individual Containers:**
+```bash
+podman stop arcaflow-analysis
+podman stop arcaflow-mcp-server
+
+# Remove containers
+podman rm arcaflow-analysis arcaflow-mcp-server
+```
 
 ---
 

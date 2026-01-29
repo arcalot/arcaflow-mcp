@@ -82,25 +82,36 @@ Choose your deployment method:
 - **Go MCP Server** (protocol handler)
 - **Python Analysis Engine** (result analysis)
 
+> **🚨 Pre-Release Note (Before v0.1.0)**: Container tags change with each commit.
+> Get the current tag: `export TAG=$(curl -s https://raw.githubusercontent.com/arcalot/arcaflow-mcp/main/scripts/get-container-tag.sh | bash)`
+> After v0.1.0, use `:latest` or version tags like `:v1.0.0`
+
 **Local Mode** (Desktop AI clients):
 
 ```bash
-# Pull BOTH components (latest builds)
-podman pull quay.io/arcalot/arcaflow-mcp-server:latest
-podman pull quay.io/arcalot/arcaflow-mcp-analysis:latest
+# Get current development tag
+export TAG=$(curl -s https://raw.githubusercontent.com/arcalot/arcaflow-mcp/main/scripts/get-container-tag.sh | bash)
 
-# Start COMPONENT 1: Analysis engine (background service)
+# Pull BOTH components
+podman pull quay.io/arcalot/arcaflow-mcp-server:${TAG}
+podman pull quay.io/arcalot/arcaflow-mcp-analysis:${TAG}
+
+# Start COMPONENT 1: Analysis engine FIRST (background service)
 podman run -d --name arcaflow-analysis \
   -p 8081:8081 \
-  quay.io/arcalot/arcaflow-mcp-analysis:latest
+  quay.io/arcalot/arcaflow-mcp-analysis:${TAG}
 
-# Verify it's running
+# Wait for startup and verify
+sleep 2
 curl http://localhost:8081/health
+# Expected: {"status":"healthy"}
 ```
 
 **Configure MCP Client** (Component 2):
 
-Add to your MCP client settings (e.g., Claude Desktop `~/Library/Application Support/Claude/claude_desktop_config.json`):
+Add to your MCP client settings (e.g., Claude Desktop `~/Library/Application Support/Claude/claude_desktop_config.json`).
+
+**Replace `main-abc1234` with your actual tag:**
 
 ```json
 {
@@ -110,17 +121,18 @@ Add to your MCP client settings (e.g., Claude Desktop `~/Library/Application Sup
       "args": [
         "run", "--rm", "-i",
         "--network", "host",
-        "quay.io/arcalot/arcaflow-mcp-server:latest"
-      ],
-      "env": {
-        "ARCAFLOW_MCP_ANALYSIS_HTTP_URL": "http://localhost:8081"
-      }
+        "-e", "ARCAFLOW_MCP_ANALYSIS_HTTP_URL=http://localhost:8081",
+        "quay.io/arcalot/arcaflow-mcp-server:main-abc1234",
+        "--mode", "local"
+      ]
     }
   }
 }
 ```
 
 The client will launch Component 2 (MCP server) on-demand, which connects to Component 1 (analysis engine).
+
+**Verify setup:** Open your AI client and ask: `"Can you see the Arcaflow MCP server?"`
 
 **Server Mode** (Multi-user deployments):
 
@@ -403,10 +415,14 @@ arcaflow-mcp/
 │   ├── adr/           # Architecture Decision Records
 │   ├── api/           # API documentation
 │   └── development/   # Development guides
-├── examples/        # Example workflows and tutorials
+├── examples/        # 🌟 Example workflows for testing (START HERE!)
+│   └── workflows/   # hello-world, data-processing, perf-test
+├── deploy/          # Deployment configurations (containers, k8s)
 ├── scripts/         # Development and CI scripts
 └── AGENTS.md        # AI agent behavioral guidelines
 ```
+
+**🎯 New to Arcaflow MCP?** Start with the [examples/workflows/](examples/) directory for ready-to-use test workflows.
 
 ## Version Compatibility
 

@@ -226,6 +226,26 @@ Any MCP-compatible client:
 
 ### Do I need Arcaflow Engine installed?
 
+### Do I need both MCP components (Go + Python)?
+
+**It depends on what you want to do:**
+
+| Your Goal | Go Server | Python Engine |
+|-----------|-----------|---------------|
+| Build workflow inputs only | ✅ Required | ❌ Not needed |
+| Validate workflow inputs | ✅ Required | ❌ Not needed |
+| Analyze workflow results | ✅ Required | ✅ Required |
+| Compare multiple runs | ✅ Required | ✅ Required |
+| Get optimization suggestions | ✅ Required | ✅ Required |
+
+**Startup Order:** If using both, start Python engine FIRST, then Go server.
+
+**Learn more:** [Architecture Overview](concepts/architecture.md)
+
+---
+
+### Do I need Arcaflow Engine installed?
+
 **For Input Construction Only:** No
 - MCP server validates inputs without running workflows
 - You can build and export inputs without Arcaflow installed
@@ -238,6 +258,8 @@ Any MCP-compatible client:
 **For Result Analysis:** No
 - MCP can analyze any workflow output files
 - No Arcaflow Engine required for analysis
+
+**Complete Workflow:** MCP builds inputs → Arcaflow Engine executes → MCP analyzes results
 
 **Learn more:** [Getting Started](getting-started.md)
 

@@ -6,6 +6,55 @@ Arcaflow MCP is a hybrid system combining a Go-based MCP server with a Python an
 
 ---
 
+## Two-Component Architecture
+
+**Arcaflow MCP consists of TWO independent components:**
+
+| Component | Technology | Purpose | Required For |
+|-----------|-----------|---------|--------------|
+| **Go MCP Server** | Go 1.23+ | MCP protocol handler, workflow loading, input validation | **Always required** |
+| **Python Analysis Engine** | Python 3.12+ | Result parsing, analysis, optimization suggestions | **Only for result analysis** |
+
+### Component Dependencies
+
+```
+Task: Build workflow inputs
+└── Requires: Go MCP Server only
+
+Task: Analyze workflow results  
+├── Requires: Go MCP Server (always)
+└── Requires: Python Analysis Engine (for analysis features)
+```
+
+### Why Two Components?
+
+**Go Server:**
+- Fast protocol handling and concurrency
+- Single binary deployment (no runtime dependencies)
+- Strong typing for MCP compliance
+- Efficient input validation
+
+**Python Engine:**
+- Rich data science ecosystem (NumPy, Pandas concepts)
+- Flexible analysis algorithms
+- Easy integration with AI/ML libraries (future)
+- Rapid development for new analysis features
+
+### Communication
+
+- **Local Mode**: Go server connects to Python engine at `http://localhost:8081`
+- **Server Mode**: Both run as services, connected via internal HTTP
+
+### Startup Order
+
+**Critical:** If using result analysis features, start components in this order:
+1. **Python Analysis Engine FIRST** (runs on port 8081)
+2. **Go MCP Server SECOND** (connects to analysis engine)
+
+The Go server will fail to start or function partially if analysis engine is needed but not reachable.
+
+---
+
 ## High-Level Architecture
 
 ```mermaid

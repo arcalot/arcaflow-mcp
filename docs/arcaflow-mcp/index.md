@@ -38,26 +38,37 @@ Arcaflow MCP bridges the gap between natural language AI assistants (like Claude
 
 ## Quick Start
 
-**Important**: Arcaflow MCP requires **two components** working together:
-1. **Go MCP Server** - Handles MCP protocol, workflow loading, input validation
-2. **Python Analysis Engine** - Provides result analysis and optimization suggestions
+**Important**: Arcaflow MCP has **two components**:
+1. **Go MCP Server** - Handles MCP protocol, workflow loading, input validation (**always required**)
+2. **Python Analysis Engine** - Provides result analysis and optimization suggestions (**only for result analysis**)
+
+**Which components do you need?**
+
+| Your Goal | Components Needed |
+|-----------|------------------|
+| Build workflow inputs | Go Server only |
+| Analyze workflow results | Go Server + Python Engine |
+
+> **🚨 Pre-Release Note**: Before v0.1.0, get the current tag:
+> ```bash
+> export TAG=$(curl -s https://raw.githubusercontent.com/arcalot/arcaflow-mcp/main/scripts/get-container-tag.sh | bash)
+> ```
+> After v0.1.0, use `:latest` or `:v1.0.0` tags.
 
 ### Try with Containers (Fastest)
 
 Pre-built container images available for both components:
 
 ```bash
-# Pull BOTH components (latest builds)
-podman pull quay.io/arcalot/arcaflow-mcp-server:latest
-podman pull quay.io/arcalot/arcaflow-mcp-analysis:latest
+# Get current development tag (before v0.1.0)
+export TAG=$(curl -s https://raw.githubusercontent.com/arcalot/arcaflow-mcp/main/scripts/get-container-tag.sh | bash)
 
-# Or with Docker:
-# docker pull quay.io/arcalot/arcaflow-mcp-server:latest
-# docker pull quay.io/arcalot/arcaflow-mcp-analysis:latest
+# Pull BOTH components
+podman pull quay.io/arcalot/arcaflow-mcp-server:${TAG}
+podman pull quay.io/arcalot/arcaflow-mcp-analysis:${TAG}
 ```
 
-**Available Tags**: `latest` (main branch), version tags after v0.1.0 (e.g., `v1.0.0`)  
-**Browse**: [quay.io/arcalot](https://quay.io/organization/arcalot)
+**Browse all tags**: [quay.io/arcalot](https://quay.io/organization/arcalot)
 
 ### Try with Pre-Compiled Binaries
 
@@ -140,7 +151,44 @@ poetry run python -m arcaflow_analysis.server.http_server &
 
 **Note:** Both components required for full functionality. Python analysis engine provides result analysis and optimization; Go MCP server handles protocol and workflow operations.
 
-**Next Steps:** [Local Mode Setup Guide](usage/local-mode.md)
+**Next Steps:** 
+- [Local Mode Setup Guide](usage/local-mode.md) - Complete configuration
+- [Your First Workflow](#your-first-workflow) - Try it now!
+
+---
+
+## Your First Workflow
+
+After setup, test with built-in example workflows in the repository:
+
+**Example Workflows Location:** `examples/workflows/` in the arcaflow-mcp repository
+
+| Workflow | Complexity | Purpose |
+|----------|------------|---------|
+| `hello-world/` | Beginner | Simple single-input test |
+| `data-processing/` | Intermediate | Multiple inputs, result analysis |
+| `perf-test/` | Advanced | Multi-run comparison |
+
+**Quick Test with Claude Desktop:**
+
+1. Open Claude and ask:
+   ```
+   "Load the hello-world workflow from /path/to/arcaflow-mcp/examples/workflows/hello-world"
+   ```
+
+2. Build inputs conversationally:
+   ```
+   "Build inputs for this workflow. Use the name 'Alice'"
+   ```
+
+3. Export for use:
+   ```
+   "Export these inputs to /tmp/hello-inputs.yaml"
+   ```
+
+**You just built your first workflow input!** See the [Getting Started Guide](getting-started.md) for more.
+
+---
 
 ### For Team/Production Deployments (Server Mode)
 
