@@ -31,6 +31,15 @@ tokens and workspace directories, ensuring data isolation. See
 [Multi-Tenancy Concepts](docs/arcaflow-mcp/concepts/multi-tenancy.md) and
 [Authentication Setup](docs/arcaflow-mcp/deployment/authentication.md).
 
+## Get Involved
+
+- 💡 **[Request Features](https://github.com/arcalot/arcaflow-mcp/issues/new?template=feature_request.yml)** - Suggest new capabilities
+- 🐛 **[Report Bugs](https://github.com/arcalot/arcaflow-mcp/issues/new?template=bug_report.yml)** - Help us improve quality
+- 📋 **[View Roadmap](ROADMAP.md)** - See what's planned and in progress
+- ✅ **[Feature Status](FEATURE_STATUS.md)** - Comprehensive list of all features
+- 🔧 **[Contribute Code](CONTRIBUTING.md)** - Submit improvements and fixes
+- 💬 **[Join Discussions](https://github.com/arcalot/arcalot-round-table/discussions)** - Community Q&A and ideas
+
 ## Architecture
 
 Arcaflow MCP uses a **hybrid two-component architecture**:
@@ -381,52 +390,15 @@ User-facing documentation is maintained separately for integration with the main
 
 ### Planned Features
 
-📋 **In Progress**: Documentation & Examples  
-📦 **Planned**: Deployment & Distribution  
-📊 **Planned**: Advanced Analysis & Visualization  
-🚀 **Future**: Workflow execution integration  
-🔄 **Future**: Iterative optimization loops  
-✨ **Future**: Workflow creation and composition
+See [Roadmap](ROADMAP.md) for detailed timeline and [Feature Status](FEATURE_STATUS.md) for comprehensive feature matrix.
 
-## Architecture
+**Highlights:**
+- 📦 **v0.1.0** (Q1 2026): Core features, binary distribution, container stability
+- 🚀 **v0.2.0** (Q2 2026): Workflow execution, iterative optimization, advanced analysis
+- ✨ **v0.3.0** (Q3 2026): Workflow creation and composition
+- 🔮 **Future**: Advanced security, ML-based optimization, platform integrations
 
-Hybrid Go + Python architecture:
-
-```mermaid
-graph TB
-    subgraph clients[AI Agents / Clients]
-        C1[Claude Desktop]
-        C2[API Clients]
-        C3[Other MCP Clients]
-    end
-    
-    subgraph goserver[MCP Server Core - Go]
-        T[Transport Layer<br/>stdio + HTTP/SSE]
-        A[Authentication &<br/>Multi-tenancy]
-        P[Protocol Handler<br/>JSON-RPC 2.0]
-        W[Workflow Tools<br/>load, validate, export]
-        
-        T --> A
-        A --> P
-        P --> W
-    end
-    
-    subgraph python[Analysis Engine - Python]
-        R[Result Parser &<br/>Metrics Extractor]
-        S[Pattern Analyzer &<br/>Suggestion Generator]
-        D[(Historical Database<br/>SQLite/PostgreSQL)]
-        
-        R --> S
-        S --> D
-    end
-    
-    clients -->|stdio / HTTP+SSE| T
-    W -->|gRPC / REST| R
-    
-    style clients fill:#e1f5ff
-    style goserver fill:#fff4e6
-    style python fill:#f3e5f5
-```
+**Want to influence priorities?** [Request a feature](https://github.com/arcalot/arcaflow-mcp/issues/new?template=feature_request.yml) or vote on existing issues!
 
 📖 **Learn More**: [Architecture Overview](docs/architecture/overview.md)
 
@@ -474,37 +446,38 @@ arcaflow-mcp/
 
 ## Contributing
 
-We welcome contributions! Please see:
+We welcome all types of contributions! Here's how you can help:
 
-- **[Contributing Guide](CONTRIBUTING.md)** - How to contribute
+- 💡 **[Request Features](https://github.com/arcalot/arcaflow-mcp/issues/new?template=feature_request.yml)** - Suggest new capabilities
+- 🐛 **[Report Bugs](https://github.com/arcalot/arcaflow-mcp/issues/new?template=bug_report.yml)** - Help us improve quality
+- 📝 **Improve Documentation** - Help others understand and use the project
+- 🔧 **Submit Code** - Fix bugs or implement features
+- 🧪 **Test Early Releases** - Provide feedback on alpha/beta versions
+- 💬 **Participate in Discussions** - Share expertise and help others
+
+**Getting Started:**
+- **[Contributing Guide](CONTRIBUTING.md)** - Complete contribution workflow
 - **[Code of Conduct](CODE_OF_CONDUCT.md)** - Community standards
-- **[Development Setup](docs/development/setup.md)** - Get started developing
+- **[Development Setup](docs/development/setup.md)** - Environment setup
+- **[Roadmap](ROADMAP.md)** - See what's planned
+- **[Maintainers](MAINTAINERS.md)** - Project governance
 
-### Development Workflow
-
-1. Read `AGENTS.md` for coding standards and AI agent behavior
-2. Run `scripts/dev-setup.sh` to install git hooks
-3. Write tests WITH code (not after)
-4. Update documentation immediately (not deferred)
-5. Ensure hooks pass before committing
-
-### Testing
+### Quick Start for Contributors
 
 ```bash
-# Run all tests
-./scripts/test-all.sh
+# 1. Setup environment
+./scripts/dev-setup.sh
 
-# Run Go tests only
-./scripts/test-go.sh
+# 2. Make changes (write tests + docs alongside code!)
 
-# Run Python tests only
-./scripts/test-python.sh
-
-# Run validation (linting, formatting)
+# 3. Validate before committing
 ./scripts/validate.sh
+
+# 4. Run tests
+./scripts/test-all.sh  # Minimum 85% coverage required
 ```
 
-Minimum test coverage: 85%
+See [Contributing Guide](CONTRIBUTING.md) for complete workflow, coding standards, and PR process.
 
 ## AI-Assisted Development
 
@@ -543,9 +516,26 @@ Aligned with Arcalot community licensing for seamless integration.
 
 ## Community
 
-- **Arcalot Community**: [GitHub Organization](https://github.com/arcalot)
-- **Arcalot Round Table**: [Community Hub](https://github.com/arcalot/arcalot-round-table)
-- **Issue Tracker**: [GitHub Issues](https://github.com/arcalot/arcaflow-mcp/issues)
+### Get Help and Connect
+
+- 💬 **[Community Discussions](https://github.com/arcalot/arcalot-round-table/discussions)** - Ask questions, share ideas
+- 🐛 **[Issue Tracker](https://github.com/arcalot/arcaflow-mcp/issues)** - Report bugs, request features
+- 📖 **[Documentation](docs/arcaflow-mcp/)** - User guides and tutorials
+- ❓ **[FAQ](docs/arcaflow-mcp/faq.md)** - Frequently asked questions
+- 🔧 **[Troubleshooting](docs/arcaflow-mcp/troubleshooting.md)** - Common issues and solutions
+
+### Project Resources
+
+- 📋 **[Roadmap](ROADMAP.md)** - Development timeline and priorities
+- ✅ **[Feature Status](FEATURE_STATUS.md)** - Comprehensive feature matrix
+- 👥 **[Maintainers](MAINTAINERS.md)** - Project governance
+- 🏛️ **[Arcalot Community](https://github.com/arcalot)** - Broader ecosystem
+
+### Stay Informed
+
+- Watch this repository for updates
+- Join [Arcalot discussions](https://github.com/arcalot/arcalot-round-table/discussions)
+- Follow releases for new versions
 
 ## Changelog
 

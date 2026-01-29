@@ -1,0 +1,152 @@
+name: Bug Report
+description: Report a bug or unexpected behavior in Arcaflow MCP
+title: "[Bug]: "
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug! This helps us improve Arcaflow MCP for everyone.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug Description
+      description: A clear description of what the bug is
+      placeholder: When I try to..., the system...
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to Reproduce
+      description: Detailed steps to reproduce the behavior
+      placeholder: |
+        1. Load workflow from '...'
+        2. Build inputs with '...'
+        3. Run command '...'
+        4. See error
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: What did you expect to happen?
+      placeholder: The workflow should...
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual Behavior
+      description: What actually happened? Include error messages if applicable.
+      placeholder: |
+        Error: ...
+        Stack trace: ...
+    validations:
+      required: true
+
+  - type: dropdown
+    id: deployment-mode
+    attributes:
+      label: Deployment Mode
+      description: How are you running Arcaflow MCP?
+      options:
+        - Local Mode (stdio, desktop AI client)
+        - Server Mode (HTTP/SSE)
+        - Both
+    validations:
+      required: true
+
+  - type: dropdown
+    id: installation-method
+    attributes:
+      label: Installation Method
+      description: How did you install Arcaflow MCP?
+      options:
+        - Pre-built containers (Podman/Docker)
+        - Pre-compiled binaries
+        - Built from source
+        - Other (please specify in additional context)
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Arcaflow MCP Version
+      description: |
+        What version of Arcaflow MCP are you using?
+        Run: `arcaflow-mcp --version` or check container tag
+      placeholder: "e.g., v0.1.0, main-abc1234, latest"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: components
+    attributes:
+      label: Affected Components
+      description: Which components are involved in this bug?
+      multiple: true
+      options:
+        - Go MCP Server
+        - Python Analysis Engine
+        - Both components
+        - Not sure
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment Details
+      description: |
+        Please provide relevant environment information
+      value: |
+        - OS: [e.g., Fedora 39, Ubuntu 22.04, macOS 14]
+        - Go version: [if building from source]
+        - Python version: [if using analysis engine]
+        - Container runtime: [e.g., Podman 4.9, Docker 24.0]
+        - AI Client: [e.g., Claude Desktop, Cursor, API client]
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant Logs
+      description: |
+        Include relevant log output. Use code blocks for formatting.
+        **Important**: Remove any sensitive information (tokens, credentials, etc.)
+      placeholder: |
+        ```
+        2025-01-29T10:30:00Z [ERROR] ...
+        ```
+      render: shell
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional Context
+      description: |
+        Any other information that might help us diagnose the issue.
+        Screenshots, workflow files (sanitized), configuration examples, etc.
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Pre-submission Checklist
+      description: Please confirm you've completed these steps
+      options:
+        - label: I've searched existing issues to ensure this isn't a duplicate
+          required: true
+        - label: I've checked the [troubleshooting guide](https://github.com/arcalot/arcaflow-mcp/blob/main/docs/arcaflow-mcp/troubleshooting.md)
+          required: true
+        - label: I've checked the [FAQ](https://github.com/arcalot/arcaflow-mcp/blob/main/docs/arcaflow-mcp/faq.md)
+          required: true
+        - label: I've removed any sensitive information from logs and examples
+          required: true

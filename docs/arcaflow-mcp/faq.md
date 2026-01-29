@@ -69,6 +69,32 @@ result analysis.
 
 ---
 
+### How do I check which version I have?
+
+**Binary or source build:**
+```bash
+arcaflow-mcp --version
+# Output: arcaflow-mcp version <version>
+```
+
+**Container:**
+```bash
+# Check container tag
+podman inspect arcaflow-mcp-server:latest | grep "org.opencontainers.image.version"
+
+# Or run version command in container
+podman run --rm quay.io/arcalot/arcaflow-mcp-server:latest --version
+```
+
+**Version Sources:**
+- Environment variable: `ARCAFLOW_MCP_VERSION`
+- `VERSION` file in repository root or binary directory
+- Fallback: `dev` (development build)
+
+**Reporting issues:** Always include version when reporting bugs. See [Bug Report Template](https://github.com/arcalot/arcaflow-mcp/issues/new?template=bug_report.yml).
+
+---
+
 ## Deployment Questions
 
 ### Should I use local mode or server mode?

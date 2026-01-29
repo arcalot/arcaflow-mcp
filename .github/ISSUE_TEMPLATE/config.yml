@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Arcalot Community Discussion
+    url: https://github.com/arcalot/arcalot-round-table/discussions
+    about: Ask questions, share ideas, and discuss with the Arcalot community
+  - name: Arcaflow Documentation
+    url: https://arcalot.io/arcaflow
+    about: Learn more about Arcaflow workflows and the Arcaflow Engine
+  - name: Security Vulnerability
+    url: https://github.com/arcalot/arcaflow-mcp/security/advisories/new
+    about: Report security vulnerabilities privately (do not open public issues)

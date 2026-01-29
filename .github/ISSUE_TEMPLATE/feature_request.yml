@@ -1,0 +1,104 @@
+name: Feature Request
+description: Suggest a new feature or enhancement for Arcaflow MCP
+title: "[Feature]: "
+labels: ["enhancement", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to suggest a feature! This helps us understand community needs and prioritize development.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or Use Case
+      description: What problem would this feature solve? What workflow would it enable?
+      placeholder: |
+        I'm working on performance testing workflows and need to...
+        Currently, I have to manually...
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposed-solution
+    attributes:
+      label: Proposed Solution
+      description: How do you envision this feature working?
+      placeholder: |
+        Add a new tool called `workflow_execute` that...
+        The AI agent could then...
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: What other approaches have you considered? What are you doing as a workaround today?
+      placeholder: |
+        I considered using the Arcaflow Engine directly, but...
+        Current workaround involves...
+
+  - type: dropdown
+    id: components
+    attributes:
+      label: Affected Components
+      description: Which parts of Arcaflow MCP would this feature involve?
+      multiple: true
+      options:
+        - Go MCP Server (protocol, input construction)
+        - Python Analysis Engine (result analysis)
+        - Both components
+        - Documentation
+        - Deployment/Infrastructure
+        - Not sure
+    validations:
+      required: true
+
+  - type: dropdown
+    id: deployment-mode
+    attributes:
+      label: Deployment Mode
+      description: Which deployment mode would benefit from this feature?
+      multiple: true
+      options:
+        - Local Mode (desktop AI clients)
+        - Server Mode (multi-tenant deployments)
+        - Both modes
+        - Not applicable
+    validations:
+      required: true
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional Context
+      description: |
+        Add any other context, examples, or screenshots that would help us understand the request.
+        Links to similar features in other projects are helpful!
+      placeholder: |
+        Example workflow: ...
+        Similar feature in X project: ...
+
+  - type: checkboxes
+    id: contribution
+    attributes:
+      label: Contribution
+      description: Would you be interested in contributing to this feature?
+      options:
+        - label: I'd be willing to contribute this feature (with guidance)
+        - label: I'd be willing to test early implementations
+        - label: I'd be willing to help with documentation
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Pre-submission Checklist
+      description: Please confirm you've completed these steps
+      options:
+        - label: I've searched existing issues to ensure this isn't a duplicate
+          required: true
+        - label: I've reviewed the [feature status](https://github.com/arcalot/arcaflow-mcp/blob/main/FEATURE_STATUS.md) and [roadmap](https://github.com/arcalot/arcaflow-mcp/blob/main/ROADMAP.md)
+          required: true
+        - label: I've read the [capabilities documentation](https://github.com/arcalot/arcaflow-mcp/blob/main/docs/arcaflow-mcp/concepts/capabilities.md)
+          required: true

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"flag"
@@ -8,10 +9,62 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/arcalot/arcaflow-mcp/server/pkg/protocol"
 )
+
+func TestVersionFlag(t *testing.T) {
+	// Set a test version via environment variable
+	t.Setenv("ARCAFLOW_MCP_VERSION", "test-1.2.3")
+
+	// Capture stdout
+	var buf bytes.Buffer
+	originalStdout := os.Stdout
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("pipe: %v", err)
+	}
+	os.Stdout = w
+	t.Cleanup(func() {
+		os.Stdout = originalStdout
+	})
+
+	// Start a goroutine to copy stdout to buffer
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		_, _ = io.Copy(&buf, r)
+	}()
+
+	// Reset flags and run with --version
+	resetFlags(t, []string{
+		"arcaflow-mcp",
+		"--version",
+	})
+
+	// Run should succeed and exit early
+	if err := run(); err != nil {
+		t.Fatalf("run() with --version failed: %v", err)
+	}
+
+	// Close write end and wait for copy to complete
+	_ = w.Close()
+	<-done
+
+	// Verify output contains version
+	output := buf.String()
+	if !strings.Contains(output, "test-1.2.3") {
+		t.Errorf("expected version output to contain 'test-1.2.3', got: %s", output)
+	}
+	if !strings.Contains(output, "arcaflow-mcp version") {
+		t.Errorf(
+			"expected version output to contain 'arcaflow-mcp version', got: %s",
+			output,
+		)
+	}
+}
 
 func TestChooseLogOutput(t *testing.T) {
 	if got := chooseLogOutput(modeLocal); got != os.Stderr {

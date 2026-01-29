@@ -47,7 +47,18 @@ func run() error {
 	configPath := flag.String("config", "", "path to YAML config file")
 	mode := flag.String("mode", "", "runtime mode: local or server")
 	address := flag.String("address", "", "listen address (host:port)")
+	showVersion := flag.Bool(
+		"version",
+		false,
+		"print version information and exit",
+	)
 	flag.Parse()
+
+	// Handle --version flag before any other processing
+	if *showVersion {
+		fmt.Printf("arcaflow-mcp version %s\n", version.Current())
+		return nil
+	}
 
 	cfg, err := config.Load(*configPath)
 	if err != nil {
