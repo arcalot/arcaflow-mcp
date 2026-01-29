@@ -204,9 +204,13 @@ Add to your MCP client configuration (e.g., `~/.config/Claude/claude_desktop_con
 
 **Next Steps**: See [Local Mode Setup](usage/local-mode.md) for detailed configuration.
 
-#### Option B: Server Mode (Multi-User Deployments)
+#### Option B: Server Mode (Multi-Tenant Deployments)
 
 For team deployments with multiple users. Deploys BOTH components as services.
+
+**What is multi-tenancy?** Each team or user group gets an isolated workspace
+called a "tenant" with independent authentication tokens and data isolation.
+After deploying containers, you'll create tenants and tokens for your users.
 
 **Using Docker Compose or Podman Compose:**
 
@@ -261,7 +265,26 @@ docker compose logs -f
 # Both components are running and connected!
 ```
 
-**Next Steps**: See [Server Mode Setup](usage/server-mode.md) for authentication and client configuration, or [Container Deployment Guide](deployment/container.md) for advanced configuration.
+**Create Your First Tenant** (required for access):
+
+```bash
+# Create tenant
+curl -X POST http://localhost:8080/admin/tenants \
+  -H "Authorization: Bearer $ARCAFLOW_MCP_ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"tenant_id":"my-team","display_name":"My Team"}'
+
+# Create tenant token (users will use this)
+curl -X POST http://localhost:8080/admin/tenants/my-team/tokens \
+  -H "Authorization: Bearer $ARCAFLOW_MCP_ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{}' | jq -r '.token'
+```
+
+**Next Steps**: 
+- 📖 **Complete tenant setup**: [Authentication Guide](deployment/authentication.md)
+- 📖 **Configure clients**: [Server Mode Setup](usage/server-mode.md)
+- 📖 **Advanced configuration**: [Container Deployment Guide](deployment/container.md)
 
 ---
 

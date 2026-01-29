@@ -63,6 +63,33 @@ curl http://localhost:8081/health  # Analysis engine
 curl http://localhost:8080/health  # MCP server
 ```
 
+## Post-Deployment: Create Tenants
+
+After containers are running, create tenants for your users. The deployment
+provides the infrastructure, but tenants and tokens are required for access.
+
+### Quick Tenant Setup
+
+```bash
+# Create your first tenant
+curl -X POST http://localhost:8080/admin/tenants \
+  -H "Authorization: Bearer $ARCAFLOW_MCP_ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"tenant_id":"my-team","display_name":"My Team"}'
+
+# Create tenant token
+curl -X POST http://localhost:8080/admin/tenants/my-team/tokens \
+  -H "Authorization: Bearer $ARCAFLOW_MCP_ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{}' | tee tenant-token.json
+
+echo "Distribute the token from tenant-token.json to your users"
+```
+
+**See:**
+- [Authentication Guide](../../docs/arcaflow-mcp/deployment/authentication.md) - Complete tenant management
+- [Multi-Tenancy Concepts](../../docs/arcaflow-mcp/concepts/multi-tenancy.md) - Understanding tenants
+
 ## Configuration
 
 ### Environment Variables

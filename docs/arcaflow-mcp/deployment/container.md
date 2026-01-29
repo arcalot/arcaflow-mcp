@@ -249,7 +249,7 @@ docker run -v /opt/arcaflow-analysis/data:/var/lib/arcaflow-analysis ...
 
 | Variable | Description | Default | Required |
 |----------|-------------|---------|----------|
-| `ARCAFLOW_MCP_ADMIN_TOKEN` | Admin authentication token | - | Yes (server mode) |
+| `ARCAFLOW_MCP_ADMIN_TOKEN` | Admin authentication token (for tenant management via `/admin/*` APIs, not for tenant MCP access) | - | Yes (server mode) |
 | `ARCAFLOW_MCP_ANALYSIS_HTTP_URL` | Analysis engine URL | `http://localhost:8081` | No |
 | `ARCAFLOW_MCP_TENANT_STORE_PATH` | Tenant store path | `/var/lib/arcaflow-mcp/tenants` | No |
 | `ARCAFLOW_MCP_TOKEN_STORE_PATH` | Token store path | `/var/lib/arcaflow-mcp/tokens` | No |
@@ -257,6 +257,9 @@ docker run -v /opt/arcaflow-analysis/data:/var/lib/arcaflow-analysis ...
 | `ARCAFLOW_MCP_USAGE_STORE_PATH` | Usage stats path | `/var/lib/arcaflow-mcp/usage` | No |
 | `ARCAFLOW_MCP_WORKSPACE_ROOT` | Tenant workspaces root | `/var/lib/arcaflow-mcp/workspaces` | No |
 | `ARCAFLOW_MCP_LISTEN_ADDR` | HTTP listen address | `:8080` | No |
+
+**Note:** Tenant tokens (for MCP operations) are created via the admin API using
+`ARCAFLOW_MCP_ADMIN_TOKEN`. See [Post-Deployment Setup](#post-deployment-setup).
 
 ### Python Analysis Engine
 
@@ -437,6 +440,109 @@ docker compose up -d
 ```
 
 **See Also:** [deploy/container/README.md](../../../deploy/container/README.md) for advanced configuration and troubleshooting.
+
+---
+
+## Post-Deployment Setup
+
+After containers are running, you must create tenants for your users. The
+containers alone do not provide access - tenants and tokens are required.
+
+### Quick Start: Create Your First Tenant
+
+**1. Verify deployment is healthy:**
+
+```bash
+# Check MCP server
+curl http://localhost:8080/health
+# Expected: {"status":"healthy","version":"..."}
+
+# Check analysis engine
+curl http://localhost:8081/health
+# Expected: {"status":"healthy"}
+```
+
+**2. Create your first tenant:**
+
+```bash
+curl -X POST http://localhost:8080/admin/tenants \
+  -H "Authorization: Bearer $ARCAFLOW_MCP_ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d @- <<'EOF'
+{
+  "tenant_id": "my-team",
+  "display_name": "My Team",
+  "metadata": {
+    "department": "engineering",
+    "contact": "team@example.com"
+  }
+}
+EOF
+```
+
+**Response:**
+```json
+{
+  "tenant_id": "my-team",
+  "display_name": "My Team",
+  "metadata": {...},
+  "created_at": "2026-01-29T12:00:00Z"
+}
+```
+
+**3. Create tenant token (users will use this):**
+
+```bash
+curl -X POST http://localhost:8080/admin/tenants/my-team/tokens \
+  -H "Authorization: Bearer $ARCAFLOW_MCP_ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{}' | tee tenant-token.json
+```
+
+**Response (save this token securely):**
+```json
+{
+  "token": "tnt_a1b2c3d4e5f6g7h8...",
+  "tenant_id": "my-team",
+  "created_at": "2026-01-29T12:05:00Z"
+}
+```
+
+**4. Distribute token to users:**
+
+Users configure their AI clients with the tenant token. Example for Claude Desktop:
+
+```json
+{
+  "mcpServers": {
+    "arcaflow": {
+      "command": "docker",
+      "args": [
+        "run", "--rm", "-i",
+        "--network", "host",
+        "-e", "ARCAFLOW_MCP_ANALYSIS_HTTP_URL=http://localhost:8081",
+        "quay.io/arcalot/arcaflow-mcp-server:latest",
+        "--mode", "client",
+        "--server-url", "http://localhost:8080",
+        "--token", "tnt_a1b2c3d4e5f6g7h8..."
+      ]
+    }
+  }
+}
+```
+
+### Next Steps
+
+**For complete tenant management:**
+- 📖 [Authentication Guide](authentication.md) - Token management, rotation, security
+- 📖 [Multi-Tenancy Concepts](../concepts/multi-tenancy.md) - Workspace isolation, quotas, usage tracking
+- 📖 [Server Mode Usage](../usage/server-mode.md) - Admin API reference
+
+**For production deployments:**
+- Configure TLS: [TLS Configuration](tls.md)
+- Set up monitoring: Check audit logs and usage metrics
+- Establish token rotation policy
+- Configure resource quotas per tenant
 
 ---
 

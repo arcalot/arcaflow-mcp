@@ -25,6 +25,12 @@ machine-readable Arcaflow workflows. It provides:
 **Key Principle:** Produce deterministic, schema-validated JSON/YAML inputs
 guaranteed to work with Arcaflow workflows and plugins.
 
+**Multi-Tenancy:** In server mode, create isolated workspaces for multiple
+teams or users called "tenants." Each tenant has independent authentication
+tokens and workspace directories, ensuring data isolation. See
+[Multi-Tenancy Concepts](docs/arcaflow-mcp/concepts/multi-tenancy.md) and
+[Authentication Setup](docs/arcaflow-mcp/deployment/authentication.md).
+
 ## Architecture
 
 Arcaflow MCP uses a **hybrid two-component architecture**:
@@ -51,7 +57,7 @@ graph LR
 
 | Component | Purpose | Required For |
 |-----------|---------|--------------|
-| **Go MCP Server** | MCP protocol handler, workflow loading, input validation | Wokflow input construction (always required) |
+| **Go MCP Server** | MCP protocol handler, workflow loading, input validation | Workflow input construction (always required) |
 | **Python Analysis Engine** | Result parsing, statistical analysis, optimization suggestions | Workflow result analysis and input refinement |
 
 **When do you need both components?**
@@ -60,15 +66,23 @@ graph LR
 
 ## Prerequisites
 
-- **Go** (version defined in `ARCALOT_GO_VERSION` org variable)
-- **Python** (versions defined in `ARCALOT_PYTHON_SUPPORTED_VERSIONS` org variable)
-- **Poetry** (Python dependency management)
-- **Docker/Podman** (optional, for containerized deployment)
+### For End Users (Containerized Deployment)
 
-**Current version requirements:** See `.github/workflows/ci.yml` or [Version Management](docs/development/version-management.md)
-- **Full Workflow**: Both components for complete input → execute → analyze cycle
+- **Docker** or **Podman** - Container runtime for running pre-built images
+- No language runtimes required when using containers
 
-**Communication**: The Go server communicates with the Python engine via HTTP REST API (default: `http://localhost:8081`)
+### For Developers (Building from Source)
+
+- **Go**: 1.24+ - See badge above for current version
+- **Python**: 3.12 or 3.13 - See badge above for supported versions
+- **Poetry**: 1.8.3+ - Python dependency management
+- **protoc**: Protocol buffer compiler (for API changes)
+- **golangci-lint**: Go linting tool
+
+**Version Details:** See [Version Management](docs/development/version-management.md)
+
+**Architecture Note:** The Go server communicates with the Python analysis
+engine via HTTP REST API (default: `http://localhost:8081`)
 
 ## Quick Start
 
@@ -134,27 +148,46 @@ The client will launch Component 2 (MCP server) on-demand, which connects to Com
 
 **Verify setup:** Open your AI client and ask: `"Can you see the Arcaflow MCP server?"`
 
-**Server Mode** (Multi-user deployments):
+**Server Mode** (Multi-tenant deployments):
 
 ```bash
-# Get compose file (deploys BOTH components together)
+# Step 1: Get compose file (deploys BOTH components together)
 curl -O https://raw.githubusercontent.com/arcalot/arcaflow-mcp/main/deploy/container/compose.yml
 
-# Generate admin token
+# Step 2: Generate admin token (used for tenant management)
 export ARCAFLOW_MCP_ADMIN_TOKEN="$(openssl rand -base64 32)"
+echo "Save this admin token securely: $ARCAFLOW_MCP_ADMIN_TOKEN"
 
-# Start both services
+# Step 3: Start both services
 docker compose up -d
 # Or: podman-compose up -d
 
 # Both components now running:
 # - Analysis engine: localhost:8081
 # - MCP server: localhost:8080
+
+# Step 4: Create your first tenant
+curl -X POST http://localhost:8080/admin/tenants \
+  -H "Authorization: Bearer $ARCAFLOW_MCP_ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"tenant_id":"my-team","display_name":"My Team"}'
+
+# Step 5: Create tenant token (users will use this to access MCP)
+curl -X POST http://localhost:8080/admin/tenants/my-team/tokens \
+  -H "Authorization: Bearer $ARCAFLOW_MCP_ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{}' | tee tenant-token.json
+
+# Step 6: Distribute tenant token to users for AI client configuration
+echo "Give the token from tenant-token.json to your users"
 ```
 
-**Available Tags**: The `latest` tag tracks the main branch. After v0.1.0, use version tags (e.g., `v1.0.0`) for stability. Browse all tags at [quay.io/arcalot](https://quay.io/organization/arcalot).
+**Next Steps:**
+- 📖 **Complete tenant setup**: [Authentication Guide](docs/arcaflow-mcp/deployment/authentication.md)
+- 📖 **Understand multi-tenancy**: [Multi-Tenancy Concepts](docs/arcaflow-mcp/concepts/multi-tenancy.md)
+- 📖 **Container deployment details**: [Container Deployment](docs/arcaflow-mcp/deployment/container.md)
 
-📖 **Detailed Setup**: See [Getting Started Guide](docs/arcaflow-mcp/getting-started.md) or [Container Deployment](docs/arcaflow-mcp/deployment/container.md)
+**Available Tags**: The `latest` tag tracks the main branch. After v0.1.0, use version tags (e.g., `v1.0.0`) for stability. Browse all tags at [quay.io/arcalot](https://quay.io/organization/arcalot).
 
 #### Option 2: Download Pre-Compiled Binaries 📦
 
@@ -438,26 +471,6 @@ arcaflow-mcp/
 **MCP Resources:**
 - [MCP Specification](https://modelcontextprotocol.io/specification/2025-11-25/)
 - [MCP Examples](https://modelcontextprotocol.io/examples)
-
-## Prerequisites
-
-### Runtime Requirements
-
-- **Go**: 1.23.0 (exact version per Arcaflow standards)
-- **Python**: 3.12 (exact version per Arcaflow standards)
-- **Poetry**: 1.8.3 (Python dependency management)
-
-### Development Requirements
-
-- **protoc**: Protocol buffer compiler with Go and Python plugins
-- **Podman/Buildah**: Container build tools (Docker-compatible)
-- **golangci-lint**: Go linting (used by validation scripts)
-
-### Optional
-
-- **Claude Desktop** or similar MCP client for local mode testing
-- **Kubernetes**: For server mode deployment in K8s
-- **PostgreSQL**: For production server mode (SQLite used for dev)
 
 ## Contributing
 
