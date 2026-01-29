@@ -54,7 +54,9 @@ poetry run python -m grpc_tools.protoc \
 ### HTTP analysis endpoint
 
 Set `ARCAFLOW_ANALYSIS_HTTP_ADDRESS` (for example, `127.0.0.1:8081`) to enable
-the HTTP endpoint used by the Go server integration:
+the HTTP endpoint used by the Go server integration. The container image
+defaults this to `0.0.0.0:8081` for convenience; override it at runtime if you
+need a different port or bind address.
 
 - `GET /healthz` for health checks
 - `POST /analysis/summary` for analysis requests

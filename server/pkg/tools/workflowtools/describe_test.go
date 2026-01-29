@@ -62,6 +62,7 @@ func TestWorkflowDescribeMissingSource(t *testing.T) {
 	_, errObj := tool.Handler(context.Background(), map[string]interface{}{})
 	if errObj == nil {
 		t.Fatalf("expected missing source error")
+		return
 	}
 	if errObj.Code != protocol.ErrInvalidParams {
 		t.Fatalf("expected invalid params error")

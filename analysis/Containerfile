@@ -91,9 +91,11 @@ USER arcaflow
 # Expose analysis engine HTTP port
 EXPOSE 8081
 
+ENV ARCAFLOW_ANALYSIS_HTTP_ADDRESS=0.0.0.0:8081
+
 # Health check endpoint
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8081/health')" || exit 1
+    CMD python -c "import os,urllib.request; addr=os.getenv('ARCAFLOW_ANALYSIS_HTTP_ADDRESS','0.0.0.0:8081'); port=addr.rsplit(':',1)[-1]; urllib.request.urlopen(f'http://127.0.0.1:{port}/healthz')" || exit 1
 
 # OCI labels following Arcalot conventions
 LABEL org.opencontainers.image.source="https://github.com/arcalot/arcaflow-mcp"
@@ -103,6 +105,6 @@ LABEL org.opencontainers.image.authors="Arcalot contributors"
 LABEL org.opencontainers.image.title="Arcaflow MCP Analysis Engine"
 LABEL org.opencontainers.image.description="Python analysis engine for Arcaflow workflow result analysis and optimization"
 
-# Start the HTTP server
-ENTRYPOINT ["python", "-m", "arcaflow_analysis.server.http_server"]
+# Start the analysis service (gRPC + HTTP when configured)
+ENTRYPOINT ["python", "-m", "arcaflow_analysis.server.app"]
 CMD []

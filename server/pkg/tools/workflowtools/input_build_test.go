@@ -122,6 +122,7 @@ func TestWorkflowInputBuildMissingInput(t *testing.T) {
 	})
 	if errObj == nil {
 		t.Fatalf("expected missing input error")
+		return
 	}
 	if errObj.Code != protocol.ErrInvalidParams {
 		t.Fatalf("expected invalid params error")
