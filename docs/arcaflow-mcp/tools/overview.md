@@ -18,36 +18,43 @@ Examples (natural language):
 
 Detailed schemas and examples are in `docs/arcaflow-mcp/tools/input-tools.md`.
 
-- `workflow_discover` - discover workflows with selection guidance and timing
+**Primary tools (exposed):**
 - `workflow_list` - list workflows across filesystem, URL, and git sources
 - `workflow_load` - load a workflow document from a selected source
-- `workflow_describe` - summarize workflow metadata and steps
-- `workflow_schema_get` - resolve workflow input/output schemas
 - `workflow_input_recommend` - recommend inputs from schemas and examples
-- `workflow_input_build` - build or update draft inputs
-- `workflow_input_validate` - validate draft inputs against schemas
-- `workflow_input_export` - export validated inputs to JSON/YAML
-- `workflow_input_examples_get` - retrieve example inputs
-- `plugin_schema_get` - fetch plugin schemas referenced by workflow steps
+
+**Advanced tools (hidden - for specialized use):**
+- `workflow_discover` - internal workflow discovery with timing details
+- `workflow_describe` - workflow metadata summary (use workflow_list instead)
+- `workflow_schema_get` - internal schema resolution (use workflow_input_recommend)
+- `workflow_input_build` - advanced iterative input construction
+- `workflow_input_validate` - advanced input validation
+- `workflow_input_export` - advanced input export
+- `workflow_input_examples_get` - internal example generation
+- `plugin_schema_get` - advanced plugin schema inspection
 
 ### Result analysis tools
 
 Detailed schemas and examples are in `docs/arcaflow-mcp/tools/result-tools.md`.
 
+**Primary tools (exposed):**
 - `workflow_results_load` - load result files from disk or URL
-- `workflow_results_parse` - parse results into summary stats
 - `workflow_results_describe` - describe results from a file or payload
 - `workflow_results_analyze` - analyze results and suggest improvements
-- `workflow_results_compare` - compare runs and rank metrics
-- `workflow_inputs_suggest` - generate input modifications
-- `workflow_optimization_guide` - provide strategic optimization guidance
-- `workflow_results_metrics_extract` - extract metric statistics
 - `workflow_history_load` - load historical analysis runs
+
+**Advanced tools (hidden - for specialized use):**
+- `workflow_results_parse` - consolidated into workflow_results_describe
+- `workflow_results_compare` - advanced multi-run comparison
+- `workflow_inputs_suggest` - advanced input modification generation
+- `workflow_optimization_guide` - advanced strategic guidance
+- `workflow_results_metrics_extract` - advanced KPI extraction
 
 ### Resources
 
 Resource URI schemes are documented in `docs/arcaflow-mcp/tools/resources.md`.
 
+- `mcp://routing-guide` - intent-to-tool mapping for AI clients
 - `workflow://` - workflow definitions
 - `workflow-schema://` - resolved workflow schemas
 - `workflow-example://` - example input payloads

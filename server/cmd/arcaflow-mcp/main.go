@@ -22,7 +22,6 @@ import (
 	"github.com/arcalot/arcaflow-mcp/server/pkg/protocol"
 	"github.com/arcalot/arcaflow-mcp/server/pkg/ratelimit"
 	"github.com/arcalot/arcaflow-mcp/server/pkg/resources"
-	"github.com/arcalot/arcaflow-mcp/server/pkg/state"
 	"github.com/arcalot/arcaflow-mcp/server/pkg/tenant"
 	"github.com/arcalot/arcaflow-mcp/server/pkg/tools/workflowtools"
 	"github.com/arcalot/arcaflow-mcp/server/pkg/transport/httpserver"
@@ -208,7 +207,6 @@ func registerDefaultTools(
 	}
 	loader := workflow.NewLoader()
 	parser := workflow.NewParser()
-	stateManager := state.NewManager(0)
 	server.RegisterTool(protocol.ToolRegistration{
 		Definition: protocol.ToolDefinition{
 			Name:        "ping",
@@ -236,46 +234,24 @@ func registerDefaultTools(
 			}, nil
 		},
 	})
-	server.RegisterTool(
-		workflowtools.NewWorkflowDiscoverTool(loader, slog.Default()),
-	)
+	// Primary workflow discovery and inspection tools
+	// Advanced: workflow_discover (hidden - internal use by workflow_input_recommend)
 	server.RegisterTool(
 		workflowtools.NewWorkflowListTool(loader, slog.Default()),
 	)
 	server.RegisterTool(
 		workflowtools.NewWorkflowLoadTool(loader, slog.Default()),
 	)
-	server.RegisterTool(
-		workflowtools.NewWorkflowSchemaGetTool(loader, parser, slog.Default()),
-	)
-	server.RegisterTool(
-		workflowtools.NewPluginSchemaGetTool(loader, slog.Default()),
-	)
-	server.RegisterTool(
-		workflowtools.NewWorkflowDescribeTool(loader, slog.Default()),
-	)
-	server.RegisterTool(
-		workflowtools.NewWorkflowInputBuildTool(
-			loader,
-			stateManager,
-			slog.Default(),
-		),
-	)
-	server.RegisterTool(
-		workflowtools.NewWorkflowInputValidateTool(
-			loader,
-			stateManager,
-			slog.Default(),
-		),
-	)
-	server.RegisterTool(
-		workflowtools.NewWorkflowInputExportTool(
-			loader,
-			parser,
-			stateManager,
-			slog.Default(),
-		),
-	)
+	// Advanced: workflow_schema_get (hidden - internal use by workflow_input_recommend)
+	// Advanced: plugin_schema_get (hidden - advanced schema inspection)
+	// Advanced: workflow_describe (hidden - use workflow_list + workflow_load instead)
+	// Advanced input construction tools (hidden - use workflow_input_recommend instead)
+	// Advanced: workflow_input_build
+	// Advanced: workflow_input_validate
+	// Advanced: workflow_input_export
+	// Advanced: workflow_input_examples_get
+
+	// Primary input recommendation tool
 	server.RegisterTool(
 		workflowtools.NewWorkflowInputRecommendTool(
 			loader,
@@ -283,18 +259,9 @@ func registerDefaultTools(
 			slog.Default(),
 		),
 	)
-	server.RegisterTool(
-		workflowtools.NewWorkflowInputExamplesTool(
-			loader,
-			parser,
-			slog.Default(),
-		),
-	)
+	// Primary result analysis tools
 	server.RegisterTool(
 		workflowtools.NewWorkflowResultsLoadTool(slog.Default()),
-	)
-	server.RegisterTool(
-		workflowtools.NewWorkflowResultsParseTool(analysisClient, slog.Default()),
 	)
 	server.RegisterTool(
 		workflowtools.NewWorkflowResultsDescribeTool(analysisClient, slog.Default()),
@@ -303,25 +270,16 @@ func registerDefaultTools(
 		workflowtools.NewWorkflowResultsAnalyzeTool(analysisClient, slog.Default()),
 	)
 	server.RegisterTool(
-		workflowtools.NewWorkflowResultsCompareTool(analysisClient, slog.Default()),
-	)
-	server.RegisterTool(
-		workflowtools.NewWorkflowInputsSuggestTool(analysisClient, slog.Default()),
-	)
-	server.RegisterTool(
-		workflowtools.NewWorkflowOptimizationGuideTool(
-			analysisClient,
-			slog.Default(),
-		),
-	)
-	server.RegisterTool(
-		workflowtools.NewWorkflowResultsMetricsExtractTool(
-			analysisClient,
-			slog.Default(),
-		),
-	)
-	server.RegisterTool(
 		workflowtools.NewWorkflowHistoryLoadTool(analysisClient, slog.Default()),
+	)
+
+	// Advanced result analysis tools (hidden - use primary tools instead)
+	// Advanced: workflow_results_compare
+	// Advanced: workflow_results_metrics_extract
+	// Advanced: workflow_inputs_suggest
+	// Advanced: workflow_optimization_guide
+	server.RegisterResourceProvider(
+		resources.NewRoutingGuideProvider(slog.Default()),
 	)
 	server.RegisterResourceProvider(
 		resources.NewWorkflowResourceProvider(

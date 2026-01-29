@@ -1,0 +1,258 @@
+# AI Client Routing Guide
+
+This document explains how Arcaflow MCP tools are designed for deterministic
+AI client routing.
+
+## Design Principles
+
+1. **Tool names match user language:** `workflow_input_recommend` matches
+   "recommend inputs", `workflow_results_describe` matches "describe results".
+
+2. **Concrete user phrases in descriptions:** Each tool description includes 2-3
+   exact user phrases that should trigger it (e.g., "USE THIS when user says:
+   'What inputs do you recommend?'").
+
+3. **Explicit negative hints:** Descriptions include "DO NOT read workflow files"
+   or "DO NOT use read_file" to discourage file-reading fallbacks.
+
+4. **Schema-level guidance:** Source parameter descriptions explain when to use
+   them (e.g., "Use when user provides @file or file path").
+
+5. **Simplified tool set:** Only 7 primary tools exposed by default. Advanced
+   tools hidden to reduce decision space.
+
+## Primary Tools (Exposed)
+
+### Input Construction
+- `workflow_list` - discover workflows in a directory
+- `workflow_load` - inspect workflow content  
+- `workflow_input_recommend` - **recommend inputs (primary)**
+
+### Result Analysis
+- `workflow_results_load` - load and parse result files
+- `workflow_results_describe` - **describe results (primary)**
+- `workflow_results_analyze` - **analyze and suggest improvements (primary)**
+- `workflow_history_load` - load historical runs
+
+## Hidden Tools (Advanced)
+
+These tools are not exposed in `tools/list` but remain callable for advanced use:
+
+### Input Construction (Advanced)
+- `workflow_discover` - internal discovery with timing
+- `workflow_describe` - metadata summary
+- `workflow_schema_get` - internal schema resolution
+- `workflow_input_examples_get` - internal example generation
+- `workflow_input_build` - iterative input construction
+- `workflow_input_validate` - input validation
+- `workflow_input_export` - input export
+- `plugin_schema_get` - plugin schema inspection
+
+### Result Analysis (Advanced)
+- `workflow_results_parse` - consolidated into `workflow_results_describe`
+- `workflow_results_compare` - multi-run comparison
+- `workflow_inputs_suggest` - input modification generation
+- `workflow_optimization_guide` - strategic guidance
+- `workflow_results_metrics_extract` - KPI extraction
+
+## Routing Resource
+
+AI clients can fetch `mcp://routing-guide` for a comprehensive intent-to-tool
+mapping reference. This resource includes:
+- User phrase patterns for each tool
+- Parameter examples
+- Explicit "DO NOT" guidance
+
+## Expected Routing Behavior
+
+### "What inputs do you recommend?"
+
+**Expected tool:** `workflow_input_recommend`
+
+**Parameters:**
+```json
+{
+  "source": {"kind": "filesystem", "location": "."},
+  "goal": "optional user goal"
+}
+```
+
+**Not expected:** ReadFile workflow.yaml, Glob *.yaml, workflow_schema_get
+
+---
+
+### "Describe results at @file.yaml"
+
+**Expected tool:** `workflow_results_describe`
+
+**Parameters:**
+```json
+{
+  "source": {"kind": "filesystem", "location": "file.yaml"}
+}
+```
+
+**Not expected:** ReadFile file.yaml
+
+---
+
+### "Analyze results at @file.yaml"
+
+**Expected tool:** `workflow_results_analyze`
+
+**Parameters:**
+```json
+{
+  "source": {"kind": "filesystem", "location": "file.yaml"}
+}
+```
+
+**Not expected:** ReadFile file.yaml
+
+---
+
+### "Output is at @results.yaml. What new inputs should I use?"
+
+**Expected tool:** `workflow_results_analyze`
+
+**Parameters:**
+```json
+{
+  "source": {"kind": "filesystem", "location": "results.yaml"}
+}
+```
+
+**Returns:** Validated input suggestions based on result metrics (e.g., "increase workers
+from 2 to 12 to utilize all CPU cores")
+
+**Not expected:** ReadFile results.yaml, WriteFile new-input.yaml
+
+---
+
+### "List workflows in this directory"
+
+**Expected tool:** `workflow_list`
+
+**Parameters:**
+```json
+{
+  "source": {"kind": "filesystem", "location": "."}
+}
+```
+
+**Not expected:** Glob *.yaml, ReadFolder
+
+---
+
+## Implementation Notes
+
+- Tool consolidation reduces choice paralysis (7 primary vs 20+ total tools)
+- User phrase matching in descriptions creates semantic anchors
+- Schema hints guide parameter selection
+- Negative hints discourage fallback behaviors
+- Routing guide resource provides machine-readable intent mapping
+
+## Anti-Patterns (Common Routing Failures)
+
+### Pattern 1: Reading example inputs instead of using schema
+
+**Symptom:** AI reads example-input.yaml, modifies it, and gets validation errors.
+
+**Problem:** Example files may be incomplete or outdated. Manual edits miss required
+fields from the schema.
+
+**Fix:** Use `workflow_input_recommend` which uses the schema to generate valid inputs.
+
+---
+
+### Pattern 2: Reading result files instead of using analysis tools
+
+**Symptom:** AI reads results.yaml and manually extracts metrics or suggests new inputs.
+
+**Problem:** Manual parsing misses structured KPIs and domain-specific metrics. Manually
+created inputs often have validation errors.
+
+**Fix:** Use `workflow_results_describe` for summaries, `workflow_results_analyze` for
+input suggestions.
+
+---
+
+### Pattern 3: Reading workflow files to understand inputs
+
+**Symptom:** AI reads workflow.yaml, sub-workflows, and plugin files to understand
+input requirements.
+
+**Problem:** Plugin schema resolution and sub-workflow merging require the Arcaflow
+engine. Manual inspection is incomplete.
+
+**Fix:** Use `workflow_input_recommend` which resolves all schemas automatically.
+
+---
+
+## Testing Routing
+
+To verify routing effectiveness:
+1. Test with prompts: "What inputs do you recommend?", "Describe results at @file"
+2. Confirm tool selection matches expected tools above
+3. Verify no ReadFile/Glob fallbacks for workflow/result files
+4. Track routing failures and refine descriptions for failed patterns
+
+## Real-World Examples (Failure Cases)
+
+### Example 1: Input Recommendations
+
+User: "What inputs do you recommend for this workflow?"
+
+**Wrong routing:**
+```
+ReadFile workflow.yaml
+ReadFile example-input-quick.yaml
+WriteFile test-input.yaml (modified example)
+Shell arcaflow run -f test-input.yaml
+# Error 1: Validation failed for 'horreum_params': This field is required
+# Error 2: unknown command "run" for "arcaflow" (invalid syntax)
+```
+
+**Correct routing:**
+```
+workflow_input_recommend {
+  source: {kind: "filesystem", location: "."}
+}
+# Returns validated inputs with all required fields
+
+# If user wants to execute (outside MCP):
+"Execute with: arcaflow --input recommended-input.yaml"
+```
+
+---
+
+### Example 2: Result Analysis and Input Optimization
+
+User: "Output is at @mcp-test-out-1.yaml. What new inputs should I use to keep
+assessing performance?"
+
+**Wrong routing:**
+```
+ReadFile mcp-test-out-1.yaml
+# Manually analyzes: "12 cores detected, only used 2 workers"
+WriteFile test-input-max-perf.yaml (manually created)
+# Problem: May miss validation constraints, incorrect field types
+```
+
+**Correct routing:**
+```
+workflow_results_analyze {
+  source: {kind: "filesystem", location: "mcp-test-out-1.yaml"}
+}
+# Returns validated input suggestions:
+# - Increase workers to 12 (matches CPU cores)
+# - Optimize memory allocation based on available RAM
+# - Adjust test duration for stability
+```
+
+## Future Improvements
+
+- Add tool metadata extension for priority/trigger hints
+- Expose routing hints in tools/list response
+- Add client-side routing policy recommendations
+- Log routing guide availability at client initialization

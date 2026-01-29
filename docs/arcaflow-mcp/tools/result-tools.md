@@ -1,20 +1,29 @@
 ## Result analysis tools
 
-This section documents the output analysis tools and schemas. Tool descriptions
-are written to support natural-language routing (users do not need to name a
-tool explicitly). Examples were validated against unit tests on 2026-01-26.
+This section documents result analysis tools and schemas. For AI client routing
+guidance, see the `mcp://routing-guide` resource.
+
+**Primary tools (simplified for consistent routing):**
+- `workflow_results_load` - load and parse result files
+- `workflow_results_describe` - summarize results
+- `workflow_results_analyze` - analyze and suggest improvements
+- `workflow_history_load` - load historical runs
+
+**Advanced tools (hidden from default tools/list):**
+- `workflow_results_parse` (consolidated into workflow_results_describe),
+  `workflow_results_compare`, `workflow_inputs_suggest`,
+  `workflow_optimization_guide`, `workflow_results_metrics_extract`
 
 For large result files, prefer the `source` + `format` inputs so the server can
 load and parse data without returning huge payloads to the client.
 
 Routing hints (for natural language clients):
-- "Analyze results at /path/to/file.json" → `workflow_results_analyze` with
-  `source.kind=filesystem`.
 - "Describe results at /path/to/file.yaml" → `workflow_results_describe` with
   `source.kind=filesystem`.
-- "Give me KPIs only from /path/to/file.json" → `workflow_results_metrics_extract`
-  with `source.kind=filesystem`.
-- Avoid loading large files with generic file tools; use `source` instead.
+- "Analyze results at /path/to/file.json" → `workflow_results_analyze` with
+  `source.kind=filesystem`.
+- DO NOT use read_file for result files - all result tools accept source parameter.
+- See `mcp://routing-guide` resource for comprehensive intent-to-tool mapping.
 
 ### `workflow_results_load`
 

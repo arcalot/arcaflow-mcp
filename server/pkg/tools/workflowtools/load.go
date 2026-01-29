@@ -18,14 +18,15 @@ const workflowLoadInputSchema = `{
   "properties": {
     "source": {
       "type": "object",
+      "description": "Workflow source. Use when user wants to inspect workflow content.",
       "properties": {
         "kind": {
           "type": "string",
-          "description": "Workflow source kind: filesystem, url, or git."
+          "description": "Workflow source kind: filesystem (for local workflows), url, or git."
         },
         "location": {
           "type": "string",
-          "description": "Filesystem root, URL, or git repository URL."
+          "description": "Directory path (e.g., '.'), URL, or git repository URL."
         },
         "ref": {
           "type": "string",
@@ -48,7 +49,7 @@ const workflowLoadInputSchema = `{
         },
         "path": {
           "type": "string",
-          "description": "Workflow path to load."
+          "description": "Workflow file path (e.g., 'workflow.yaml')."
         }
       },
       "additionalProperties": false
@@ -99,8 +100,10 @@ func NewWorkflowLoadTool(
 	return protocol.ToolRegistration{
 		Definition: protocol.ToolDefinition{
 			Name: "workflow_load",
-			Description: "Load a workflow document after selecting the " +
-				"workflow to inspect.",
+			Description: "Load workflow document for inspection with validation. " +
+				"USE THIS when user says: 'Show me the workflow', 'Load workflow.yaml', " +
+				"'Inspect workflow'. PREVENTS: Loading invalid workflow documents. " +
+				"Returns full YAML/JSON content with metadata and SHA256 fingerprint.",
 			InputSchema: json.RawMessage(workflowLoadInputSchema),
 		},
 		Handler: func(

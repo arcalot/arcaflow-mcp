@@ -15,14 +15,15 @@ const workflowListInputSchema = `{
   "properties": {
     "source": {
       "type": "object",
+      "description": "Workflow source. Use when user provides directory path to discover workflows.",
       "properties": {
         "kind": {
           "type": "string",
-          "description": "Workflow source kind: filesystem, url, or git."
+          "description": "Workflow source kind: filesystem (for local directories), url, or git."
         },
         "location": {
           "type": "string",
-          "description": "Filesystem root, URL, or git repository URL."
+          "description": "Directory path (e.g., '.', '/workflows'), URL, or git repository URL."
         },
         "ref": {
           "type": "string",
@@ -89,8 +90,12 @@ func NewWorkflowListTool(
 	return protocol.ToolRegistration{
 		Definition: protocol.ToolDefinition{
 			Name: "workflow_list",
-			Description: "List workflows available from a source to select " +
-				"the target workflow without scanning files manually.",
+			Description: "List available Arcaflow workflows with validation. " +
+				"USE THIS when user says: 'List workflows in this directory', " +
+				"'What workflows are available?', 'Show me workflows'. " +
+				"PREVENTS: Loading invalid or non-Arcaflow YAML files. " +
+				"Returns only validated workflow documents with metadata. " +
+				"Accepts source.kind=filesystem for local paths.",
 			InputSchema: json.RawMessage(workflowListInputSchema),
 		},
 		Handler: func(

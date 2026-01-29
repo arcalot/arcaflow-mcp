@@ -1,16 +1,21 @@
 ## Input construction tools
 
-This section will document the input construction tools and schemas.
+This section documents input construction tools and schemas. For AI client routing
+guidance, see the `mcp://routing-guide` resource.
+
+**Primary tools (simplified for consistent routing):**
+- `workflow_list` - discover workflows in a directory
+- `workflow_load` - inspect workflow content
+- `workflow_input_recommend` - recommend inputs (use instead of reading files)
+
+**Advanced tools (hidden from default tools/list):**
+- `workflow_discover`, `workflow_describe`, `workflow_schema_get`,
+  `workflow_input_examples_get`, `workflow_input_build`, `workflow_input_validate`,
+  `workflow_input_export`, `plugin_schema_get`
 
 When a workflow selector is missing and multiple workflows are found, the
 workflow tools return a discovery payload with selection guidance instead of
-failing. Use `workflow_discover` to preview the same guidance proactively.
-
-When users ask what inputs they should use or request input recommendations,
-prefer `workflow_schema_get` and `workflow_input_examples_get` to ground the
-response in the workflow's schema. Use `workflow_input_build` to assemble draft
-inputs and `workflow_input_validate`/`workflow_input_export` to confirm and share
-validated payloads.
+failing.
 
 When a workflow source fails to load, tool error messages include the underlying
 failure detail. The error data also includes an `error` field and, for timeouts,

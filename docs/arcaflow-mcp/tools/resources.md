@@ -5,6 +5,24 @@ via `resources/read` using URI schemes that encode the workflow source and
 selector. Successful reads are cached per tenant and returned by
 `resources/list`.
 
+### `mcp://routing-guide`
+
+Returns intent-to-tool mapping guidance for AI clients. This resource helps LLMs
+route natural language requests to the correct MCP tools without reading workflow
+or result files directly.
+
+URI format:
+
+```
+mcp://routing-guide
+```
+
+Content: Markdown document with user phrase patterns mapped to MCP tool names,
+parameters, and negative hints (what NOT to do).
+
+Example use: AI clients can fetch this resource during initialization to improve
+tool selection accuracy.
+
 ### `workflow-schema://`
 
 Returns resolved workflow input/output schemas and a sample input payload. The

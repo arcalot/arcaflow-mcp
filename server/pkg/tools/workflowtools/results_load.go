@@ -24,14 +24,15 @@ const workflowResultsLoadInputSchema = `{
   "properties": {
     "source": {
       "type": "object",
+      "description": "Result file source. Use when user provides result file path.",
       "properties": {
         "kind": {
           "type": "string",
-          "description": "Result source kind: filesystem or url."
+          "description": "Result source kind: filesystem (for local files) or url."
         },
         "location": {
           "type": "string",
-          "description": "Filesystem path or URL for the result file."
+          "description": "Path to result file (e.g., 'results.yaml') or URL."
         }
       },
       "required": ["kind", "location"],
@@ -77,11 +78,10 @@ func NewWorkflowResultsLoadTool(
 	}
 	return protocol.ToolRegistration{
 		Definition: protocol.ToolDefinition{
-			Name:        "workflow_results_load",
-			Description: "Load a results file from disk or URL and parse it for " +
-				"inspection. Example: \"show me the contents of /path/results.json\". " +
-				"If the user asks to analyze a file, route to workflow_results_analyze " +
-				"with source instead of read_file.",
+			Name: "workflow_results_load",
+			Description: "Load result file for inspection. USE THIS when user says: " +
+				"'Show me results.json', 'Load the results file'. Returns parsed payload. " +
+				"For analysis, use workflow_results_describe or workflow_results_analyze.",
 			InputSchema: json.RawMessage(workflowResultsLoadInputSchema),
 		},
 		Handler: func(

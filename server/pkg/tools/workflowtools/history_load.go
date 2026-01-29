@@ -46,8 +46,10 @@ func NewWorkflowHistoryLoadTool(
 	}
 	return protocol.ToolRegistration{
 		Definition: protocol.ToolDefinition{
-			Name:        "workflow_history_load",
-			Description: "Load stored result history for workflow analysis.",
+			Name: "workflow_history_load",
+			Description: "Load historical analysis runs. USE THIS when user says: " +
+				"'Show me previous results', 'Load analysis history', 'Past runs'. " +
+				"Returns stored analysis metadata and summaries.",
 			InputSchema: json.RawMessage(workflowHistoryLoadInputSchema),
 		},
 		Handler: func(

@@ -34,15 +34,15 @@ const workflowResultsAnalysisInputSchema = `{
     },
     "source": {
       "type": "object",
-      "description": "Optional results file source for large payloads or when a file path is provided. Prefer this over read_file for huge files.",
+      "description": "Result file source. USE THIS when user provides @file or file path instead of reading the file with read_file.",
       "properties": {
         "kind": {
           "type": "string",
-          "description": "Result source kind: filesystem or url (use filesystem for local paths)."
+          "description": "Result source kind: filesystem (for local result files) or url."
         },
         "location": {
           "type": "string",
-          "description": "Filesystem path or URL for the result file (absolute paths preferred)."
+          "description": "Path to result file (e.g., 'results.yaml', '/path/to/output.json') or URL."
         }
       },
       "required": ["kind", "location"],
@@ -137,9 +137,15 @@ func NewWorkflowResultsDescribeTool(
 ) protocol.ToolRegistration {
 	return newResultsAnalysisTool(
 		"workflow_results_describe",
-		"Describe workflow results from a file or payload. Use when the user " +
-			"asks to describe results at a file path. If a file path is provided, " +
-			"use source.kind=filesystem and do not call read_file.",
+		"Describe workflow results with structured metrics summary. " +
+			"USE THIS when user says: 'Describe results at @file', 'Summarize results.yaml', " +
+			"'What are the results?', 'Show me output at @file'. " +
+			"USE workflow_results_analyze INSTEAD when user asks for input suggestions or optimization. " +
+			"PREVENTS: Manual YAML parsing, missing metrics, incomplete summaries. " +
+			"Returns structured metrics (CPU, memory, throughput, latency). " +
+			"THIS TOOL READS FILES - just provide source.kind=filesystem + location. " +
+			"DO NOT read the file yourself - this tool does it internally. " +
+			"EXAMPLE: {source: {kind: 'filesystem', location: 'results.yaml'}}",
 		analysisClient,
 		logger,
 		func(response analysis.AnalyzeResponse) (interface{}, error) {
@@ -156,10 +162,17 @@ func NewWorkflowResultsAnalyzeTool(
 ) protocol.ToolRegistration {
 	return newResultsAnalysisTool(
 		"workflow_results_analyze",
-		"Analyze results and suggest input improvements. Use when the user asks " +
-			"for recommendations or tuning guidance. Example: \"analyze " +
-			"/path/results.json\". If a file path is provided, use " +
-			"source.kind=filesystem and do not call read_file.",
+		"Analyze workflow results and suggest optimized inputs for better performance. " +
+			"USE THIS when user says: 'Results are at @file, what inputs should I use?', " +
+			"'Analyze results at @file', 'How can I improve performance?', " +
+			"'What new inputs should I use?', 'Optimize results.yaml', " +
+			"'Output is at @file, suggest inputs'. " +
+			"PREVENTS: Manual result inspection, guessing at input changes, creating invalid inputs. " +
+			"Returns VALIDATED input suggestions based on result patterns (CPU usage, memory, concurrency). " +
+			"THIS TOOL READS FILES - just provide source.kind=filesystem + location. " +
+			"DO NOT read the file yourself with read_file - this tool does it internally. " +
+			"EXAMPLE: {source: {kind: 'filesystem', location: 'results.yaml'}} " +
+			"OUTPUT: Specific input modifications to improve performance metrics.",
 		analysisClient,
 		logger,
 		func(response analysis.AnalyzeResponse) (interface{}, error) {

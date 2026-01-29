@@ -17,14 +17,15 @@ const workflowInputRecommendInputSchema = `{
   "properties": {
     "source": {
       "type": "object",
+      "description": "Workflow source. Use when user provides directory or file path instead of reading workflow files directly.",
       "properties": {
         "kind": {
           "type": "string",
-          "description": "Workflow source kind: filesystem, url, or git."
+          "description": "Workflow source kind: filesystem (for local paths), url, or git."
         },
         "location": {
           "type": "string",
-          "description": "Filesystem root, URL, or git repository URL."
+          "description": "Directory or file path (filesystem), URL, or git repository URL."
         },
         "ref": {
           "type": "string",
@@ -90,8 +91,16 @@ func NewWorkflowInputRecommendTool(
 	return protocol.ToolRegistration{
 		Definition: protocol.ToolDefinition{
 			Name: "workflow_input_recommend",
-			Description: "Recommend inputs for a workflow using schemas and " +
-				"examples. Prefer this over reading workflow files directly.",
+			Description: "Recommend workflow inputs validated against the workflow schema. " +
+				"USE THIS when user says: 'What inputs do you recommend?', " +
+				"'Run workflow in this directory', 'What should I use for inputs?'. " +
+				"PREVENTS: Validation errors from missing required fields or incorrect types. " +
+				"Returns schema + example inputs guaranteed to pass validation. " +
+				"Accepts source.kind=filesystem for local workflows. " +
+				"DO NOT read workflow.yaml or example files - this tool uses the schema internally. " +
+				"EXAMPLE: {source: {kind: 'filesystem', location: '.'}, goal: 'max performance'}. " +
+				"NOTE: MCP does not execute workflows. For execution, user runs: " +
+				"arcaflow --input <file.yaml> (NOT arcaflow run -f)",
 			InputSchema: json.RawMessage(workflowInputRecommendInputSchema),
 		},
 		Handler: func(
