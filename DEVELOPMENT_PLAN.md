@@ -1,7 +1,7 @@
 # Arcaflow MCP Server - Development Plan
 
-**Version:** 1.2.2  
-**Last Updated:** 2026-01-27  
+**Version:** 1.3.0  
+**Last Updated:** 2026-01-29  
 **Language:** Go for MCP server core, Python for analysis engine  
 **Current Phase:** Phase 7 - Documentation & Examples (In Progress)
 
@@ -1415,6 +1415,132 @@ Awaiting Gate Approval: NO
 
 ---
 
+### Phase 7.5: LLM Evaluation Pipeline
+Status: Not Started  
+Gate Keeper: User approval to proceed to Phase 8
+
+Objectives:
+- Establish automated quality assurance for LLM interactions through MCP server
+- Ensure deterministic operations (schema, parsing, validation) achieve 100% accuracy
+- Validate LLM-influenced operations (analysis, suggestions) maintain high consistency
+- Detect quality regressions and behavioral drift over time
+- Integrate evaluation into CI for continuous quality monitoring
+
+Rationale:
+Schema operations must be perfectly reliable (100% accuracy). LLM-driven analysis and recommendations should be highly consistent and accurate (95%+ target). Evaluation pipeline provides confidence in production use and catches regressions before users encounter them.
+
+Tasks:
+
+- [ ] Build evaluation infrastructure
+  - Outcome: Test harness for automated MCP conversation evaluation.
+  - Requirements:
+    - Framework for executing prompts through MCP server and capturing responses
+    - Golden test suite with reference workflows, inputs, outputs, and expected behaviors
+    - Conversation scenario library with expected tool sequences
+    - Metrics engine for scoring accuracy, consistency, and quality
+  - Creative Freedom: Choose testing framework, design conversation DSL, implement scoring algorithms.
+
+- [ ] Create deterministic test suite (100% accuracy target)
+  - Outcome: Comprehensive tests for schema operations and data parsing.
+  - Requirements:
+    - Schema extraction tests (simple to complex workflows, sub-workflows, plugins)
+    - Data parsing tests (JSON, YAML, logs, metrics)
+    - Validation tests (input/output validation, schema compliance)
+    - Export correctness (round-trip validation, format correctness)
+    - Target: 60-75 tests covering all deterministic operations
+  - Success Criteria: 100% pass rate required for schema and parsing operations.
+
+- [ ] Create LLM-influenced test suite (95% accuracy target)
+  - Outcome: Quality validation for analysis, suggestions, and conversational behavior.
+  - Requirements:
+    - Tool selection tests (correct tool chosen, proper sequencing, parameter accuracy)
+    - Analysis quality tests (root cause identification, actionable suggestions)
+    - Suggestion generation tests (optimization recommendations appropriate to results)
+    - Conversational flow tests (natural dialog, error handling, progress tracking)
+    - Target: 65-95 tests with quality rubrics
+  - Success Criteria: 95% pass rate for LLM-influenced operations.
+  - Creative Freedom: Define quality rubrics, design scoring system, balance hard/soft requirements.
+
+- [ ] Implement consistency and drift detection
+  - Outcome: Track LLM behavior stability over time.
+  - Requirements:
+    - Response variance measurement (same prompt, multiple runs)
+    - Semantic stability tracking (embeddings or similarity metrics)
+    - Baseline storage and comparison (detect regressions)
+    - Trend analysis over time (identify gradual degradation)
+  - Creative Freedom: Choose similarity metrics, define acceptable variance thresholds.
+
+- [ ] Build reporting and visualization
+  - Outcome: Coverage-style reports showing evaluation results and trends.
+  - Requirements:
+    - HTML dashboard with test results
+    - Coverage-like visualization (percentage passing by category)
+    - Regression alerts (quality degradation detection)
+    - Historical trend charts (track quality over time)
+    - PR comment generation (evaluation summary)
+  - Creative Freedom: Design dashboard UI, choose visualization library, optimize for clarity.
+
+- [ ] Integrate into CI/CD
+  - Outcome: Automated evaluation on every PR and nightly drift detection.
+  - Requirements:
+    - GitHub Actions workflow for evaluation
+    - Deterministic tests run on all PRs (fast, required)
+    - Full evaluation suite runs nightly (comprehensive, tracks drift)
+    - Regression detection and alerting
+    - Performance benchmarking integration
+  - Creative Freedom: Optimize workflow execution time, decide on failure thresholds.
+
+- [ ] Establish quality baselines
+  - Outcome: Initial metrics captured for future comparison.
+  - Requirements:
+    - Run evaluation suite against current MCP server
+    - Capture baseline metrics for all test categories
+    - Document expected accuracy levels
+    - Store baseline data for drift detection
+  - Note: Baselines updated when intentional behavior changes occur.
+
+Dependencies:
+- Phase 7 complete (documentation provides test scenarios and examples)
+- Stable MCP server and analysis engine
+
+Exit Criteria:
+
+Evaluation Coverage:
+- [ ] Deterministic test suite: 60+ tests, 100% pass rate enforced
+- [ ] LLM-influenced test suite: 65+ tests, 95% pass rate target
+- [ ] Consistency framework: Measures variance and detects drift
+- [ ] Test coverage: All primary MCP tools and capabilities evaluated
+
+Quality Assurance:
+- [ ] Schema operations: 100% accuracy achieved
+- [ ] Analysis quality: 95%+ consistency achieved
+- [ ] Regression detection: Alerts trigger on quality degradation
+- [ ] Baseline established: Initial quality metrics captured and documented
+
+CI Integration:
+- [ ] Evaluation runs on all PRs (deterministic tests required)
+- [ ] Nightly evaluation for drift detection (full suite)
+- [ ] Reports generated with coverage visualization
+- [ ] PR comments show evaluation summary
+
+Documentation:
+- [ ] Evaluation guide for contributors (how to add tests)
+- [ ] Quality rubrics documented (what constitutes passing)
+- [ ] Baseline metrics published (expected accuracy levels)
+- [ ] Regression handling documented (how to update baselines)
+
+Manual Validation:
+- [ ] Run evaluation against known-good MCP server version
+- [ ] Intentionally introduce schema error, verify 100% detection
+- [ ] Degrade analysis quality, verify regression detection
+- [ ] Change prompt engineering, verify consistency tests catch drift
+- [ ] Validate report accuracy and comprehensibility
+- [ ] Test CI integration on sample PRs with varying quality
+
+Awaiting Gate Approval: NO
+
+---
+
 ### Phase 8: Deployment & Distribution
 Status: In Progress (2026-01-28)
 Gate Keeper: Project release approval
@@ -1632,6 +1758,9 @@ Quality
 - [ ] >85% code coverage
 - [ ] Zero critical security issues
 - [ ] Support concurrent sessions (input + analysis)
+- [ ] Evaluation pipeline: Deterministic operations 100% pass rate
+- [ ] Evaluation pipeline: LLM-influenced operations 95%+ pass rate
+- [ ] Evaluation pipeline: Response consistency >90% (semantic similarity)
 
 Server Mode Specific:
 - [ ] Handle 100+ concurrent tenant connections
@@ -1688,6 +1817,13 @@ Clear messaging - User understands:
 ## Plan Changelog
 
 Purpose: Track significant changes to this plan itself (not development progress).
+
+### 2026-01-29 - Added Phase 7.5 LLM Evaluation Pipeline (v1.3.0)
+- Added new Phase 7.5 for LLM evaluation infrastructure and quality assurance
+- Establishes automated testing for deterministic operations (100% accuracy target) and LLM-influenced operations (95% target)
+- Includes consistency tracking, drift detection, CI integration, and coverage-style reporting
+- Positioned between documentation and deployment to validate quality before first release
+- Rationale: Ensure reliable, consistent LLM behavior for schema operations and analysis; build user confidence through measurable quality metrics
 
 ### 2026-01-27 - Enhanced Phase 7 Documentation Scope (v1.2.2)
 - Established README.md as explicit documentation entrypoint with dedicated task
