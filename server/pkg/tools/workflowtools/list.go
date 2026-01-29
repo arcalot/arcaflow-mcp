@@ -3,6 +3,7 @@ package workflowtools
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log/slog"
 
 	"github.com/arcalot/arcaflow-mcp/server/pkg/arcaflow/workflow"
@@ -137,7 +138,10 @@ func NewWorkflowListTool(
 			if err != nil {
 				return protocol.ToolsCallResult{}, toolError(
 					protocol.ErrInvalidParams,
-					"workflow source load failed",
+					fmt.Sprintf(
+						"workflow source load failed: %s",
+						err.Error(),
+					),
 					loadErrorData(err),
 				)
 			}

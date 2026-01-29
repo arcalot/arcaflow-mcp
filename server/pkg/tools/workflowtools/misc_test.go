@@ -3,6 +3,7 @@ package workflowtools
 import (
 	"context"
 	"log/slog"
+	"strings"
 	"testing"
 	"time"
 
@@ -67,6 +68,28 @@ func TestLoadErrorDataIncludesTimeoutGuidance(t *testing.T) {
 	}
 	if guidance, ok := data["retry_guidance"].(string); !ok || guidance == "" {
 		t.Fatalf("expected retry guidance")
+	}
+}
+
+func TestWorkflowLoadFailureIncludesDetails(t *testing.T) {
+	t.Parallel()
+
+	loader := workflow.NewLoader()
+	tool := NewWorkflowListTool(loader, slog.Default())
+	_, errObj := tool.Handler(context.Background(), map[string]interface{}{
+		"source": map[string]interface{}{
+			"kind":     "unknown",
+			"location": "/tmp",
+		},
+	})
+	if errObj == nil {
+		t.Fatalf("expected load error")
+	}
+	if !strings.Contains(errObj.Message, "workflow source load failed:") {
+		t.Fatalf("expected load failure prefix in message")
+	}
+	if !strings.Contains(errObj.Message, "unsupported source kind") {
+		t.Fatalf("expected load failure detail in message")
 	}
 }
 

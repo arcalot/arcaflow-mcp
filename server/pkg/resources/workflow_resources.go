@@ -99,7 +99,7 @@ func (provider *WorkflowResourceProvider) Read(
 	if err != nil {
 		return nil, true, resourceError(
 			protocol.ErrInvalidParams,
-			"workflow source load failed",
+			fmt.Sprintf("workflow source load failed: %s", err.Error()),
 			map[string]string{"error": err.Error()},
 		)
 	}

@@ -6,6 +6,10 @@ When a workflow selector is missing and multiple workflows are found, the
 workflow tools return a discovery payload with selection guidance instead of
 failing. Use `workflow_discover` to preview the same guidance proactively.
 
+When a workflow source fails to load, tool error messages include the underlying
+failure detail. The error data also includes an `error` field and, for timeouts,
+`timeout_seconds` and `retry_guidance` to help refine the request.
+
 ### `workflow_discover`
 
 Discovers workflows available from a specified source and returns selection

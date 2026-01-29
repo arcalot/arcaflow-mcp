@@ -63,6 +63,7 @@ func TestWorkflowListInvalidKind(t *testing.T) {
 	})
 	if errObj == nil {
 		t.Fatalf("expected error for invalid kind")
+		return
 	}
 	if errObj.Code != protocol.ErrInvalidParams {
 		t.Fatalf("expected invalid params error")
@@ -75,6 +76,7 @@ func TestWorkflowListMissingSource(t *testing.T) {
 	_, errObj := tool.Handler(context.Background(), map[string]interface{}{})
 	if errObj == nil {
 		t.Fatalf("expected error for missing source")
+		return
 	}
 	if errObj.Code != protocol.ErrInvalidParams {
 		t.Fatalf("expected invalid params error")

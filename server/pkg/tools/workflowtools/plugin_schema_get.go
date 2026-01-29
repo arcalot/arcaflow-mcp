@@ -141,7 +141,10 @@ func NewPluginSchemaGetTool(
 			if err != nil {
 				return protocol.ToolsCallResult{}, toolError(
 					protocol.ErrInvalidParams,
-					"workflow source load failed",
+					fmt.Sprintf(
+						"workflow source load failed: %s",
+						err.Error(),
+					),
 					loadErrorData(err),
 				)
 			}
