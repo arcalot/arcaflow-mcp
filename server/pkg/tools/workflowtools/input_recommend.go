@@ -3,17 +3,16 @@ package workflowtools
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"strings"
 
 	"github.com/arcalot/arcaflow-mcp/server/pkg/arcaflow/workflow"
-	"github.com/arcalot/arcaflow-mcp/server/pkg/auth"
 	"github.com/arcalot/arcaflow-mcp/server/pkg/protocol"
-	"github.com/arcalot/arcaflow-mcp/server/pkg/state"
 )
 
-const workflowInputExportInputSchema = `{
+const workflowInputRecommendInputSchema = `{
   "type": "object",
   "properties": {
     "source": {
@@ -53,47 +52,36 @@ const workflowInputExportInputSchema = `{
       },
       "additionalProperties": false
     },
-    "session_id": {
+    "goal": {
       "type": "string",
-      "description": "Advanced: session ID for a stored draft. Only use if you just ran workflow_input_build and received this session_id."
-    },
-    "input": {
-      "type": "object",
-      "description": "Optional workflow input payload to export."
-    },
-    "format": {
-      "type": "string",
-      "description": "Export format: json or yaml.",
-      "default": "json"
+      "description": "Optional goal for the recommendation (e.g. max performance)."
     }
   },
   "required": ["source"],
   "additionalProperties": false
 }`
 
-// InputExportParams defines the workflow_input_export tool input.
-type InputExportParams struct {
-	Source    ListSourceParams       `json:"source"`
-	Selector  LoadSelectorParams     `json:"selector,omitempty"`
-	SessionID string                 `json:"session_id,omitempty"`
-	Input     map[string]interface{} `json:"input,omitempty"`
-	Format    string                 `json:"format,omitempty"`
+// InputRecommendParams defines the workflow_input_recommend tool input.
+type InputRecommendParams struct {
+	Source   ListSourceParams   `json:"source"`
+	Selector LoadSelectorParams `json:"selector,omitempty"`
+	Goal     string             `json:"goal,omitempty"`
 }
 
-// InputExportResult is the workflow_input_export tool output payload.
-type InputExportResult struct {
-	SessionID string                  `json:"session_id,omitempty"`
-	Workflow  SchemaWorkflow          `json:"workflow"`
-	Format    string                  `json:"format"`
-	Payload   string                  `json:"payload"`
-	Metadata  workflow.ExportMetadata `json:"metadata"`
+// InputRecommendResult is the workflow_input_recommend tool output payload.
+type InputRecommendResult struct {
+	Workflow        SchemaWorkflow  `json:"workflow"`
+	Goal            string          `json:"goal,omitempty"`
+	InputJSONSchema json.RawMessage `json:"input_json_schema"`
+	ExampleInput    json.RawMessage `json:"example_input"`
+	Generated       bool            `json:"generated"`
+	InputKey        string          `json:"input_key,omitempty"`
 }
 
-// NewWorkflowInputExportTool registers the workflow_input_export tool.
-func NewWorkflowInputExportTool(
+// NewWorkflowInputRecommendTool registers the workflow_input_recommend tool.
+func NewWorkflowInputRecommendTool(
 	loader *workflow.Loader,
 	parser *workflow.Parser,
-	stateManager *state.Manager,
 	logger *slog.Logger,
 ) protocol.ToolRegistration {
 	if logger == nil {
@@ -101,21 +89,19 @@ func NewWorkflowInputExportTool(
 	}
 	return protocol.ToolRegistration{
 		Definition: protocol.ToolDefinition{
-			Name: "workflow_input_export",
-			Description: "Validate and export final inputs for execution elsewhere " +
-				"(execution not supported here). STRONGLY prefer passing `input` " +
-				"directly; only use session_id if you just created a draft with " +
-				"workflow_input_build in the same conversation.",
-			InputSchema: json.RawMessage(workflowInputExportInputSchema),
+			Name: "workflow_input_recommend",
+			Description: "Recommend inputs for a workflow using schemas and " +
+				"examples. Prefer this over reading workflow files directly.",
+			InputSchema: json.RawMessage(workflowInputRecommendInputSchema),
 		},
 		Handler: func(
 			ctx context.Context,
 			arguments map[string]interface{},
 		) (protocol.ToolsCallResult, *protocol.ErrorObject) {
-			if loader == nil || parser == nil || stateManager == nil {
+			if loader == nil || parser == nil {
 				return protocol.ToolsCallResult{}, toolError(
 					protocol.ErrInternal,
-					"workflow input export not configured",
+					"workflow input recommendations not configured",
 					nil,
 				)
 			}
@@ -126,10 +112,6 @@ func NewWorkflowInputExportTool(
 					map[string]string{"error": ctx.Err().Error()},
 				)
 			}
-			if _, ok := auth.TenantIDFromContext(ctx); !ok {
-				ctx = auth.WithTenantID(ctx, "local")
-			}
-
 			payload, err := json.Marshal(arguments)
 			if err != nil {
 				return protocol.ToolsCallResult{}, toolError(
@@ -138,7 +120,7 @@ func NewWorkflowInputExportTool(
 					map[string]string{"error": err.Error()},
 				)
 			}
-			var params InputExportParams
+			var params InputRecommendParams
 			if err := json.Unmarshal(payload, &params); err != nil {
 				return protocol.ToolsCallResult{}, toolError(
 					protocol.ErrInvalidParams,
@@ -181,20 +163,6 @@ func NewWorkflowInputExportTool(
 				)
 			}
 
-			rawInput, sessionID, err := resolveValidationInput(
-				ctx,
-				stateManager,
-				params.SessionID,
-				params.Input,
-			)
-			if err != nil {
-				return protocol.ToolsCallResult{}, toolError(
-					protocol.ErrInvalidParams,
-					"input resolution failed",
-					map[string]string{"error": err.Error()},
-				)
-			}
-
 			parsed, err := parser.Parse(ctx, selected)
 			if err != nil {
 				return protocol.ToolsCallResult{}, toolError(
@@ -204,31 +172,39 @@ func NewWorkflowInputExportTool(
 				)
 			}
 
-			format, err := normalizeExportFormat(params.Format)
+			resolver := workflow.NewInputSchemaResolver()
+			resolvedInput, err := resolver.ResolveInputJSONSchema(ctx, selected)
 			if err != nil {
+				details := map[string]string{"error": err.Error()}
+				var resolutionErr workflow.NamespaceResolutionError
+				if errors.As(err, &resolutionErr) && resolutionErr.Hint != "" {
+					details["hint"] = resolutionErr.Hint
+				}
+				if strings.Contains(err.Error(), "no container runtime available") {
+					details["hint"] = "Install podman or docker to resolve plugin schemas."
+				}
 				return protocol.ToolsCallResult{}, toolError(
 					protocol.ErrInvalidParams,
-					"unsupported export format",
-					map[string]string{"error": err.Error()},
+					"workflow input schema resolution failed",
+					details,
 				)
 			}
 
-			exported, err := workflow.GenerateInputFile(
-				ctx,
-				parsed,
-				rawInput,
-				format,
-			)
-			if err != nil {
-				return protocol.ToolsCallResult{}, toolError(
-					protocol.ErrInvalidParams,
-					"input export failed",
-					map[string]string{"error": err.Error()},
-				)
+			example := parsed.InputExample
+			generated := false
+			if len(example) == 0 {
+				example, err = workflow.GenerateExampleInput(resolvedInput)
+				if err != nil {
+					return protocol.ToolsCallResult{}, toolError(
+						protocol.ErrInvalidParams,
+						"example input generation failed",
+						map[string]string{"error": err.Error()},
+					)
+				}
+				generated = true
 			}
 
-			result := InputExportResult{
-				SessionID: sessionID,
+			result := InputRecommendResult{
 				Workflow: SchemaWorkflow{
 					ID:   selected.ID,
 					Name: selected.Name,
@@ -240,26 +216,14 @@ func NewWorkflowInputExportTool(
 						Subdir:   selected.Source.Subdir,
 					},
 				},
-				Format:   string(exported.Format),
-				Payload:  string(exported.Payload),
-				Metadata: exported.Metadata,
+				Goal:            strings.TrimSpace(params.Goal),
+				InputJSONSchema: resolvedInput,
+				ExampleInput:    example,
+				Generated:       generated,
+				InputKey:        parsed.InputSchemaPath,
 			}
 
 			return renderJSONResult(result, logger)
 		},
-	}
-}
-
-func normalizeExportFormat(value string) (workflow.ExportFormat, error) {
-	if strings.TrimSpace(value) == "" {
-		return workflow.ExportFormatJSON, nil
-	}
-	switch strings.ToLower(strings.TrimSpace(value)) {
-	case string(workflow.ExportFormatJSON):
-		return workflow.ExportFormatJSON, nil
-	case string(workflow.ExportFormatYAML):
-		return workflow.ExportFormatYAML, nil
-	default:
-		return "", fmt.Errorf("unknown format %q", value)
 	}
 }

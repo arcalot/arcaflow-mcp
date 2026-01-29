@@ -19,6 +19,7 @@ func TestWorkflowInputBuildMerge(t *testing.T) {
 	workflowPath := filepath.Join(root, "input.yaml")
 	content := []byte(`
 version: v0.2.0
+steps: {}
 input:
   root: InputParams
   objects:
@@ -188,6 +189,7 @@ func TestWorkflowInputBuildInvalidDraft(t *testing.T) {
 	workflowPath := filepath.Join(root, "input.yaml")
 	content := []byte(`
 version: v0.2.0
+steps: {}
 input:
   root: InputParams
   objects:
@@ -255,6 +257,7 @@ func TestWorkflowInputBuildSelectorError(t *testing.T) {
 	workflowPath := filepath.Join(root, "input.yaml")
 	content := []byte(`
 version: v0.2.0
+steps: {}
 input:
   root: InputParams
   objects:

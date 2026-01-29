@@ -91,8 +91,9 @@ func NewWorkflowDescribeTool(
 	}
 	return protocol.ToolRegistration{
 		Definition: protocol.ToolDefinition{
-			Name:        "workflow_describe",
-			Description: "Get a human-readable description of a workflow.",
+			Name: "workflow_describe",
+			Description: "Summarize workflow metadata and steps to guide input " +
+				"planning and recommendations.",
 			InputSchema: json.RawMessage(workflowDescribeInputSchema),
 		},
 		Handler: func(

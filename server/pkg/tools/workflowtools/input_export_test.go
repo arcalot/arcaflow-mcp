@@ -20,6 +20,7 @@ func TestWorkflowInputExportJSON(t *testing.T) {
 	workflowPath := filepath.Join(root, "export.yaml")
 	content := []byte(`
 version: v0.2.0
+steps: {}
 input:
   root: InputParams
   objects:
@@ -76,6 +77,7 @@ func TestWorkflowInputExportFromSessionYAML(t *testing.T) {
 	workflowPath := filepath.Join(root, "export.yaml")
 	content := []byte(`
 version: v0.2.0
+steps: {}
 input:
   root: InputParams
   objects:
@@ -152,6 +154,7 @@ func TestWorkflowInputExportInvalidFormat(t *testing.T) {
 	workflowPath := filepath.Join(root, "export.yaml")
 	content := []byte(`
 version: v0.2.0
+steps: {}
 input:
   root: InputParams
   objects:

@@ -93,6 +93,7 @@ func TestPluginSchemaGetMissingStep(t *testing.T) {
 	})
 	if errObj == nil {
 		t.Fatalf("expected missing step error")
+		return
 	}
 	if errObj.Code != protocol.ErrInvalidParams {
 		t.Fatalf("expected invalid params error")

@@ -30,6 +30,7 @@ func TestWorkflowLoadSelectorRequired(t *testing.T) {
 	root := t.TempDir()
 	content := []byte(`
 version: v0.2.0
+steps: {}
 input:
   root: InputParams
   objects:
@@ -73,6 +74,7 @@ func TestWorkflowSchemaGetContextCancelled(t *testing.T) {
 	root := t.TempDir()
 	content := []byte(`
 version: v0.2.0
+steps: {}
 input:
   root: InputParams
   objects:
@@ -114,6 +116,7 @@ func TestWorkflowInputValidateMissingDraft(t *testing.T) {
 	root := t.TempDir()
 	content := []byte(`
 version: v0.2.0
+steps: {}
 input:
   root: InputParams
   objects:

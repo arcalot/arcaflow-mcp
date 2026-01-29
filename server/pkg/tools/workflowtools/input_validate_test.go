@@ -19,6 +19,7 @@ func TestWorkflowInputValidatePayload(t *testing.T) {
 	workflowPath := filepath.Join(root, "validate.yaml")
 	content := []byte(`
 version: v0.2.0
+steps: {}
 input:
   root: InputParams
   objects:
@@ -67,6 +68,7 @@ func TestWorkflowInputValidateFromSession(t *testing.T) {
 	workflowPath := filepath.Join(root, "validate.yaml")
 	content := []byte(`
 version: v0.2.0
+steps: {}
 input:
   root: InputParams
   objects:

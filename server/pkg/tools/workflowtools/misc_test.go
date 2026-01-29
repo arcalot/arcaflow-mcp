@@ -84,6 +84,7 @@ func TestWorkflowLoadFailureIncludesDetails(t *testing.T) {
 	})
 	if errObj == nil {
 		t.Fatalf("expected load error")
+		return
 	}
 	if !strings.Contains(errObj.Message, "workflow source load failed:") {
 		t.Fatalf("expected load failure prefix in message")

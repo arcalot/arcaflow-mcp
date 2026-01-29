@@ -12,7 +12,7 @@ import (
 	"github.com/arcalot/arcaflow-mcp/server/pkg/protocol"
 )
 
-func TestWorkflowInputExamplesGet(t *testing.T) {
+func TestWorkflowInputRecommend(t *testing.T) {
 	root := t.TempDir()
 	workflowPath := filepath.Join(root, "example.yaml")
 	content := []byte(`
@@ -38,7 +38,7 @@ outputs:
 
 	loader := workflow.NewLoader()
 	parser := workflow.NewParser()
-	tool := NewWorkflowInputExamplesTool(loader, parser, slog.Default())
+	tool := NewWorkflowInputRecommendTool(loader, parser, slog.Default())
 	result, errObj := tool.Handler(context.Background(), map[string]interface{}{
 		"source": map[string]interface{}{
 			"kind":     "filesystem",
@@ -47,14 +47,21 @@ outputs:
 		"selector": map[string]interface{}{
 			"path": "example.yaml",
 		},
+		"goal": "max performance",
 	})
 	if errObj != nil {
 		t.Fatalf("expected no error, got %v", errObj)
 	}
 
-	var payload InputExamplesResult
+	var payload InputRecommendResult
 	if err := json.Unmarshal([]byte(result.Content[0].Text), &payload); err != nil {
 		t.Fatalf("unmarshal result: %v", err)
+	}
+	if payload.Goal != "max performance" {
+		t.Fatalf("expected goal to be preserved")
+	}
+	if len(payload.InputJSONSchema) == 0 {
+		t.Fatalf("expected input schema")
 	}
 	if len(payload.ExampleInput) == 0 {
 		t.Fatalf("expected example input")
@@ -64,10 +71,10 @@ outputs:
 	}
 }
 
-func TestWorkflowInputExamplesMissingSource(t *testing.T) {
+func TestWorkflowInputRecommendMissingSource(t *testing.T) {
 	loader := workflow.NewLoader()
 	parser := workflow.NewParser()
-	tool := NewWorkflowInputExamplesTool(loader, parser, slog.Default())
+	tool := NewWorkflowInputRecommendTool(loader, parser, slog.Default())
 	_, errObj := tool.Handler(context.Background(), map[string]interface{}{})
 	if errObj == nil {
 		t.Fatalf("expected missing source error")
@@ -78,10 +85,10 @@ func TestWorkflowInputExamplesMissingSource(t *testing.T) {
 	}
 }
 
-func TestWorkflowInputExamplesInvalidArguments(t *testing.T) {
+func TestWorkflowInputRecommendInvalidArguments(t *testing.T) {
 	loader := workflow.NewLoader()
 	parser := workflow.NewParser()
-	tool := NewWorkflowInputExamplesTool(loader, parser, slog.Default())
+	tool := NewWorkflowInputRecommendTool(loader, parser, slog.Default())
 	_, errObj := tool.Handler(context.Background(), map[string]interface{}{
 		"bad": make(chan int),
 	})
@@ -90,7 +97,7 @@ func TestWorkflowInputExamplesInvalidArguments(t *testing.T) {
 	}
 }
 
-func TestWorkflowInputExamplesSelectorRequired(t *testing.T) {
+func TestWorkflowInputRecommendSelectorRequired(t *testing.T) {
 	root := t.TempDir()
 	content := []byte(`
 version: v0.2.0
@@ -118,7 +125,7 @@ outputs:
 
 	loader := workflow.NewLoader()
 	parser := workflow.NewParser()
-	tool := NewWorkflowInputExamplesTool(loader, parser, slog.Default())
+	tool := NewWorkflowInputRecommendTool(loader, parser, slog.Default())
 	result, errObj := tool.Handler(context.Background(), map[string]interface{}{
 		"source": map[string]interface{}{
 			"kind":     "filesystem",
@@ -138,7 +145,7 @@ outputs:
 	}
 }
 
-func TestWorkflowInputExamplesCanceledContext(t *testing.T) {
+func TestWorkflowInputRecommendCanceledContext(t *testing.T) {
 	root := t.TempDir()
 	workflowPath := filepath.Join(root, "example.yaml")
 	content := []byte(`
@@ -164,7 +171,7 @@ outputs:
 
 	loader := workflow.NewLoader()
 	parser := workflow.NewParser()
-	tool := NewWorkflowInputExamplesTool(loader, parser, slog.Default())
+	tool := NewWorkflowInputRecommendTool(loader, parser, slog.Default())
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 	_, errObj := tool.Handler(ctx, map[string]interface{}{
@@ -181,10 +188,10 @@ outputs:
 	}
 }
 
-func TestWorkflowInputExamplesInvalidSourceKind(t *testing.T) {
+func TestWorkflowInputRecommendInvalidSourceKind(t *testing.T) {
 	loader := workflow.NewLoader()
 	parser := workflow.NewParser()
-	tool := NewWorkflowInputExamplesTool(loader, parser, slog.Default())
+	tool := NewWorkflowInputRecommendTool(loader, parser, slog.Default())
 	_, errObj := tool.Handler(context.Background(), map[string]interface{}{
 		"source": map[string]interface{}{
 			"kind":     "invalid",

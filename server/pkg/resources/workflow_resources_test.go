@@ -19,6 +19,7 @@ func TestWorkflowSchemaResourceReadCachesList(t *testing.T) {
 	workflowPath := filepath.Join(root, "workflow.yaml")
 	content := []byte(
 		"version: v0.1\n" +
+		"steps: {}\n" +
 			"input:\n" +
 			"  root: InputParams\n" +
 			"  objects:\n" +
@@ -153,6 +154,7 @@ func TestWorkflowExampleResourceReadGeneratesExample(t *testing.T) {
 	workflowPath := filepath.Join(root, "workflow.yaml")
 	content := []byte(
 		"version: v0.1\n" +
+		"steps: {}\n" +
 			"input:\n" +
 			"  root: InputParams\n" +
 			"  objects:\n" +

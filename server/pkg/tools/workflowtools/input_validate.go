@@ -92,9 +92,9 @@ func NewWorkflowInputValidateTool(
 	return protocol.ToolRegistration{
 		Definition: protocol.ToolDefinition{
 			Name: "workflow_input_validate",
-			Description: "Validate workflow inputs. STRONGLY prefer passing `input` " +
-				"directly; only use session_id if you just created a draft with " +
-				"workflow_input_build in the same conversation.",
+			Description: "Validate recommended inputs before sharing. STRONGLY " +
+				"prefer passing `input` directly; only use session_id if you just " +
+				"created a draft with workflow_input_build in the same conversation.",
 			InputSchema: json.RawMessage(workflowInputValidateInputSchema),
 		},
 		Handler: func(

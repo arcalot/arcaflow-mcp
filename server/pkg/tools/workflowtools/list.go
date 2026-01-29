@@ -88,8 +88,9 @@ func NewWorkflowListTool(
 	}
 	return protocol.ToolRegistration{
 		Definition: protocol.ToolDefinition{
-			Name:        "workflow_list",
-			Description: "List workflows available from a source.",
+			Name: "workflow_list",
+			Description: "List workflows available from a source to select " +
+				"the target workflow without scanning files manually.",
 			InputSchema: json.RawMessage(workflowListInputSchema),
 		},
 		Handler: func(

@@ -91,8 +91,8 @@ func NewPluginSchemaGetTool(
 	}
 	return protocol.ToolRegistration{
 		Definition: protocol.ToolDefinition{
-			Name:        "plugin_schema_get",
-			Description: "Get plugin schemas referenced by a workflow.",
+			Name: "plugin_schema_get",
+			Description: "Get plugin schemas referenced by workflow steps.",
 			InputSchema: json.RawMessage(pluginSchemaGetInputSchema),
 		},
 		Handler: func(

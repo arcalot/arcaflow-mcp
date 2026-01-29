@@ -115,7 +115,8 @@ func NewWorkflowInputBuildTool(
 	return protocol.ToolRegistration{
 		Definition: protocol.ToolDefinition{
 			Name: "workflow_input_build",
-			Description: "Build or update draft inputs. For multi-step builds, pass " +
+			Description: "Build or update draft inputs from schema or user " +
+				"goals without reading workflow files. For multi-step builds, pass " +
 				"`input` each time; disable `validate` until required fields are set.",
 			InputSchema: json.RawMessage(workflowInputBuildInputSchema),
 		},

@@ -192,6 +192,7 @@ func TestWorkflowLoadUnknownID(t *testing.T) {
 	})
 	if errObj == nil {
 		t.Fatalf("expected error for missing id")
+		return
 	}
 	if errObj.Code != protocol.ErrInvalidParams {
 		t.Fatalf("expected invalid params error")

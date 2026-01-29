@@ -55,6 +55,14 @@ func TestToolHandlersRequireDependencies(t *testing.T) {
 			},
 		},
 		{
+			name: "workflow_input_recommend",
+			call: func() *protocol.ErrorObject {
+				tool := NewWorkflowInputRecommendTool(nil, nil, nil)
+				_, errObj := tool.Handler(context.Background(), map[string]interface{}{})
+				return errObj
+			},
+		},
+		{
 			name: "plugin_schema_get",
 			call: func() *protocol.ErrorObject {
 				tool := NewPluginSchemaGetTool(nil, nil)

@@ -25,21 +25,21 @@ func TestLoadFromFilesystem(t *testing.T) {
 
 	if err := os.WriteFile(
 		filepath.Join(root, "a.yaml"),
-		[]byte("name: workflow-a"),
+		[]byte("version: v0.2.0\nsteps: {}\n"),
 		0o644,
 	); err != nil {
 		t.Fatalf("write workflow: %v", err)
 	}
 	if err := os.WriteFile(
 		filepath.Join(root, "nested", "b.yml"),
-		[]byte("name: workflow-b"),
+		[]byte("version: v0.2.0\nsteps: {}\n"),
 		0o644,
 	); err != nil {
 		t.Fatalf("write workflow: %v", err)
 	}
 	if err := os.WriteFile(
 		filepath.Join(root, "nested", "c.json"),
-		[]byte(`{"name":"workflow-c"}`),
+		[]byte(`{"version":"v0.2.0","steps":{}}`),
 		0o644,
 	); err != nil {
 		t.Fatalf("write workflow: %v", err)
@@ -202,8 +202,12 @@ func TestLoadFromGit(t *testing.T) {
 	fake := &fakeGitClient{
 		commit: "abc123",
 		files: map[string][]byte{
-			filepath.Join("workflows", "sample.yaml"): []byte("name: git"),
-			filepath.Join("workflows", "sample.json"): []byte(`{"name":"git-json"}`),
+			filepath.Join("workflows", "sample.yaml"): []byte(
+				"version: v0.2.0\nsteps: {}\n",
+			),
+			filepath.Join("workflows", "sample.json"): []byte(
+				`{"version":"v0.2.0","steps":{}}`,
+			),
 			"README.md": []byte("ignore"),
 		},
 	}
@@ -241,7 +245,9 @@ func TestLoadWithDetailsReportsGitProgress(t *testing.T) {
 	client := &progressGitClient{
 		commit: "abc123",
 		files: map[string][]byte{
-			filepath.Join("workflows", "sample.yaml"): []byte("name: git"),
+			filepath.Join("workflows", "sample.yaml"): []byte(
+				"version: v0.2.0\nsteps: {}\n",
+			),
 		},
 	}
 	loader := NewLoader(
@@ -299,7 +305,11 @@ func TestLoadFromFilesystemSingleFile(t *testing.T) {
 	ctx := context.Background()
 	root := t.TempDir()
 	path := filepath.Join(root, "single.yaml")
-	if err := os.WriteFile(path, []byte("name: single"), 0o644); err != nil {
+	if err := os.WriteFile(
+		path,
+		[]byte("version: v0.2.0\nsteps: {}\n"),
+		0o644,
+	); err != nil {
 		t.Fatalf("write workflow: %v", err)
 	}
 
@@ -331,6 +341,75 @@ func TestLoadFromFilesystemRejectsNonWorkflowFile(t *testing.T) {
 	}
 }
 
+func TestLoadFromFilesystemSkipsHiddenAndNonWorkflowFiles(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	root := t.TempDir()
+
+	if err := os.WriteFile(
+		filepath.Join(root, "workflow.yaml"),
+		[]byte("version: v0.2.0\nsteps: {}\n"),
+		0o644,
+	); err != nil {
+		t.Fatalf("write workflow: %v", err)
+	}
+	if err := os.MkdirAll(filepath.Join(root, "examples"), 0o755); err != nil {
+		t.Fatalf("mkdir examples: %v", err)
+	}
+	if err := os.WriteFile(
+		filepath.Join(root, "examples", "workflow.yaml"),
+		[]byte("version: v0.2.0\nsteps: {}\n"),
+		0o644,
+	); err != nil {
+		t.Fatalf("write example workflow: %v", err)
+	}
+	if err := os.MkdirAll(
+		filepath.Join(root, ".github", "workflows"),
+		0o755,
+	); err != nil {
+		t.Fatalf("mkdir github workflows: %v", err)
+	}
+	if err := os.WriteFile(
+		filepath.Join(root, ".github", "workflows", "ci.yml"),
+		[]byte("name: CI\non: [push]\njobs: {}\n"),
+		0o644,
+	); err != nil {
+		t.Fatalf("write ci workflow: %v", err)
+	}
+	if err := os.MkdirAll(filepath.Join(root, ".cache"), 0o755); err != nil {
+		t.Fatalf("mkdir cache: %v", err)
+	}
+	if err := os.WriteFile(
+		filepath.Join(root, ".cache", "workflow.yaml"),
+		[]byte("version: v0.2.0\nsteps: {}\n"),
+		0o644,
+	); err != nil {
+		t.Fatalf("write cached workflow: %v", err)
+	}
+
+	loader := NewLoader()
+	index, err := loader.LoadFromFilesystem(ctx, root)
+	if err != nil {
+		t.Fatalf("load workflows: %v", err)
+	}
+
+	if got := len(index.Workflows); got != 2 {
+		t.Fatalf("expected 2 workflows, got %d", got)
+	}
+	if index.Workflows[0].Path != filepath.Join("examples", "workflow.yaml") {
+		t.Fatalf(
+			"expected first workflow path examples/workflow.yaml, got %s",
+			index.Workflows[0].Path,
+		)
+	}
+	if index.Workflows[1].Path != "workflow.yaml" {
+		t.Fatalf(
+			"expected second workflow path workflow.yaml, got %s",
+			index.Workflows[1].Path,
+		)
+	}
+}
+
 func TestLoaderOptions(t *testing.T) {
 	t.Parallel()
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
@@ -359,7 +438,7 @@ func TestLoadDirectoryUsesFingerprint(t *testing.T) {
 	root := t.TempDir()
 	if err := os.WriteFile(
 		filepath.Join(root, "workflow.yaml"),
-		[]byte("name: workflow"),
+		[]byte("version: v0.2.0\nsteps: {}\n"),
 		0o644,
 	); err != nil {
 		t.Fatalf("write workflow: %v", err)
@@ -398,7 +477,7 @@ func TestLoadDirectoryCacheHit(t *testing.T) {
 	root := t.TempDir()
 	if err := os.WriteFile(
 		filepath.Join(root, "workflow.yaml"),
-		[]byte("name: workflow"),
+		[]byte("version: v0.2.0\nsteps: {}\n"),
 		0o644,
 	); err != nil {
 		t.Fatalf("write workflow: %v", err)

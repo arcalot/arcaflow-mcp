@@ -112,8 +112,9 @@ func NewWorkflowDiscoverTool(
 	}
 	return protocol.ToolRegistration{
 		Definition: protocol.ToolDefinition{
-			Name:        "workflow_discover",
-			Description: "Discover workflows and selection guidance from a source.",
+			Name: "workflow_discover",
+			Description: "Discover workflows with selection guidance from a " +
+				"source. Use to identify the workflow instead of inspecting files.",
 			InputSchema: json.RawMessage(workflowDiscoverInputSchema),
 		},
 		Handler: func(

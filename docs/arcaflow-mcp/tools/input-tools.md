@@ -6,6 +6,12 @@ When a workflow selector is missing and multiple workflows are found, the
 workflow tools return a discovery payload with selection guidance instead of
 failing. Use `workflow_discover` to preview the same guidance proactively.
 
+When users ask what inputs they should use or request input recommendations,
+prefer `workflow_schema_get` and `workflow_input_examples_get` to ground the
+response in the workflow's schema. Use `workflow_input_build` to assemble draft
+inputs and `workflow_input_validate`/`workflow_input_export` to confirm and share
+validated payloads.
+
 When a workflow source fails to load, tool error messages include the underlying
 failure detail. The error data also includes an `error` field and, for timeouts,
 `timeout_seconds` and `retry_guidance` to help refine the request.
@@ -14,6 +20,9 @@ failure detail. The error data also includes an `error` field and, for timeouts,
 
 Discovers workflows available from a specified source and returns selection
 guidance, cache status, and timing information.
+
+For filesystem sources, discovery skips hidden directories and only returns
+Arcaflow workflow documents (files with `version` and `steps`).
 
 Input schema:
 
@@ -282,10 +291,11 @@ Example response:
 
 ### `workflow_schema_get`
 
-Retrieves input/output schemas from a workflow document. Input schemas come from
-`input` and are resolved against sub-workflows and plugin schemas referenced by
-Arcaflow namespaces. Output schemas come from `output`/`outputs` with optional
-`outputSchema` refinement.
+Retrieves input/output schemas from a workflow document. Use it when users ask
+what inputs are needed or when you need to recommend inputs for a workflow. Input
+schemas come from `input` and are resolved against sub-workflows and plugin
+schemas referenced by Arcaflow namespaces. Output schemas come from
+`output`/`outputs` with optional `outputSchema` refinement.
 
 Schema resolution may execute plugin containers to fetch their input schemas. If
 no container runtime is available, schema resolution will fail with a clear
@@ -386,6 +396,106 @@ Example response:
     "input_key": "input",
     "output_key": "outputs"
   }
+}
+```
+
+### `workflow_input_recommend`
+
+Recommends workflow inputs using schemas and generated examples. Use this tool
+when users ask, "What inputs do you recommend?" without reading workflow files
+directly.
+
+Input schema:
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "source": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "description": "Workflow source kind: filesystem, url, or git."
+        },
+        "location": {
+          "type": "string",
+          "description": "Filesystem root, URL, or git repository URL."
+        },
+        "ref": {
+          "type": "string",
+          "description": "Optional git ref (branch, tag, or commit)."
+        },
+        "subdir": {
+          "type": "string",
+          "description": "Optional git subdirectory to scan for workflows."
+        }
+      },
+      "required": ["kind", "location"],
+      "additionalProperties": false
+    },
+    "selector": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Workflow ID to load."
+        },
+        "path": {
+          "type": "string",
+          "description": "Workflow path to load."
+        }
+      },
+      "additionalProperties": false
+    },
+    "goal": {
+      "type": "string",
+      "description": "Optional goal for the recommendation (e.g. max performance)."
+    }
+  },
+  "required": ["source"],
+  "additionalProperties": false
+}
+```
+
+Example request:
+
+```json
+{
+  "source": {
+    "kind": "filesystem",
+    "location": "/workflows"
+  },
+  "selector": {
+    "path": "perf-test.yaml"
+  },
+  "goal": "max performance"
+}
+```
+
+Example response:
+
+```json
+{
+  "workflow": {
+    "id": "b87f7e7e0f8b1d4b5b0d4b1f8d1f2cb5e1a8c7d0e14f1f2e2d4c3b5a6f7e8d9c",
+    "name": "perf-test",
+    "path": "perf-test.yaml",
+    "source": {
+      "kind": "filesystem",
+      "location": "/workflows"
+    }
+  },
+  "goal": "max performance",
+  "input_json_schema": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object"
+  },
+  "example_input": {
+    "sample": "value"
+  },
+  "generated": true,
+  "input_key": "input"
 }
 ```
 
@@ -596,7 +706,8 @@ Example response:
 ### `workflow_input_build`
 
 Builds or updates a draft workflow input payload, storing it in a session and
-optionally validating it against the workflow input schema.
+optionally validating it against the workflow input schema. Use it to assemble
+candidate inputs suggested from schema analysis or user requirements.
 
 Input schema:
 
@@ -710,7 +821,8 @@ Example response:
 ### `workflow_input_validate`
 
 Validates a workflow input payload or an existing draft input session against
-the workflow input schema.
+the workflow input schema. Use it to confirm recommended inputs before sharing
+them as ready-to-run payloads.
 
 Input schema:
 
@@ -809,6 +921,7 @@ Example response:
 ### `workflow_input_export`
 
 Validates and exports workflow inputs as deterministic JSON or YAML payloads.
+Use it when you need to hand a user a finalized payload for execution elsewhere.
 
 Input schema:
 
@@ -916,7 +1029,8 @@ Example response:
 
 ### `workflow_input_examples_get`
 
-Returns an example input payload generated from the workflow input schema.
+Returns an example input payload generated from the workflow input schema. Use
+this as a starting point for input recommendations when users ask what to run.
 
 Input schema:
 

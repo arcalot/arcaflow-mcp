@@ -130,6 +130,25 @@ func NewWorkflowResultsParseTool(
 	)
 }
 
+// NewWorkflowResultsDescribeTool registers the workflow_results_describe tool.
+func NewWorkflowResultsDescribeTool(
+	analysisClient *analysis.Client,
+	logger *slog.Logger,
+) protocol.ToolRegistration {
+	return newResultsAnalysisTool(
+		"workflow_results_describe",
+		"Describe workflow results from a file or payload. Use when the user " +
+			"asks to describe results at a file path. If a file path is provided, " +
+			"use source.kind=filesystem and do not call read_file.",
+		analysisClient,
+		logger,
+		func(response analysis.AnalyzeResponse) (interface{}, error) {
+			return ResultsParseResult{Analysis: response.Analysis}, nil
+		},
+		false,
+	)
+}
+
 // NewWorkflowResultsAnalyzeTool registers the workflow_results_analyze tool.
 func NewWorkflowResultsAnalyzeTool(
 	analysisClient *analysis.Client,

@@ -277,6 +277,13 @@ func registerDefaultTools(
 		),
 	)
 	server.RegisterTool(
+		workflowtools.NewWorkflowInputRecommendTool(
+			loader,
+			parser,
+			slog.Default(),
+		),
+	)
+	server.RegisterTool(
 		workflowtools.NewWorkflowInputExamplesTool(
 			loader,
 			parser,
@@ -288,6 +295,9 @@ func registerDefaultTools(
 	)
 	server.RegisterTool(
 		workflowtools.NewWorkflowResultsParseTool(analysisClient, slog.Default()),
+	)
+	server.RegisterTool(
+		workflowtools.NewWorkflowResultsDescribeTool(analysisClient, slog.Default()),
 	)
 	server.RegisterTool(
 		workflowtools.NewWorkflowResultsAnalyzeTool(analysisClient, slog.Default()),

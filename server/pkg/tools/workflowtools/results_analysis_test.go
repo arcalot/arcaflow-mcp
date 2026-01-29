@@ -35,6 +35,28 @@ func TestWorkflowResultsParseTool(t *testing.T) {
 	}
 }
 
+func TestWorkflowResultsDescribeTool(t *testing.T) {
+	t.Parallel()
+
+	server := newAnalysisTestServer(t)
+	t.Cleanup(server.Close)
+
+	client := analysis.NewClient(server.URL)
+	tool := NewWorkflowResultsDescribeTool(client, slog.Default())
+	result, errObj := tool.Handler(context.Background(), analysisCompareArgs())
+	if errObj != nil {
+		t.Fatalf("expected no error, got %v", errObj)
+	}
+
+	var payload ResultsParseResult
+	if err := json.Unmarshal([]byte(result.Content[0].Text), &payload); err != nil {
+		t.Fatalf("unmarshal result: %v", err)
+	}
+	if payload.Analysis.RecordCount == 0 {
+		t.Fatalf("expected record count")
+	}
+}
+
 func TestWorkflowResultsAnalyzeTool(t *testing.T) {
 	t.Parallel()
 
@@ -201,6 +223,16 @@ func TestWorkflowResultsAnalyzeMissingClient(t *testing.T) {
 	t.Parallel()
 
 	tool := NewWorkflowResultsAnalyzeTool(nil, slog.Default())
+	_, errObj := tool.Handler(context.Background(), analysisToolArgs())
+	if errObj == nil {
+		t.Fatalf("expected missing analysis client error")
+	}
+}
+
+func TestWorkflowResultsDescribeMissingClient(t *testing.T) {
+	t.Parallel()
+
+	tool := NewWorkflowResultsDescribeTool(nil, slog.Default())
 	_, errObj := tool.Handler(context.Background(), analysisToolArgs())
 	if errObj == nil {
 		t.Fatalf("expected missing analysis client error")

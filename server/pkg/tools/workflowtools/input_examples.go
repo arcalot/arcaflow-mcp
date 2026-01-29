@@ -82,8 +82,9 @@ func NewWorkflowInputExamplesTool(
 	}
 	return protocol.ToolRegistration{
 		Definition: protocol.ToolDefinition{
-			Name:        "workflow_input_examples_get",
-			Description: "Get example input payloads for a workflow.",
+			Name: "workflow_input_examples_get",
+			Description: "Generate example inputs to recommend starting " +
+				"values. Prefer this over reading example YAML files.",
 			InputSchema: json.RawMessage(workflowInputExamplesInputSchema),
 		},
 		Handler: func(

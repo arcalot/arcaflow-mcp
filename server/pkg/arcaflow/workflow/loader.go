@@ -435,6 +435,12 @@ func (loader *Loader) loadSingleFile(
 			err,
 		)
 	}
+	if !isWorkflowDocument(content) {
+		return WorkflowIndex{}, false, time.Since(startedAt), fmt.Errorf(
+			"not a workflow document: %s",
+			path,
+		)
+	}
 
 	workflow := workflowFromContent(SourceMetadata{
 		Kind:     SourceFilesystem,
@@ -516,6 +522,9 @@ func scanDirectory(
 			return ctx.Err()
 		}
 		if entry.IsDir() {
+			if path != scanRoot && shouldSkipWorkflowDir(entry.Name()) {
+				return filepath.SkipDir
+			}
 			return nil
 		}
 		if !isWorkflowFile(path) {
@@ -536,6 +545,9 @@ func scanDirectory(
 		content, err := os.ReadFile(path)
 		if err != nil {
 			return fmt.Errorf("read workflow file: %w", err)
+		}
+		if !isWorkflowDocument(content) {
+			return nil
 		}
 
 		workflow := workflowFromContent(
@@ -565,6 +577,33 @@ func scanDirectory(
 func isWorkflowFile(path string) bool {
 	ext := strings.ToLower(filepath.Ext(path))
 	return ext == ".yaml" || ext == ".yml" || ext == ".json"
+}
+
+// shouldSkipWorkflowDir skips hidden/cache directories for discovery signal.
+func shouldSkipWorkflowDir(name string) bool {
+	if strings.HasPrefix(name, ".") {
+		return true
+	}
+	switch name {
+	case "__pycache__", "node_modules", "vendor":
+		return true
+	default:
+		return false
+	}
+}
+
+// isWorkflowDocument guards against non-Arcaflow YAML/JSON files.
+func isWorkflowDocument(content []byte) bool {
+	root, err := ParseDocument(content)
+	if err != nil {
+		return false
+	}
+	version, ok := root["version"].(string)
+	if !ok || strings.TrimSpace(version) == "" {
+		return false
+	}
+	_, ok = root["steps"].(map[string]interface{})
+	return ok
 }
 
 func workflowFromContent(

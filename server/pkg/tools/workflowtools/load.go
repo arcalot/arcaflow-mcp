@@ -98,8 +98,9 @@ func NewWorkflowLoadTool(
 	}
 	return protocol.ToolRegistration{
 		Definition: protocol.ToolDefinition{
-			Name:        "workflow_load",
-			Description: "Load a workflow document from a source.",
+			Name: "workflow_load",
+			Description: "Load a workflow document after selecting the " +
+				"workflow to inspect.",
 			InputSchema: json.RawMessage(workflowLoadInputSchema),
 		},
 		Handler: func(

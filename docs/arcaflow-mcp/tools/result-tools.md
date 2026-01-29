@@ -10,6 +10,8 @@ load and parse data without returning huge payloads to the client.
 Routing hints (for natural language clients):
 - "Analyze results at /path/to/file.json" → `workflow_results_analyze` with
   `source.kind=filesystem`.
+- "Describe results at /path/to/file.yaml" → `workflow_results_describe` with
+  `source.kind=filesystem`.
 - "Give me KPIs only from /path/to/file.json" → `workflow_results_metrics_extract`
   with `source.kind=filesystem`.
 - Avoid loading large files with generic file tools; use `source` instead.
@@ -86,6 +88,89 @@ Example response:
 ### `workflow_results_parse`
 
 Parses result payloads and returns summary statistics.
+
+### `workflow_results_describe`
+
+Describes workflow results from a file or payload, returning summary statistics
+without suggestions. Use it when a user asks to describe results at a path.
+
+Input schema:
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "results": {
+      "type": "array",
+      "description": "Result payloads to analyze.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "format": {
+            "type": "string",
+            "description": "Result format hint: json, yaml, yml, log, or txt."
+          },
+          "payload": {
+            "description": "Parsed result payload or raw string."
+          }
+        },
+        "required": ["payload"],
+        "additionalProperties": false
+      },
+      "minItems": 1
+    },
+    "source": {
+      "type": "object",
+      "description": "Optional results file source for large payloads or when a file path is provided.",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "description": "Result source kind: filesystem or url (use filesystem for local paths)."
+        },
+        "location": {
+          "type": "string",
+          "description": "Filesystem path or URL for the result file (absolute paths preferred)."
+        }
+      },
+      "required": ["kind", "location"],
+      "additionalProperties": false
+    },
+    "format": {
+      "type": "string",
+      "description": "Optional format hint for source: json, yaml, yml, log, or txt."
+    }
+  },
+  "anyOf": [
+    {"required": ["results"]},
+    {"required": ["source"]}
+  ],
+  "additionalProperties": false
+}
+```
+
+Example request:
+
+```json
+{
+  "source": {
+    "kind": "filesystem",
+    "location": "/path/to/result.json"
+  }
+}
+```
+
+Example response:
+
+```json
+{
+  "analysis": {
+    "success_rate": 1.0,
+    "metric_stats": {},
+    "record_count": 1,
+    "findings": []
+  }
+}
+```
 
 Input schema:
 

@@ -97,8 +97,9 @@ func NewWorkflowSchemaGetTool(
 	}
 	return protocol.ToolRegistration{
 		Definition: protocol.ToolDefinition{
-			Name:        "workflow_schema_get",
-			Description: "Get workflow input and output schemas.",
+			Name: "workflow_schema_get",
+			Description: "Resolve workflow input/output schemas to recommend " +
+				"inputs. Prefer this over reading workflow files directly.",
 			InputSchema: json.RawMessage(workflowSchemaGetInputSchema),
 		},
 		Handler: func(
