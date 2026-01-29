@@ -51,8 +51,8 @@ graph LR
 
 | Component | Purpose | Required For |
 |-----------|---------|--------------|
-| **Go MCP Server** | MCP protocol handler, workflow loading, input validation | Input construction (always required) |
-| **Python Analysis Engine** | Result parsing, statistical analysis, optimization suggestions | Result analysis (optional for input-only workflows) |
+| **Go MCP Server** | MCP protocol handler, workflow loading, input validation | Wokflow input construction (always required) |
+| **Python Analysis Engine** | Result parsing, statistical analysis, optimization suggestions | Workflow result analysis and input refinement |
 
 **When do you need both components?**
 - **Input Construction Only**: Go server is sufficient
@@ -74,56 +74,169 @@ graph LR
 
 ### For End Users
 
-Choose your deployment mode:
+Choose your deployment method:
+
+#### Option 1: Use Pre-Built Containers (Fastest) ⚡
+
+**Important**: Arcaflow MCP requires **TWO components**:
+- **Go MCP Server** (protocol handler)
+- **Python Analysis Engine** (result analysis)
+
+**Local Mode** (Desktop AI clients):
+
+```bash
+# Pull BOTH components (latest builds)
+podman pull quay.io/arcalot/arcaflow-mcp-server:latest
+podman pull quay.io/arcalot/arcaflow-mcp-analysis:latest
+
+# Start COMPONENT 1: Analysis engine (background service)
+podman run -d --name arcaflow-analysis \
+  -p 8081:8081 \
+  quay.io/arcalot/arcaflow-mcp-analysis:latest
+
+# Verify it's running
+curl http://localhost:8081/health
+```
+
+**Configure MCP Client** (Component 2):
+
+Add to your MCP client settings (e.g., Claude Desktop `~/Library/Application Support/Claude/claude_desktop_config.json`):
+
+```json
+{
+  "mcpServers": {
+    "arcaflow": {
+      "command": "podman",
+      "args": [
+        "run", "--rm", "-i",
+        "--network", "host",
+        "quay.io/arcalot/arcaflow-mcp-server:latest"
+      ],
+      "env": {
+        "ARCAFLOW_MCP_ANALYSIS_HTTP_URL": "http://localhost:8081"
+      }
+    }
+  }
+}
+```
+
+The client will launch Component 2 (MCP server) on-demand, which connects to Component 1 (analysis engine).
+
+**Server Mode** (Multi-user deployments):
+
+```bash
+# Get compose file (deploys BOTH components together)
+curl -O https://raw.githubusercontent.com/arcalot/arcaflow-mcp/main/deploy/container/compose.yml
+
+# Generate admin token
+export ARCAFLOW_MCP_ADMIN_TOKEN="$(openssl rand -base64 32)"
+
+# Start both services
+docker compose up -d
+# Or: podman-compose up -d
+
+# Both components now running:
+# - Analysis engine: localhost:8081
+# - MCP server: localhost:8080
+```
+
+**Available Tags**: The `latest` tag tracks the main branch. After v0.1.0, use version tags (e.g., `v1.0.0`) for stability. Browse all tags at [quay.io/arcalot](https://quay.io/organization/arcalot).
+
+📖 **Detailed Setup**: See [Getting Started Guide](docs/arcaflow-mcp/getting-started.md) or [Container Deployment](docs/arcaflow-mcp/deployment/container.md)
+
+#### Option 2: Download Pre-Compiled Binaries 📦
+
+**Download from GitHub Releases** (available after v0.1.0):
+
+**Go MCP Server:**
+```bash
+# Download latest release for your platform
+# Linux x86_64
+curl -L https://github.com/arcalot/arcaflow-mcp/releases/latest/download/arcaflow-mcp-linux-amd64 -o arcaflow-mcp
+chmod +x arcaflow-mcp
+
+# macOS arm64 (Apple Silicon)
+curl -L https://github.com/arcalot/arcaflow-mcp/releases/latest/download/arcaflow-mcp-darwin-arm64 -o arcaflow-mcp
+chmod +x arcaflow-mcp
+
+# macOS x86_64 (Intel)
+curl -L https://github.com/arcalot/arcaflow-mcp/releases/latest/download/arcaflow-mcp-darwin-amd64 -o arcaflow-mcp
+chmod +x arcaflow-mcp
+
+# Windows x86_64
+curl -L https://github.com/arcalot/arcaflow-mcp/releases/latest/download/arcaflow-mcp-windows-amd64.exe -o arcaflow-mcp.exe
+```
+
+**Python Analysis Engine:**
+
+The analysis engine requires installation from source or use containers. PyPI distribution planned.
+
+```bash
+# Current: Use containers (recommended)
+podman pull quay.io/arcalot/arcaflow-mcp-analysis:latest
+
+# Or install from source:
+cd analysis && poetry install
+poetry run python -m arcaflow_analysis.server.http_server
+```
+
+**Browse Releases**: [github.com/arcalot/arcaflow-mcp/releases](https://github.com/arcalot/arcaflow-mcp/releases)
+
+**Note**: Go binaries available after v0.1.0. For now, use containers or build from source.
+
+#### Option 3: Build from Source (For Development) 🔧
+
+**Requires building BOTH components** (two-component architecture).
 
 **Local Mode** (Recommended for desktop AI clients):
 ```bash
-# 1. Build the Go MCP server
+# Build COMPONENT 1: Go MCP server
 cd server && go build -o arcaflow-mcp ./cmd/arcaflow-mcp
 
-# 2. Start Python analysis engine (for result analysis features)
+# Start COMPONENT 2: Python analysis engine (background service)
 cd ../analysis
 poetry install
 poetry run python -m arcaflow_analysis.server.http_server &
 
-# 3. Configure your MCP client (Claude Desktop, etc.)
+# Configure your MCP client to launch Component 1 (Claude Desktop, etc.)
 # Add ARCAFLOW_MCP_ANALYSIS_HTTP_URL=http://localhost:8081 to env
 # See: docs/arcaflow-mcp/usage/local-mode.md
 
-# 4. Client launches server automatically
+# Client launches MCP server (Component 1) which connects to
+# analysis engine (Component 2) at http://localhost:8081
 ```
 
-**Note:** Python engine is required for result analysis. Input construction works without it.
+**Note:** Both components required. Analysis engine (Component 2) provides result analysis; MCP server (Component 1) handles protocol and workflows.
 
 **Server Mode** (For multi-user deployments):
 ```bash
-# 1. Set data directory location (change this path if needed)
+# Set data directory location
 export DATA_DIR="./data"
-
-# 2. Create data directory
 mkdir -p "$DATA_DIR"
 
-# 3. Set admin token (for testing; use secure random for production)
+# Set admin token (use secure random for production)
 export ARCAFLOW_MCP_ADMIN_TOKEN="dev-admin-token-$(date +%s)"
 
-# 4. Configure data storage paths (all use $DATA_DIR)
+# Configure data storage paths
 export ARCAFLOW_MCP_TOKEN_STORE_PATH="$DATA_DIR/tokens.json"
 export ARCAFLOW_MCP_TENANT_STORE_PATH="$DATA_DIR/tenants.json"
 export ARCAFLOW_MCP_AUDIT_STORE_PATH="$DATA_DIR/audit.json"
 export ARCAFLOW_MCP_USAGE_STORE_PATH="$DATA_DIR/usage.json"
 export ARCAFLOW_MCP_TENANT_WORKSPACE_ROOT="$DATA_DIR/tenants"
 
-# 5. Start Python analysis engine
+# Start COMPONENT 2: Python analysis engine (Terminal 1 or background)
 cd analysis
 poetry install
 poetry run python -m arcaflow_analysis.server.http_server &
 cd ..
 
-# 6. Start Go MCP server
+# Start COMPONENT 1: Go MCP server (Terminal 2)
 export ARCAFLOW_MCP_ANALYSIS_HTTP_URL="http://localhost:8081"
 ./server/arcaflow-mcp --mode server --address 127.0.0.1:8080
 
-# 7. Connect AI clients via HTTP/SSE
+# Both components running and connected!
+# - Analysis engine: localhost:8081
+# - MCP server: localhost:8080
 # See: docs/arcaflow-mcp/usage/server-mode.md
 ```
 

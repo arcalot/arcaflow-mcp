@@ -1,8 +1,90 @@
-services:
-  server:
-    image: arcaflow-mcp-server:dev
-    environment:
-      - ARCAFLOW_MCP_MODE=server
+# Arcaflow MCP Server - Docker/Podman Compose Configuration
+#
+# This compose file deploys both required components:
+# 1. Python Analysis Engine (port 8081)
+# 2. Go MCP Server (port 8080)
+#
+# Usage:
+#   export ARCAFLOW_MCP_ADMIN_TOKEN="$(openssl rand -base64 32)"
+#   docker compose up -d
+#   # or: podman-compose up -d
+#
+# Optional: Create workflow directory if mounting workflows
+#   mkdir -p ./workflows
+#
+# For specific version tags:
+#   export TAG="v1.0.0"  # Or "main-abc1234" for development builds
+#   docker compose up -d
+#
+# Environment Variables:
+#   ARCAFLOW_MCP_ADMIN_TOKEN - Required: Admin authentication token
+#   TAG - Optional: Image tag (default: latest)
+#   IMAGE_REPO - Optional: Container registry (default: quay.io/arcalot)
+#   LOG_LEVEL - Optional: Logging level (default: INFO)
+#   WORKFLOW_DIR - Optional: Local workflow directory (default: ./workflows)
 
+services:
+  # COMPONENT 1: Python Analysis Engine
+  # Provides result parsing, analysis, and optimization suggestions
   analysis:
-    image: arcaflow-mcp-analysis:dev
+    image: ${IMAGE_REPO:-quay.io/arcalot}/arcaflow-mcp-analysis:${TAG:-latest}
+    container_name: arcaflow-analysis
+    restart: unless-stopped
+    ports:
+      - "8081:8081"
+    volumes:
+      - analysis-data:/var/lib/arcaflow-analysis
+    environment:
+      - ANALYSIS_PORT=8081
+      - ANALYSIS_HOST=0.0.0.0
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      # SQLite URL format: sqlite:////<absolute-path> (4 slashes for absolute paths)
+      - DATABASE_URL=sqlite:////var/lib/arcaflow-analysis/arcaflow_analysis.db
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - arcaflow
+
+  # COMPONENT 2: Go MCP Server
+  # Handles MCP protocol, workflow loading, and input validation
+  # Connects to analysis engine at http://analysis:8081
+  mcp-server:
+    image: ${IMAGE_REPO:-quay.io/arcalot}/arcaflow-mcp-server:${TAG:-latest}
+    container_name: arcaflow-mcp-server
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    depends_on:
+      analysis:
+        condition: service_healthy
+    volumes:
+      - mcp-data:/var/lib/arcaflow-mcp
+      - ${WORKFLOW_DIR:-./workflows}:/workflows:ro
+    environment:
+      - ARCAFLOW_MCP_ADMIN_TOKEN=${ARCAFLOW_MCP_ADMIN_TOKEN:?ARCAFLOW_MCP_ADMIN_TOKEN is required}
+      - ARCAFLOW_MCP_ANALYSIS_HTTP_URL=http://analysis:8081
+      - ARCAFLOW_MCP_LISTEN_ADDR=:8080
+      - ARCAFLOW_MCP_LOG_LEVEL=${LOG_LEVEL:-info}
+    command: ["--mode", "server"]
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - arcaflow
+
+networks:
+  arcaflow:
+    driver: bridge
+
+volumes:
+  mcp-data:
+    driver: local
+  analysis-data:
+    driver: local

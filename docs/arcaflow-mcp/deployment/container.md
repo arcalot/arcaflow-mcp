@@ -52,9 +52,12 @@ quay.io/arcalot/arcaflow-mcp-analysis:v1.0.0
 
 ### Image Tags
 
-- `latest`: Latest stable release (not recommended for production)
-- `v1.0.0`: Specific version (recommended for production)
-- `main`: Latest main branch build (unstable, for testing only)
+**Available Tags:**
+- `latest`: Latest build from main branch
+- `v1.0.0`, `v1.0.1`, etc.: Specific releases (after v0.1.0)
+- `main-<sha>`: Specific commit builds (7-char SHA)
+
+**For Production**: Use specific version tags (e.g., `v1.0.0`) once available. The `latest` tag tracks the main branch and may include breaking changes.
 
 ### Building from Source
 
@@ -82,6 +85,62 @@ podman build -t arcaflow-mcp-analysis:local -f analysis/Containerfile .
 - Python Analysis Engine: [`analysis/Containerfile`](../../../analysis/Containerfile)
 
 Both Containerfiles use multi-stage builds for minimal image size, run as non-root users, and include health checks.
+
+### Finding Available Tags
+
+Query Quay.io to discover available version tags:
+
+```bash
+# List all tags using skopeo
+skopeo list-tags docker://quay.io/arcalot/arcaflow-mcp-server
+
+# Or use Quay.io API directly
+curl -s 'https://quay.io/api/v1/repository/arcalot/arcaflow-mcp-server/tag/?limit=100' | \
+  jq -r '.tags[].name' | sort -V
+
+# Browse visually: https://quay.io/repository/arcalot/arcaflow-mcp-server?tab=tags
+```
+
+**Using Specific Tags:**
+
+```bash
+# For latest build
+podman pull quay.io/arcalot/arcaflow-mcp-server:latest
+
+# For specific version (after v0.1.0)
+podman pull quay.io/arcalot/arcaflow-mcp-server:v1.0.0
+
+# For specific commit (if needed)
+podman pull quay.io/arcalot/arcaflow-mcp-server:main-abc1234
+```
+
+Without cloning the repository:
+
+```bash
+# Fetch latest main branch SHA from GitHub
+export TAG="main-$(curl -s https://api.github.com/repos/arcalot/arcaflow-mcp/commits/main | jq -r '.sha[:7]')"
+echo "Using tag: $TAG"
+
+# Pull images with this tag
+podman pull quay.io/arcalot/arcaflow-mcp-server:${TAG}
+podman pull quay.io/arcalot/arcaflow-mcp-analysis:${TAG}
+```
+
+**Browsing Available Tags:**
+
+Visit the Quay.io repositories to see all available tags:
+- Go Server: https://quay.io/repository/arcalot/arcaflow-mcp-server?tab=tags
+- Python Engine: https://quay.io/repository/arcalot/arcaflow-mcp-analysis?tab=tags
+
+**Stability:**
+
+Development builds (`main-<sha>`) are:
+- Built automatically on every commit to main
+- Useful for testing latest features
+- Not recommended for production
+- Expire after 90 days
+
+For production use, wait for official releases or build from a specific git tag.
 
 ---
 
@@ -114,7 +173,7 @@ docker run -d --name mcp-server \
   -v arcaflow-mcp-data:/var/lib/arcaflow-mcp \
   -v "$PWD/workflows:/workflows:ro" \
   --link analysis:analysis \
-  ghcr.io/arcaflow-mcp-server:latest \
+  quay.io/arcalot/arcaflow-mcp-server:latest \
   --server
 ```
 
@@ -304,73 +363,67 @@ podman run -d \
 
 ## Docker Compose
 
-### Development Compose
+### Using the Repository Compose File
 
-```yaml
-# deploy/container/compose.yml
-version: '3.8'
+The repository includes a production-ready compose file at `deploy/container/compose.yml` that deploys both components with proper configuration.
 
-services:
-  analysis:
-    image: quay.io/arcalot/arcaflow-mcp-analysis:latest
-    container_name: arcaflow-analysis
-    ports:
-      - "8081:8081"
-    volumes:
-      - analysis-data:/var/lib/arcaflow-analysis
-    environment:
-      - ANALYSIS_PORT=8081
-      - ANALYSIS_HOST=0.0.0.0
-      - LOG_LEVEL=INFO
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8081/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-      start_period: 10s
-
-  mcp-server:
-    image: quay.io/arcalot/arcaflow-mcp-server:latest
-    container_name: arcaflow-mcp-server
-    ports:
-      - "8080:8080"
-    depends_on:
-      analysis:
-        condition: service_healthy
-    volumes:
-      - mcp-data:/var/lib/arcaflow-mcp
-      - ./workflows:/workflows:ro
-    environment:
-      - ARCAFLOW_MCP_ADMIN_TOKEN=${ARCAFLOW_MCP_ADMIN_TOKEN:-changeme}
-      - ARCAFLOW_MCP_ANALYSIS_HTTP_URL=http://analysis:8081
-    command: ["--server"]
-    healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8080/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-      start_period: 10s
-
-volumes:
-  mcp-data:
-  analysis-data:
-```
-
-### Usage
+**Quick Start:**
 
 ```bash
-# Set admin token
+# Method 1: From repository
+git clone https://github.com/arcalot/arcaflow-mcp.git
+cd arcaflow-mcp/deploy/container
+
+# Method 2: Download directly
+curl -O https://raw.githubusercontent.com/arcalot/arcaflow-mcp/main/deploy/container/compose.yml
+
+# Set admin token (REQUIRED)
 export ARCAFLOW_MCP_ADMIN_TOKEN="$(openssl rand -base64 32)"
 
 # Start services
-docker compose -f deploy/container/compose.yml up -d
+docker compose up -d
 
 # View logs
-docker compose -f deploy/container/compose.yml logs -f
+docker compose logs -f
 
 # Stop services
-docker compose -f deploy/container/compose.yml down
+docker compose down
 ```
+
+**Compose File Features:**
+
+- ✅ Both components (Go MCP Server + Python Analysis Engine)
+- ✅ Health checks for both services
+- ✅ Persistent volumes for data
+- ✅ Proper networking between components
+- ✅ Environment variable configuration
+- ✅ Optional workflow directory mounting
+- ✅ Support for development tags (TAG environment variable)
+
+**Environment Variables:**
+
+| Variable | Description | Required | Default |
+|----------|-------------|----------|---------|
+| `ARCAFLOW_MCP_ADMIN_TOKEN` | Admin token | **Yes** | - |
+| `TAG` | Image tag | No | `latest` |
+| `IMAGE_REPO` | Registry | No | `quay.io/arcalot` |
+| `LOG_LEVEL` | Logging level | No | `INFO` |
+| `WORKFLOW_DIR` | Workflow directory | No | `./workflows` |
+
+**Using Specific Version Tags:**
+
+```bash
+# Use latest (default)
+export ARCAFLOW_MCP_ADMIN_TOKEN="$(openssl rand -base64 32)"
+docker compose up -d
+
+# Or use specific version tag
+export TAG="v1.0.0"
+export ARCAFLOW_MCP_ADMIN_TOKEN="$(openssl rand -base64 32)"
+docker compose up -d
+```
+
+**See Also:** [deploy/container/README.md](../../../deploy/container/README.md) for advanced configuration and troubleshooting.
 
 ---
 

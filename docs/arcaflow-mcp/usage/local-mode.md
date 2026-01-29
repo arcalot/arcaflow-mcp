@@ -5,6 +5,12 @@ is intended for desktop MCP clients that launch the server as a subprocess.
 
 ### Prerequisites
 
+**Using Containers:**
+- Podman or Docker
+- Container images from quay.io (see [Getting Started](../getting-started.md))
+
+**Building from Source:**
+
 **For input construction only:**
 - Go MCP server (built from `server/`)
 
@@ -15,7 +21,25 @@ is intended for desktop MCP clients that launch the server as a subprocess.
 ### Start the Python analysis engine (optional but recommended)
 
 The Python analysis engine provides result analysis, comparison, and optimization features.
-Start it before launching your MCP client:
+
+**Using Containers:**
+
+```bash
+# Pull image (use latest development tag before v0.1.0)
+export TAG="main-abc1234"  # See Getting Started guide for current tag
+podman pull quay.io/arcalot/arcaflow-mcp-analysis:${TAG}
+
+# Start analysis engine
+podman run -d \
+  --name arcaflow-analysis \
+  -p 8081:8081 \
+  quay.io/arcalot/arcaflow-mcp-analysis:${TAG}
+
+# Verify it's running
+curl http://localhost:8081/health
+```
+
+**Building from Source:**
 
 ```bash
 cd analysis
@@ -29,13 +53,29 @@ The engine will listen on `http://localhost:8081` by default.
 
 ### Start the Go MCP server
 
-Most desktop MCP clients launch local servers on-demand. In that case, the
-client configuration should point to this command and the client will manage
-the lifecycle (spawn on connect, terminate on disconnect):
+Most desktop MCP clients launch local servers on-demand.
+
+**Using Containers:**
+
+Configure your client to run the MCP server in a container (example for Podman):
+
+```
+podman run -i --rm \
+  --network host \
+  -e ARCAFLOW_MCP_ANALYSIS_HTTP_URL=http://localhost:8081 \
+  quay.io/arcalot/arcaflow-mcp-server:${TAG} \
+  --mode local
+```
+
+**Building from Source:**
+
+Point to the built binary:
 
 ```
 ./server/arcaflow-mcp --mode local
 ```
+
+The client will manage the lifecycle (spawn on connect, terminate on disconnect).
 
 ### Configure an MCP client
 
@@ -44,22 +84,54 @@ exact UI and file format vary, but the required information is usually the
 same:
 
 - **Name/ID:** A label like `arcaflow-mcp`.
-- **Command:** The executable path, for example `./server/arcaflow-mcp`.
-- **Arguments:** `--mode local` (plus `--config` if you use a config file).
-- **Working directory:** The repo root so relative paths resolve correctly.
-- **Environment:** **Required** `ARCAFLOW_MCP_ANALYSIS_HTTP_URL=http://localhost:8081` for result analysis features, plus optional overrides such as `ARCAFLOW_MCP_LOG_LEVEL=debug`.
+- **Command:** Container command or executable path
+- **Arguments:** Container args or `--mode local`
+- **Working directory:** (containers don't need this)
+- **Environment:** **Required** `ARCAFLOW_MCP_ANALYSIS_HTTP_URL=http://localhost:8081` for result analysis features
 
 After saving the configuration, the client should start the server on demand
-and complete MCP initialization automatically. If the client expects a JSON
-config file, look for an MCP or "local servers" section and provide the command
-and arguments there.
+and complete MCP initialization automatically.
 
-Example JSON-style entry (field names may vary by client):
+**Example: Using Containers (Podman)**
 
 ```json
 {
   "name": "arcaflow-mcp",
-  "command": "./server/arcaflow-mcp",
+  "command": "podman",
+  "args": [
+    "run", "-i", "--rm",
+    "--network", "host",
+    "-e", "ARCAFLOW_MCP_ANALYSIS_HTTP_URL=http://localhost:8081",
+    "-e", "ARCAFLOW_MCP_LOG_LEVEL=info",
+    "quay.io/arcalot/arcaflow-mcp-server:main-abc1234",
+    "--mode", "local"
+  ]
+}
+```
+
+**Example: Using Containers (Docker)**
+
+```json
+{
+  "name": "arcaflow-mcp",
+  "command": "docker",
+  "args": [
+    "run", "-i", "--rm",
+    "--network", "host",
+    "-e", "ARCAFLOW_MCP_ANALYSIS_HTTP_URL=http://localhost:8081",
+    "-e", "ARCAFLOW_MCP_LOG_LEVEL=info",
+    "quay.io/arcalot/arcaflow-mcp-server:main-abc1234",
+    "--mode", "local"
+  ]
+}
+```
+
+**Example: Built from Source**
+
+```json
+{
+  "name": "arcaflow-mcp",
+  "command": "/path/to/arcaflow-mcp/server/arcaflow-mcp",
   "args": ["--mode", "local"],
   "cwd": "/path/to/arcaflow-mcp",
   "env": {
@@ -68,6 +140,8 @@ Example JSON-style entry (field names may vary by client):
   }
 }
 ```
+
+**Note:** Replace `main-abc1234` with the actual current tag. Use `./scripts/get-container-tag.sh` to find it.
 
 ### Supported MCP methods
 

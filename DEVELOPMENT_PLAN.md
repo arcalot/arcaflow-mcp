@@ -1,6 +1,6 @@
 # Arcaflow MCP Server - Development Plan
 
-**Version:** 1.3.0  
+**Version:** 1.3.1  
 **Last Updated:** 2026-01-29  
 **Language:** Go for MCP server core, Python for analysis engine  
 **Current Phase:** Phase 7 - Documentation & Examples (In Progress)
@@ -1559,6 +1559,8 @@ Tasks:
     - ✅ GitHub releases (Go binaries) configured in release.yml
     - ✅ Coverage enforcement (.limgo.json) as part of build quality
     - ✅ Comprehensive CI/CD documentation (.github/workflows/README.md)
+    - ⚠️ Python package PyPI publishing automation (analysis package) [pending]
+    - ⚠️ Console script entry points for arcaflow-analysis-server [pending]
     - ⚠️ Install scripts for both components [pending]
     - ⚠️ MCP client config templates [pending]
     - ⚠️ Single-command installer [pending]
@@ -1602,22 +1604,26 @@ Dependencies:
 
 Exit Criteria:
 - [IN PROGRESS] Go binaries built for all platforms (GoReleaser configured, needs testing)
-- [ ] Python packages built and tested
+- [ ] Python packages built and tested (PyPI publishing automation configured)
+- [ ] Python package published to PyPI (arcaflow-analysis)
 - [IN PROGRESS] Docker images published for both services (workflows configured, needs testing)
 - [ ] Container compose brings up both services with basic gRPC communication
 - [ ] Container compose tested
 - [✓] Kubernetes manifests tested (both services communicating) - docs complete from Phase 7
-- [ ] Release v0.1.0 published (both components)
-- [ ] Installation tested on all platforms (both modes)
+- [ ] Release v0.1.0 published (both components: Go binaries, Python package, containers)
+- [ ] Installation tested on all platforms (both modes: containers, binaries, PyPI)
 - [ ] Inter-service communication verified
 - [ ] Security review complete (server mode, both services)
 - [ ] Initial user feedback positive
 - [ ] Manual User Validation:
   - [ ] Local Mode Installation:
-    - User can download and install binaries on Linux, macOS, and Windows
+    - User can download and install Go MCP server binaries on Linux, macOS, and Windows
+    - User can install Python analysis engine from PyPI (`pip install arcaflow-analysis`)
+    - Console script `arcaflow-analysis-server` works after PyPI installation
     - Single-command installer works on all platforms
     - Claude Desktop configuration succeeds using provided templates
     - MCP server successfully starts and connects to Claude Desktop
+    - Both components communicate via HTTP (Go server → Python analysis engine)
   - [ ] Server Mode Deployment:
     - Container compose deployment succeeds on clean system
     - Kubernetes deployment succeeds in test cluster
@@ -1817,6 +1823,13 @@ Clear messaging - User understands:
 ## Plan Changelog
 
 Purpose: Track significant changes to this plan itself (not development progress).
+
+### 2026-01-29 - Explicit PyPI Publishing in Phase 8 (v1.3.1)
+- Added explicit PyPI publishing requirements to Phase 8 "Build system and local mode distribution" task
+- Added console script entry points requirement for `arcaflow-analysis-server` command
+- Updated exit criteria to explicitly include PyPI package publication
+- Enhanced manual validation to include PyPI installation testing
+- Clarifies that "Python packages" in Phase 8 means PyPI distribution, not just wheels
 
 ### 2026-01-29 - Added Phase 7.5 LLM Evaluation Pipeline (v1.3.0)
 - Added new Phase 7.5 for LLM evaluation infrastructure and quality assurance
