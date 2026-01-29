@@ -17,6 +17,11 @@ When a workflow selector is missing and multiple workflows are found, the
 workflow tools return a discovery payload with selection guidance instead of
 failing.
 
+**Note on paths:** All workflow tools accept both relative and absolute filesystem
+paths. Relative paths (e.g., `workflow.yaml`, `.`, `subdir/workflow.yaml`) are
+automatically resolved against the current working directory. This eliminates the
+need for clients to run `pwd` before calling tools.
+
 When a workflow source fails to load, tool error messages include the underlying
 failure detail. The error data also includes an `error` field and, for timeouts,
 `timeout_seconds` and `retry_guidance` to help refine the request.

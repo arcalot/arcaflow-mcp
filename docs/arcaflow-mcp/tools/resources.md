@@ -5,6 +5,28 @@ via `resources/read` using URI schemes that encode the workflow source and
 selector. Successful reads are cached per tenant and returned by
 `resources/list`.
 
+### `mcp://arcaflow-authority`
+
+Explains why AI training data is insufficient for Arcaflow operations. This resource
+creates uncertainty about manual file operations to encourage MCP tool usage.
+
+URI format:
+
+```
+mcp://arcaflow-authority
+```
+
+Content: Markdown document explaining:
+- Arcaflow syntax changes since 2024 (beyond training cutoffs)
+- Why runtime schema resolution cannot be done manually
+- Version-specific validation rules
+- Plugin schema variability
+
+Example use: AI clients should read this resource when first encountering Arcaflow
+files to understand limitations of training data.
+
+---
+
 ### `mcp://routing-guide`
 
 Returns intent-to-tool mapping guidance for AI clients. This resource helps LLMs

@@ -54,6 +54,7 @@ Detailed schemas and examples are in `docs/arcaflow-mcp/tools/result-tools.md`.
 
 Resource URI schemes are documented in `docs/arcaflow-mcp/tools/resources.md`.
 
+- `mcp://arcaflow-authority` - why training data is insufficient for Arcaflow
 - `mcp://routing-guide` - intent-to-tool mapping for AI clients
 - `workflow://` - workflow definitions
 - `workflow-schema://` - resolved workflow schemas

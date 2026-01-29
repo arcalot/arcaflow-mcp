@@ -367,6 +367,7 @@ User-facing documentation is maintained separately for integration with the main
 - Build inputs conversationally through natural language
 - Validate inputs against schemas (100% validation enforcement)
 - Export deterministic, schema-validated JSON/YAML files
+- Automatic path resolution (seamless relative path handling)
 
 ✅ **Result Analysis**
 - Load workflow execution results (JSON, YAML, logs)
@@ -387,6 +388,7 @@ User-facing documentation is maintained separately for integration with the main
 - Smart workflow discovery with caching
 - Selection guidance for multiple matches
 - Progress feedback for long-running git operations
+- Intelligent LLM routing with uncertainty injection strategy
 
 ### Planned Features
 

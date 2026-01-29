@@ -279,6 +279,9 @@ func registerDefaultTools(
 	// Advanced: workflow_inputs_suggest
 	// Advanced: workflow_optimization_guide
 	server.RegisterResourceProvider(
+		resources.NewArcaflowAuthorityProvider(slog.Default()),
+	)
+	server.RegisterResourceProvider(
 		resources.NewRoutingGuideProvider(slog.Default()),
 	)
 	server.RegisterResourceProvider(

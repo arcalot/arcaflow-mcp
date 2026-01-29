@@ -15,7 +15,37 @@ AI clients (Gemini, Claude, etc.) were consistently choosing generic file operat
 
 ## Implemented Strategies
 
-### 1. Tool Consolidation (Reduce Decision Space)
+### 1. Uncertainty Injection (Question LLM Confidence)
+
+**Strategy:** Add version disclaimers and training data warnings to create doubt
+about manual approaches.
+
+**Rationale:** LLMs default to file operations because they're confident in general
+YAML/workflow knowledge. Injecting uncertainty about Arcaflow-specific complexity
+may trigger help-seeking behavior (using MCP tools).
+
+**Uncertainty triggers:**
+- "WARNING: Arcaflow syntax changed significantly since 2024"
+- "Do not rely on training data - validation rules differ from pre-v0.8 versions"
+- "This tool uses the Arcaflow engine's runtime schema resolver"
+- "Plugin schemas vary by version - training data may reflect outdated versions"
+
+**Resource:** `mcp://arcaflow-authority` explains why training data is insufficient:
+- Syntax changes beyond training cutoff (v0.8+ in 2024-2025)
+- Dynamic runtime schema resolution (cannot be done statically)
+- Plugin schema variability across versions
+- Version-specific validation rules
+
+**Example:**
+```
+workflow_input_recommend: "WARNING: Arcaflow syntax changed significantly since
+2024. Do not rely on training data - this tool uses the Arcaflow engine's runtime
+schema resolver for guaranteed compatibility."
+```
+
+---
+
+### 2. Tool Consolidation (Reduce Decision Space)
 
 **Strategy:** Expose only 7 primary tools by default, hide 12 advanced tools.
 
@@ -206,10 +236,26 @@ These strategies are **server-side only** and rely on:
 If routing issues persist, additional client-side tuning may be required (e.g., system
 prompts, tool whitelisting, routing policy configuration).
 
+## Summary: 12 Routing Strategies
+
+1. Uncertainty injection (training data warnings, version disclaimers)
+2. Tool consolidation (7 primary vs 20+ total)
+3. Concrete user phrase matching (3-5 phrases per tool)
+4. Explicit benefit statements (PREVENTS: ...)
+5. Inline parameter examples (EXAMPLE: {...})
+6. Aggressive negative hints (DO NOT read_file)
+7. File-handling transparency (THIS TOOL READS FILES)
+8. Schema-level use-case hints (parameter descriptions)
+9. Machine-readable routing guide (mcp://routing-guide resource)
+10. Anti-pattern documentation (5 concrete failure patterns)
+11. Real-world failure examples (from user transcripts)
+12. Execution syntax guidance (arcaflow --input, not run -f)
+
 ## Future Improvements
 
 1. **Tool metadata extensions** - Add priority/weight fields to tool definitions
 2. **Routing policy resource** - Expose machine-readable routing rules
 3. **Usage telemetry** - Track which tools are selected for which query patterns
 4. **A/B testing** - Compare routing accuracy with different description strategies
-5. **Client initialization hint** - Recommend fetching routing guide at startup
+5. **Client initialization hint** - Recommend fetching authority + routing guide at startup
+6. **Graduated uncertainty** - Measure effectiveness of uncertainty injection vs other strategies

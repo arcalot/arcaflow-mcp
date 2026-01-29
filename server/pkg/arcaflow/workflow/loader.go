@@ -175,13 +175,18 @@ func (loader *Loader) loadFromFilesystemWithDetails(
 		return LoadDetails{}, fmt.Errorf("filesystem root is required")
 	}
 
+	// Resolve relative paths to absolute paths based on current directory
+	absRoot, err := ResolveFilesystemPath(root)
+	if err != nil {
+		return LoadDetails{}, fmt.Errorf("resolve filesystem path: %w", err)
+	}
+	root = absRoot
+
 	startedAt := time.Now()
 	stat, err := os.Stat(root)
 	if err != nil {
 		return LoadDetails{}, fmt.Errorf("stat filesystem root: %w", err)
 	}
-
-	root = filepath.Clean(root)
 	cacheKey := fmt.Sprintf("filesystem:%s", root)
 	var (
 		index        WorkflowIndex

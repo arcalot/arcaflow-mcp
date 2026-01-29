@@ -40,6 +40,8 @@ Legend:
 | Complex type support (maps) | ✅ Implemented | Go Server | Key-value dictionaries |
 | Complex type support (unions) | ✅ Implemented | Go Server | Tagged unions |
 | Plugin schema discovery | ✅ Implemented | Go Server | From workflow step definitions |
+| Automatic path resolution | ✅ Implemented | Go Server | Relative→absolute path conversion |
+| LLM routing optimization | ✅ Implemented | Go Server | Uncertainty injection, routing guides |
 | Input templates and presets | 📋 Planned | Go Server | v0.2.0 |
 | Input versioning | 🔮 Future | Go Server | Track input evolution |
 | Input diffing | 🔮 Future | Go Server | Compare input versions |
@@ -111,6 +113,7 @@ Legend:
 |---------|--------|-----------|-------|
 | Tools capability | ✅ Implemented | Go Server | All workflow tools |
 | Resources capability | ✅ Implemented | Go Server | Workflow and schema resources |
+| Routing guidance resources | ✅ Implemented | Go Server | mcp://routing-guide, mcp://arcaflow-authority |
 | Prompts capability | ❌ Out of Scope | - | Not needed for our use case |
 | Sampling capability | ❌ Out of Scope | - | Not needed for our use case |
 | Logging capability | ✅ Implemented | Go Server | Server-side logging |

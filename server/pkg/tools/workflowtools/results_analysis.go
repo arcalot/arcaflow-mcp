@@ -42,7 +42,7 @@ const workflowResultsAnalysisInputSchema = `{
         },
         "location": {
           "type": "string",
-          "description": "Path to result file (e.g., 'results.yaml', '/path/to/output.json') or URL."
+          "description": "Path to result file - relative (e.g., 'results.yaml') or absolute (e.g., '/path/to/output.json') or URL. Relative paths resolved against current directory."
         }
       },
       "required": ["kind", "location"],
@@ -137,12 +137,16 @@ func NewWorkflowResultsDescribeTool(
 ) protocol.ToolRegistration {
 	return newResultsAnalysisTool(
 		"workflow_results_describe",
-		"Describe workflow results with structured metrics summary. " +
-			"USE THIS when user says: 'Describe results at @file', 'Summarize results.yaml', " +
-			"'What are the results?', 'Show me output at @file'. " +
-			"USE workflow_results_analyze INSTEAD when user asks for input suggestions or optimization. " +
-			"PREVENTS: Manual YAML parsing, missing metrics, incomplete summaries. " +
-			"Returns structured metrics (CPU, memory, throughput, latency). " +
+		"Describe workflow results using plugin-aware parsers for Arcaflow v0.8+ " +
+			"output formats. USE THIS when user says: 'Describe results at @file', " +
+			"'Summarize results.yaml', 'What are the results?', 'Show me output at @file'. " +
+			"USE workflow_results_analyze INSTEAD when user asks for input suggestions. " +
+			"WARNING: Result formats changed significantly in Arcaflow v0.8+ (2024). " +
+			"Do not rely on training data for result parsing - output structure, metric " +
+			"nesting, and plugin-specific formats differ from earlier versions. This tool " +
+			"uses domain-specific extractors updated for current Arcaflow plugin versions. " +
+			"PREVENTS: Missing metrics, incomplete summaries, outdated parsing patterns. " +
+			"Returns structured metrics (CPU, memory, throughput, latency) from current formats. " +
 			"THIS TOOL READS FILES - just provide source.kind=filesystem + location. " +
 			"DO NOT read the file yourself - this tool does it internally. " +
 			"EXAMPLE: {source: {kind: 'filesystem', location: 'results.yaml'}}",
@@ -162,17 +166,22 @@ func NewWorkflowResultsAnalyzeTool(
 ) protocol.ToolRegistration {
 	return newResultsAnalysisTool(
 		"workflow_results_analyze",
-		"Analyze workflow results and suggest optimized inputs for better performance. " +
-			"USE THIS when user says: 'Results are at @file, what inputs should I use?', " +
-			"'Analyze results at @file', 'How can I improve performance?', " +
-			"'What new inputs should I use?', 'Optimize results.yaml', " +
-			"'Output is at @file, suggest inputs'. " +
-			"PREVENTS: Manual result inspection, guessing at input changes, creating invalid inputs. " +
-			"Returns VALIDATED input suggestions based on result patterns (CPU usage, memory, concurrency). " +
+		"Analyze workflow results and suggest validated inputs for Arcaflow v0.8+ " +
+			"optimized performance. USE THIS when user says: 'Results are at @file, " +
+			"what inputs should I use?', 'Analyze results at @file', " +
+			"'How can I improve performance?', 'What new inputs should I use?', " +
+			"'Optimize results.yaml', 'Output is at @file, suggest inputs'. " +
+			"WARNING: Input optimization requires understanding current Arcaflow v0.8+ " +
+			"validation constraints and plugin-specific parameters that changed since 2024. " +
+			"Do not manually create input files based on training data - validation rules, " +
+			"required fields, and parameter constraints differ from earlier versions. " +
+			"This tool validates suggestions against the Arcaflow engine schema resolver. " +
+			"PREVENTS: Invalid input suggestions, missing required fields, outdated patterns. " +
+			"Returns VALIDATED input suggestions based on result patterns (CPU, memory, concurrency). " +
 			"THIS TOOL READS FILES - just provide source.kind=filesystem + location. " +
 			"DO NOT read the file yourself with read_file - this tool does it internally. " +
 			"EXAMPLE: {source: {kind: 'filesystem', location: 'results.yaml'}} " +
-			"OUTPUT: Specific input modifications to improve performance metrics.",
+			"OUTPUT: Specific validated input modifications guaranteed to pass Arcaflow validation.",
 		analysisClient,
 		logger,
 		func(response analysis.AnalyzeResponse) (interface{}, error) {

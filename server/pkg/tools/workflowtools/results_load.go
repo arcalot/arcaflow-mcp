@@ -11,10 +11,10 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"path/filepath"
 	"strings"
 	"time"
 
+	"github.com/arcalot/arcaflow-mcp/server/pkg/arcaflow/workflow"
 	"github.com/arcalot/arcaflow-mcp/server/pkg/protocol"
 	"gopkg.in/yaml.v3"
 )
@@ -32,7 +32,7 @@ const workflowResultsLoadInputSchema = `{
         },
         "location": {
           "type": "string",
-          "description": "Path to result file (e.g., 'results.yaml') or URL."
+          "description": "Path to result file - relative (e.g., 'results.yaml') or absolute (e.g., '/path/to/file') or URL. Relative paths resolved against current directory."
         }
       },
       "required": ["kind", "location"],
@@ -173,8 +173,12 @@ func loadResultContent(
 	kind := strings.ToLower(strings.TrimSpace(source.Kind))
 	switch kind {
 	case "filesystem":
-		path := filepath.Clean(source.Location)
-		data, err := os.ReadFile(path)
+		// Resolve relative paths to absolute paths
+		absPath, err := workflow.ResolveFilesystemPath(source.Location)
+		if err != nil {
+			return "", 0, "", fmt.Errorf("resolve result path: %w", err)
+		}
+		data, err := os.ReadFile(absPath)
 		if err != nil {
 			return "", 0, "", fmt.Errorf("read result file: %w", err)
 		}

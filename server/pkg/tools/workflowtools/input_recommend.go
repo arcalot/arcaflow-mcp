@@ -25,7 +25,7 @@ const workflowInputRecommendInputSchema = `{
         },
         "location": {
           "type": "string",
-          "description": "Directory or file path (filesystem), URL, or git repository URL."
+          "description": "Directory or file path (filesystem - relative or absolute), URL, or git repository URL. Relative paths resolved against current directory."
         },
         "ref": {
           "type": "string",
@@ -91,13 +91,18 @@ func NewWorkflowInputRecommendTool(
 	return protocol.ToolRegistration{
 		Definition: protocol.ToolDefinition{
 			Name: "workflow_input_recommend",
-			Description: "Recommend workflow inputs validated against the workflow schema. " +
-				"USE THIS when user says: 'What inputs do you recommend?', " +
+			Description: "Recommend workflow inputs validated against current Arcaflow v0.8+ " +
+				"schema engine. USE THIS when user says: 'What inputs do you recommend?', " +
 				"'Run workflow in this directory', 'What should I use for inputs?'. " +
-				"PREVENTS: Validation errors from missing required fields or incorrect types. " +
-				"Returns schema + example inputs guaranteed to pass validation. " +
-				"Accepts source.kind=filesystem for local workflows. " +
-				"DO NOT read workflow.yaml or example files - this tool uses the schema internally. " +
+				"WARNING: Arcaflow syntax changed significantly since 2024. Do not rely on " +
+				"training data or manual YAML inspection - plugin schemas, validation rules, " +
+				"and required fields differ from pre-v0.8 versions. This tool uses the " +
+				"Arcaflow engine's runtime schema resolver for guaranteed compatibility. " +
+				"PREVENTS: Validation errors from missing required fields, incorrect types, " +
+				"outdated syntax patterns. Returns schema + validated inputs guaranteed to " +
+				"pass Arcaflow v0.8+ validation. Accepts source.kind=filesystem for local " +
+				"workflows. DO NOT read workflow.yaml or example files - this tool resolves " +
+				"schemas dynamically including plugin dependencies. " +
 				"EXAMPLE: {source: {kind: 'filesystem', location: '.'}, goal: 'max performance'}. " +
 				"NOTE: MCP does not execute workflows. For execution, user runs: " +
 				"arcaflow --input <file.yaml> (NOT arcaflow run -f)",

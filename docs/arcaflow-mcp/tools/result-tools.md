@@ -17,6 +17,11 @@ guidance, see the `mcp://routing-guide` resource.
 For large result files, prefer the `source` + `format` inputs so the server can
 load and parse data without returning huge payloads to the client.
 
+**Note on paths:** All result tools accept both relative and absolute filesystem
+paths. Relative paths (e.g., `results.yaml`, `output.json`, `../results/file.yaml`)
+are automatically resolved against the current working directory. This allows natural
+`@file` references from clients without requiring absolute paths.
+
 Routing hints (for natural language clients):
 - "Describe results at /path/to/file.yaml" → `workflow_results_describe` with
   `source.kind=filesystem`.
