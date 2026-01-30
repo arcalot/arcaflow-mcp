@@ -18,7 +18,9 @@ tools without reading workflow or result files directly.
 
 ### Input Recommendations
 
-**User says:** "What inputs do you recommend?", "Run workflow in this directory",
+**User says:** "What inputs do you recommend?", "I want to test...",
+"I want to use this workflow to...", "I need to benchmark...", 
+"Help me configure...", "Run workflow in this directory",
 "What should I use for inputs?", "Maximum performance inputs"
 
 **Use tool:** workflow_input_recommend
@@ -26,9 +28,19 @@ tools without reading workflow or result files directly.
 **Parameters:**
 - source.kind: "filesystem"
 - source.location: "." (current directory) or specific path
-- goal: optional (e.g., "max performance")
+- goal: REQUIRED when user states intent (e.g., "test performance limits")
 
-**DO NOT:** read_file(workflow.yaml), glob(*.yaml), read example files
+**CRITICAL:** When user says "I want to [action]...", extract their goal and pass
+it in the goal parameter. The user's workflow execution WILL FAIL if inputs are not
+validated through this MCP server. Validation logic is ONLY accessible here - it
+cannot be replicated. DO NOT read example-input*.yaml files or manually construct
+inputs - this will cause the user's workflow to fail.
+
+**Example:**
+- User: "I want to test performance limits"
+- Call: workflow_input_recommend({source: {...}, goal: "test performance limits"})
+
+**DO NOT:** read_file(workflow.yaml), read_file(example-input*.yaml), glob(*.yaml)
 
 ---
 
@@ -147,6 +159,48 @@ constraints like required fields, type requirements, and nested structures.
           goal: "quick test"
         })
         # Returns validated inputs guaranteed to pass schema validation
+
+---
+
+### ❌ WRONG: Reading example files for "I want to..." queries
+
+    User: "I want to test the performance limits of this system"
+    AI: read_file("example-input-thorough.yaml")
+        # Modifies example file for performance testing
+        write_file("perf-test-input.yaml", modified_content)
+        # Result: User's workflow execution FAILS with validation errors
+
+**Problem:** The phrase "I want to..." describes user intent, not a request to see
+examples. Providing unvalidated inputs will cause the user's workflow to FAIL.
+Validation logic is ONLY accessible through the MCP server - it cannot be replicated
+by reading files or using training data. This is the most common routing failure.
+
+**✓ CORRECT:** Use workflow_input_recommend with goal parameter
+
+    User: "I want to test the performance limits of this system"
+    AI: workflow_input_recommend({
+          source: {kind: "filesystem", location: "."},
+          goal: "test performance limits"
+        })
+        # Returns goal-adapted, validated inputs - user's workflow succeeds
+
+**Why this works:** Tool description emphasizes "Workflow execution WILL FAIL if inputs
+not validated through this tool" - creating agent responsibility to prevent user failure
+rather than just explaining a technical limitation.
+
+**Fallback (if agent already constructed inputs):**
+
+If despite routing guidance, you have already manually constructed input YAML:
+
+    # You should NOT have done this, but if you did:
+    AI: workflow_input_validate({
+          source: {kind: "filesystem", location: "."},
+          input: <your_manually_constructed_payload>
+        })
+        # MANDATORY: Must validate before giving to user
+
+The user's workflow WILL FAIL if you provide unvalidated inputs. Validation is
+non-negotiable regardless of how inputs were created.
 
 ---
 

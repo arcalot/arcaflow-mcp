@@ -113,23 +113,27 @@ Now you can build the inputs by describing what you want, and the AI will help c
 **You:**
 > I want to test the workflow with the name "Alice"
 
-**AI (using `workflow_input_build` tool):**
-> I've created workflow inputs with name set to "Alice". 
+**AI (using `workflow_input_recommend` tool with goal parameter):**
+> I'll generate validated inputs for your testing goal.
 >
-> The current input:
+> The recommended input:
 >
 > ```yaml
 > name: "Alice"
 > ```
 >
-> This input is valid and ready to use. Would you like to:
+> This input is validated against the current schema and ready to use. Would you like to:
 > - Export it to a file?
-> - Validate it one more time?
 > - Modify any values?
+> - Test with a different name?
+
+**Why this works:** The phrase "I want to test..." triggers the AI to use 
+`workflow_input_recommend` with your goal, rather than trying to read and modify 
+example files (which may be incomplete or outdated).
 
 ### Alternative: Iterative Building
 
-For more complex workflows, you can build inputs iteratively:
+For complex workflows requiring step-by-step construction, you can build inputs iteratively:
 
 **You:**
 > Start building inputs for the workflow

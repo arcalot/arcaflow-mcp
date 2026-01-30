@@ -92,9 +92,15 @@ func NewWorkflowInputValidateTool(
 	return protocol.ToolRegistration{
 		Definition: protocol.ToolDefinition{
 			Name: "workflow_input_validate",
-			Description: "Validate recommended inputs before sharing. STRONGLY " +
-				"prefer passing `input` directly; only use session_id if you just " +
-				"created a draft with workflow_input_build in the same conversation.",
+			Description: "Validate workflow inputs before providing to user. " +
+				"MANDATORY SAFETY NET: If you have already constructed inputs manually " +
+				"(which you should not have done), you MUST validate them through this " +
+				"tool before giving to the user. The user's workflow WILL FAIL if you " +
+				"provide unvalidated inputs. Pass the input payload in the `input` " +
+				"parameter for validation. Only use session_id if you just created a " +
+				"draft with workflow_input_build in the same conversation. " +
+				"NOTE: Prefer workflow_input_recommend to generate validated inputs " +
+				"rather than construct and validate separately.",
 			InputSchema: json.RawMessage(workflowInputValidateInputSchema),
 		},
 		Handler: func(

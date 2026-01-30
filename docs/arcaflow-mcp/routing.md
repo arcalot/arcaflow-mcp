@@ -81,6 +81,37 @@ mapping reference. This resource includes:
 
 ---
 
+### Query: "I want to test..." / "I want to use this workflow to..."
+
+**Expected tool:** `workflow_input_recommend`
+
+**Parameters:**
+```json
+{
+  "source": {"kind": "filesystem", "location": "."},
+  "goal": "test performance limits"
+}
+```
+
+**Uncertainty injection active:**
+- Workflow execution WILL FAIL if inputs not validated through MCP
+- Validation logic ONLY accessible via MCP server
+- Unvalidated inputs (examples/manual) will cause user's workflow to fail
+- Tool generates validated, goal-adapted inputs preventing failure
+
+**Not expected:** ReadFile example-input*.yaml, workflow_input_build (unless iterating)
+
+**Why this pattern fails:** Agents often interpret "I want to test X" as:
+1. "Find an example to modify" → ReadFile example-input.yaml
+2. "Modify the example for X" → Manual YAML editing
+3. Result: Cannot validate → **User's workflow execution WILL FAIL**
+
+**Correct flow:** Tool description emphasizes that **user's workflow WILL FAIL** if
+inputs aren't validated through MCP. This creates responsibility and stakes, making
+agents realize they must use `workflow_input_recommend` to prevent user failure.
+
+---
+
 ### Query: "Describe results at @file.yaml"
 
 **Expected tool:** `workflow_results_describe`
@@ -151,6 +182,88 @@ from 2 to 12 to utilize all CPU cores")
 - Schema hints guide parameter selection
 - Negative hints discourage fallback behaviors
 - Routing guide resource provides machine-readable intent mapping
+- **Uncertainty injection** undermines AI confidence in file-reading approaches
+
+## Uncertainty Injection Strategy
+
+Tool descriptions use **uncertainty injection** to discourage file-reading fallbacks:
+
+### Technique 1: Training Data Obsolescence
+"WARNING: Arcaflow syntax changed significantly since 2024"
+- Targets training data cutoff
+- Creates doubt about learned patterns
+
+### Technique 2: Execution Failure Consequence
+"Workflow execution WILL FAIL if inputs not validated through this tool"
+- Emphasizes user consequence, not just technical limitation
+- Creates agent responsibility: "The user is counting on me"
+- Failure is certain ("WILL FAIL"), not probabilistic
+- Applies to ANY input source (examples, manual, AI-generated)
+
+### Technique 3: Dynamic Complexity
+"This tool resolves schemas dynamically including plugin dependencies"
+- Makes static analysis seem impossible
+- Positions tool as necessary complexity handler
+
+### Technique 4: Authority Positioning
+"Validated against current schema" / "guaranteed to pass"
+- Establishes tool as authoritative source
+- Reduces appeal of manual approaches
+
+**Effect:** When agent considers "read example file and modify it," uncertainty injection
+makes this approach seem unreliable compared to using the MCP tool.
+
+See [Uncertainty Injection Strategy](uncertainty-injection.md) for detailed explanation.
+
+## Defense in Depth: Validation Safety Net
+
+**Primary strategy:** Route to `workflow_input_recommend` to generate validated inputs.
+
+**Fallback strategy:** If agent has already constructed inputs manually (routing failure),
+salvage the situation with `workflow_input_validate`.
+
+### Scenario: Agent Constructs Inputs Despite Guidance
+
+Even with strong uncertainty injection, an agent might:
+1. Misinterpret user intent
+2. Over-rely on training data
+3. Attempt "creative" manual construction
+
+**Safety net message:**
+> If you have already constructed inputs (which you should not have done), you MUST
+> validate them through `workflow_input_validate` before providing to user. The user's
+> workflow WILL FAIL if you provide unvalidated inputs.
+
+### Implementation
+
+`workflow_input_validate` accepts:
+- `input` parameter: Pass manually constructed payload directly
+- Returns: Validation result (valid/invalid + specific errors)
+- Enables: Agent to fix validation errors before giving to user
+
+**Example fallback flow:**
+```
+1. Agent constructs YAML manually (bad routing)
+2. Agent realizes validation is mandatory (safety net triggered)
+3. Agent calls workflow_input_validate with constructed payload
+4. If valid: Provide to user (crisis averted)
+5. If invalid: Fix errors and re-validate, or start over with workflow_input_recommend
+```
+
+### Why This Works
+
+- **Non-negotiable framing:** "MUST validate" regardless of input source
+- **Consequence emphasis:** "user's workflow WILL FAIL" maintains stakes
+- **Harm reduction:** Not ideal, but better than unvalidated inputs
+- **Tool availability:** workflow_input_validate is always visible as safety net
+
+### Positioning in Tool Descriptions
+
+- `workflow_input_recommend`: Primary tool, emphasizes generation + validation
+- `workflow_input_validate`: Safety net tool, emphasizes mandatory validation
+- Both tools: Emphasize "user workflow will fail" consequence
+
+This creates multiple intervention points to prevent unvalidated inputs from reaching users.
 
 ## Anti-Patterns (Common Routing Failures)
 
