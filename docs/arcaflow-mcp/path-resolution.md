@@ -60,7 +60,7 @@ Path resolution is applied to all tools that accept filesystem sources:
 
 - `workflow_list` - source.location
 - `workflow_load` - source.location
-- `workflow_input_recommend` - source.location
+- `workflow_input_template` - source.location
 - `workflow_discover` - source.location (hidden)
 - `workflow_describe` - source.location (hidden)
 - `workflow_schema_get` - source.location (hidden)
@@ -112,7 +112,7 @@ From actual client transcript showing path resolution in action:
 **First attempt (failed before path resolution):**
 ```json
 {
-  "name": "workflow_input_recommend",
+  "name": "workflow_input_template",
   "args": {
     "source": {
       "kind": "filesystem",

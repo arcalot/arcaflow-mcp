@@ -5,8 +5,8 @@ AI client routing.
 
 ## Design Principles
 
-1. **Tool names match user language:** `workflow_input_recommend` matches
-   "recommend inputs", `workflow_results_describe` matches "describe results".
+1. **Tool names match user language:** `workflow_input_template` provides
+   input structure/template, `workflow_results_describe` matches "describe results".
 
 2. **Concrete user phrases in descriptions:** Each tool description includes 2-3
    exact user phrases that should trigger it (e.g., "USE THIS when user says:
@@ -26,7 +26,7 @@ AI client routing.
 ### Input Construction
 - `workflow_list` - discover workflows in a directory
 - `workflow_load` - inspect workflow content  
-- `workflow_input_recommend` - **recommend inputs (primary)**
+- `workflow_input_template` - **get input structure/template (primary)**
 
 ### Result Analysis
 - `workflow_results_load` - load and parse result files
@@ -67,7 +67,7 @@ mapping reference. This resource includes:
 
 ### Query: "What inputs do you recommend?"
 
-**Expected tool:** `workflow_input_recommend`
+**Expected tool:** `workflow_input_template`
 
 **Parameters:**
 ```json
@@ -83,7 +83,7 @@ mapping reference. This resource includes:
 
 ### Query: "I want to test..." / "I want to use this workflow to..."
 
-**Expected tool:** `workflow_input_recommend`
+**Expected tool:** `workflow_input_template`
 
 **Parameters:**
 ```json
@@ -108,7 +108,8 @@ mapping reference. This resource includes:
 
 **Correct flow:** Tool description emphasizes that **user's workflow WILL FAIL** if
 inputs aren't validated through MCP. This creates responsibility and stakes, making
-agents realize they must use `workflow_input_recommend` to prevent user failure.
+agents realize they must use `workflow_input_template` to get validated structure,
+then populate values, to prevent user failure.
 
 ---
 
@@ -217,7 +218,7 @@ See [Uncertainty Injection Strategy](uncertainty-injection.md) for detailed expl
 
 ## Defense in Depth: Validation Safety Net
 
-**Primary strategy:** Route to `workflow_input_recommend` to generate validated inputs.
+**Primary strategy:** Route to `workflow_input_template` to get validated structure for AI to populate.
 
 **Fallback strategy:** If agent has already constructed inputs manually (routing failure),
 salvage the situation with `workflow_input_validate`.
@@ -247,7 +248,7 @@ Even with strong uncertainty injection, an agent might:
 2. Agent realizes validation is mandatory (safety net triggered)
 3. Agent calls workflow_input_validate with constructed payload
 4. If valid: Provide to user (crisis averted)
-5. If invalid: Fix errors and re-validate, or start over with workflow_input_recommend
+5. If invalid: Fix errors and re-validate, or start over with workflow_input_template
 ```
 
 ### Why This Works
@@ -259,7 +260,7 @@ Even with strong uncertainty injection, an agent might:
 
 ### Positioning in Tool Descriptions
 
-- `workflow_input_recommend`: Primary tool, emphasizes generation + validation
+- `workflow_input_template`: Primary tool, provides structure for AI to populate + validate
 - `workflow_input_validate`: Safety net tool, emphasizes mandatory validation
 - Both tools: Emphasize "user workflow will fail" consequence
 
@@ -274,7 +275,7 @@ This creates multiple intervention points to prevent unvalidated inputs from rea
 **Problem:** Example files may be incomplete or outdated. Manual edits miss required
 fields from the schema.
 
-**Fix:** Use `workflow_input_recommend` which uses the schema to generate valid inputs.
+**Fix:** Use `workflow_input_template` which provides the schema and structure for AI to populate with valid inputs.
 
 ---
 
@@ -298,7 +299,7 @@ input requirements.
 **Problem:** Plugin schema resolution and sub-workflow merging require the Arcaflow
 engine. Manual inspection is incomplete.
 
-**Fix:** Use `workflow_input_recommend` which resolves all schemas automatically.
+**Fix:** Use `workflow_input_template` which resolves all schemas automatically.
 
 ---
 
@@ -329,7 +330,7 @@ Shell arcaflow run -f test-input.yaml
 
 **Correct routing:**
 ```
-workflow_input_recommend {
+workflow_input_template {
   source: {kind: "filesystem", location: "."}
 }
 # Returns validated inputs with all required fields

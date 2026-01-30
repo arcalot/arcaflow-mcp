@@ -113,8 +113,8 @@ Now you can build the inputs by describing what you want, and the AI will help c
 **You:**
 > I want to test the workflow with the name "Alice"
 
-**AI (using `workflow_input_recommend` tool with goal parameter):**
-> I'll generate validated inputs for your testing goal.
+**AI (using `workflow_input_template` tool with goal parameter):**
+> I'll get the validated input structure and populate it for your testing goal.
 >
 > The recommended input:
 >
@@ -128,8 +128,9 @@ Now you can build the inputs by describing what you want, and the AI will help c
 > - Test with a different name?
 
 **Why this works:** The phrase "I want to test..." triggers the AI to use 
-`workflow_input_recommend` with your goal, rather than trying to read and modify 
-example files (which may be incomplete or outdated).
+`workflow_input_template` with your goal to get the validated structure, then 
+populate appropriate values, rather than trying to read and modify example files 
+(which may be incomplete or outdated).
 
 ### Alternative: Iterative Building
 

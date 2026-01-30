@@ -12,7 +12,7 @@ import (
 	"github.com/arcalot/arcaflow-mcp/server/pkg/protocol"
 )
 
-func TestWorkflowInputRecommend(t *testing.T) {
+func TestWorkflowInputTemplate(t *testing.T) {
 	root := t.TempDir()
 	workflowPath := filepath.Join(root, "example.yaml")
 	content := []byte(`
@@ -38,7 +38,7 @@ outputs:
 
 	loader := workflow.NewLoader()
 	parser := workflow.NewParser()
-	tool := NewWorkflowInputRecommendTool(loader, parser, slog.Default())
+	tool := NewWorkflowInputTemplateTool(loader, parser, slog.Default())
 	result, errObj := tool.Handler(context.Background(), map[string]interface{}{
 		"source": map[string]interface{}{
 			"kind":     "filesystem",
@@ -53,7 +53,7 @@ outputs:
 		t.Fatalf("expected no error, got %v", errObj)
 	}
 
-	var payload InputRecommendResult
+	var payload InputTemplateResult
 	if err := json.Unmarshal([]byte(result.Content[0].Text), &payload); err != nil {
 		t.Fatalf("unmarshal result: %v", err)
 	}
@@ -71,10 +71,10 @@ outputs:
 	}
 }
 
-func TestWorkflowInputRecommendMissingSource(t *testing.T) {
+func TestWorkflowInputTemplateMissingSource(t *testing.T) {
 	loader := workflow.NewLoader()
 	parser := workflow.NewParser()
-	tool := NewWorkflowInputRecommendTool(loader, parser, slog.Default())
+	tool := NewWorkflowInputTemplateTool(loader, parser, slog.Default())
 	_, errObj := tool.Handler(context.Background(), map[string]interface{}{})
 	if errObj == nil {
 		t.Fatalf("expected missing source error")
@@ -85,10 +85,10 @@ func TestWorkflowInputRecommendMissingSource(t *testing.T) {
 	}
 }
 
-func TestWorkflowInputRecommendInvalidArguments(t *testing.T) {
+func TestWorkflowInputTemplateInvalidArguments(t *testing.T) {
 	loader := workflow.NewLoader()
 	parser := workflow.NewParser()
-	tool := NewWorkflowInputRecommendTool(loader, parser, slog.Default())
+	tool := NewWorkflowInputTemplateTool(loader, parser, slog.Default())
 	_, errObj := tool.Handler(context.Background(), map[string]interface{}{
 		"bad": make(chan int),
 	})
@@ -97,7 +97,7 @@ func TestWorkflowInputRecommendInvalidArguments(t *testing.T) {
 	}
 }
 
-func TestWorkflowInputRecommendSelectorRequired(t *testing.T) {
+func TestWorkflowInputTemplateSelectorRequired(t *testing.T) {
 	root := t.TempDir()
 	content := []byte(`
 version: v0.2.0
@@ -125,7 +125,7 @@ outputs:
 
 	loader := workflow.NewLoader()
 	parser := workflow.NewParser()
-	tool := NewWorkflowInputRecommendTool(loader, parser, slog.Default())
+	tool := NewWorkflowInputTemplateTool(loader, parser, slog.Default())
 	result, errObj := tool.Handler(context.Background(), map[string]interface{}{
 		"source": map[string]interface{}{
 			"kind":     "filesystem",
@@ -145,7 +145,7 @@ outputs:
 	}
 }
 
-func TestWorkflowInputRecommendCanceledContext(t *testing.T) {
+func TestWorkflowInputTemplateCanceledContext(t *testing.T) {
 	root := t.TempDir()
 	workflowPath := filepath.Join(root, "example.yaml")
 	content := []byte(`
@@ -171,7 +171,7 @@ outputs:
 
 	loader := workflow.NewLoader()
 	parser := workflow.NewParser()
-	tool := NewWorkflowInputRecommendTool(loader, parser, slog.Default())
+	tool := NewWorkflowInputTemplateTool(loader, parser, slog.Default())
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 	_, errObj := tool.Handler(ctx, map[string]interface{}{
@@ -188,10 +188,10 @@ outputs:
 	}
 }
 
-func TestWorkflowInputRecommendInvalidSourceKind(t *testing.T) {
+func TestWorkflowInputTemplateInvalidSourceKind(t *testing.T) {
 	loader := workflow.NewLoader()
 	parser := workflow.NewParser()
-	tool := NewWorkflowInputRecommendTool(loader, parser, slog.Default())
+	tool := NewWorkflowInputTemplateTool(loader, parser, slog.Default())
 	_, errObj := tool.Handler(context.Background(), map[string]interface{}{
 		"source": map[string]interface{}{
 			"kind":     "invalid",

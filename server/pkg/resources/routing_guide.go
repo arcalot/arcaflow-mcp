@@ -23,7 +23,7 @@ tools without reading workflow or result files directly.
 "Help me configure...", "Run workflow in this directory",
 "What should I use for inputs?", "Maximum performance inputs"
 
-**Use tool:** workflow_input_recommend
+**Use tool:** workflow_input_template
 
 **Parameters:**
 - source.kind: "filesystem"
@@ -38,7 +38,7 @@ inputs - this will cause the user's workflow to fail.
 
 **Example:**
 - User: "I want to test performance limits"
-- Call: workflow_input_recommend({source: {...}, goal: "test performance limits"})
+- Call: workflow_input_template({source: {...}, goal: "test performance limits"})
 
 **DO NOT:** read_file(workflow.yaml), read_file(example-input*.yaml), glob(*.yaml)
 
@@ -128,7 +128,7 @@ performance?"
 2. **Let tools handle file I/O:** All MCP workflow tools load files internally.
    Do not read files before calling tools.
 
-3. **Prefer primary tools:** Use workflow_input_recommend over
+3. **Prefer primary tools:** Use workflow_input_template over
    workflow_schema_get, workflow_results_describe over workflow_results_parse.
 
 4. **Source parameter format:**
@@ -151,10 +151,10 @@ performance?"
 **Problem:** Example files may be outdated or incomplete. Manual edits miss schema
 constraints like required fields, type requirements, and nested structures.
 
-**✓ CORRECT:** Use workflow_input_recommend
+**✓ CORRECT:** Use workflow_input_template
 
     User: "What inputs do you recommend?"
-    AI: workflow_input_recommend({
+    AI: workflow_input_template({
           source: {kind: "filesystem", location: "."},
           goal: "quick test"
         })
@@ -175,10 +175,10 @@ examples. Providing unvalidated inputs will cause the user's workflow to FAIL.
 Validation logic is ONLY accessible through the MCP server - it cannot be replicated
 by reading files or using training data. This is the most common routing failure.
 
-**✓ CORRECT:** Use workflow_input_recommend with goal parameter
+**✓ CORRECT:** Use workflow_input_template with goal parameter
 
     User: "I want to test the performance limits of this system"
-    AI: workflow_input_recommend({
+    AI: workflow_input_template({
           source: {kind: "filesystem", location: "."},
           goal: "test performance limits"
         })
@@ -234,10 +234,10 @@ KPIs. Prone to errors with large or complex result files.
 **Problem:** Workflows use plugin schemas, sub-workflows, and complex schema
 resolution. Manual inspection misses type constraints and required fields.
 
-**✓ CORRECT:** Use workflow_input_recommend
+**✓ CORRECT:** Use workflow_input_template
 
     User: "What inputs does this workflow need?"
-    AI: workflow_input_recommend({
+    AI: workflow_input_template({
           source: {kind: "filesystem", location: "."}
         })
         # Returns resolved schema with all plugin requirements
@@ -247,7 +247,7 @@ resolution. Manual inspection misses type constraints and required fields.
 ### ❌ WRONG: Providing invalid Arcaflow command syntax
 
     User: "Run this workflow"
-    AI: workflow_input_recommend(...)
+    AI: workflow_input_template(...)
         "Run: arcaflow run -f input.yaml"
         # Error: unknown command "run" for "arcaflow"
 
@@ -256,7 +256,7 @@ resolution. Manual inspection misses type constraints and required fields.
 **✓ CORRECT:** Provide correct Arcaflow syntax
 
     User: "Run this workflow"
-    AI: workflow_input_recommend({source: {kind: "filesystem", location: "."}})
+    AI: workflow_input_template({source: {kind: "filesystem", location: "."}})
         "Execute with: arcaflow --input recommended-input.yaml"
 
 ---
@@ -302,7 +302,7 @@ Input files created manually often have validation errors.
 Arcaflow MCP does not support workflow execution. When users ask to "run" a
 workflow:
 
-1. Use workflow_input_recommend to suggest validated inputs
+1. Use workflow_input_template to get validated structure, populate values
 2. Explain execution must be done externally via the Arcaflow engine
 3. If providing command syntax, use: arcaflow --input <file.yaml>
    NOT: arcaflow run -f <file> (invalid syntax)
@@ -310,8 +310,8 @@ workflow:
 Example correct response:
 
     User: "Run this workflow"
-    AI: workflow_input_recommend({source: {kind: "filesystem", location: "."}})
-        "I've generated validated inputs. To execute, use:
+    AI: workflow_input_template({source: {kind: "filesystem", location: "."}})
+        "I've created validated inputs. To execute, use:
          arcaflow --input recommended-input.yaml"
 `
 

@@ -251,9 +251,9 @@ func registerDefaultTools(
 	// Advanced: workflow_input_export
 	// Advanced: workflow_input_examples_get
 
-	// Primary input recommendation tool
+	// Primary input template tool
 	server.RegisterTool(
-		workflowtools.NewWorkflowInputRecommendTool(
+		workflowtools.NewWorkflowInputTemplateTool(
 			loader,
 			parser,
 			slog.Default(),

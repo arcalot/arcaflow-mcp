@@ -99,8 +99,8 @@ func NewWorkflowInputValidateTool(
 				"provide unvalidated inputs. Pass the input payload in the `input` " +
 				"parameter for validation. Only use session_id if you just created a " +
 				"draft with workflow_input_build in the same conversation. " +
-				"NOTE: Prefer workflow_input_recommend to generate validated inputs " +
-				"rather than construct and validate separately.",
+				"NOTE: Prefer workflow_input_template to get validated structure that AI " +
+				"populates, rather than construct and validate separately.",
 			InputSchema: json.RawMessage(workflowInputValidateInputSchema),
 		},
 		Handler: func(

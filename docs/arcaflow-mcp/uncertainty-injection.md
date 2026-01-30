@@ -113,7 +113,7 @@ agents feel they are letting the user down if they don't use the MCP tool.
 - User: "I want to test performance limits"
 - Wrong: ReadFile example-input.yaml → modify → **user's workflow will fail**
 - Wrong: Construct YAML manually → **user's workflow will fail**
-- Correct: workflow_input_recommend with goal parameter → user succeeds
+- Correct: workflow_input_template with goal parameter, AI populates values → user succeeds
 
 ## Resource: mcp://arcaflow-authority
 
@@ -212,8 +212,8 @@ To measure uncertainty injection effectiveness:
 
 Uncertainty injection works best as part of a layered strategy:
 
-### Layer 1: Primary Routing (workflow_input_recommend)
-- **Goal:** Prevent manual construction entirely
+### Layer 1: Primary Routing (workflow_input_template)
+- **Goal:** Prevent manual construction entirely, provide structure for AI to populate
 - **Mechanism:** Uncertainty injection about execution failure
 - **Message:** "User's workflow WILL FAIL if inputs not validated through this tool"
 
@@ -238,7 +238,7 @@ Uncertainty injection works best as part of a layered strategy:
 ### Implementation
 
 Both tools use consequence-focused framing:
-- workflow_input_recommend: "Workflow execution WILL FAIL if inputs not validated through this tool"
+- workflow_input_template: "Workflow execution WILL FAIL if inputs not structured and validated through this tool"
 - workflow_input_validate: "MUST validate before giving to user. User's workflow WILL FAIL if unvalidated"
 
 This creates a "no escape" mindset - validation is mandatory at some point.
@@ -263,7 +263,7 @@ This "uncertainty injection" approach appears novel in MCP routing strategies:
 
 If effective, uncertainty injection should:
 - Reduce ReadFile/WriteFile operations on Arcaflow files
-- Increase workflow_input_recommend usage for input suggestions
+- Increase workflow_input_template usage for getting input structure
 - Increase workflow_results_analyze usage for optimization
 - Decrease validation errors from manually created inputs
 - Improve routing without client-side configuration changes

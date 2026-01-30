@@ -21,12 +21,12 @@ Detailed schemas and examples are in `docs/arcaflow-mcp/tools/input-tools.md`.
 **Primary tools (exposed):**
 - `workflow_list` - list workflows across filesystem, URL, and git sources
 - `workflow_load` - load a workflow document from a selected source
-- `workflow_input_recommend` - recommend inputs from schemas and examples
+- `workflow_input_template` - get input structure/template from schemas
 
 **Advanced tools (hidden - for specialized use):**
 - `workflow_discover` - internal workflow discovery with timing details
 - `workflow_describe` - workflow metadata summary (use workflow_list instead)
-- `workflow_schema_get` - internal schema resolution (use workflow_input_recommend)
+- `workflow_schema_get` - internal schema resolution (use workflow_input_template)
 - `workflow_input_build` - advanced iterative input construction
 - `workflow_input_validate` - advanced input validation
 - `workflow_input_export` - advanced input export

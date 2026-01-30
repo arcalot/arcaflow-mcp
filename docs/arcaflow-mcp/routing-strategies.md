@@ -38,7 +38,7 @@ may trigger help-seeking behavior (using MCP tools).
 
 **Example:**
 ```
-workflow_input_recommend: "WARNING: Arcaflow syntax changed significantly since
+workflow_input_template: "WARNING: Arcaflow syntax changed significantly since
 2024. Do not rely on training data - this tool uses the Arcaflow engine's runtime
 schema resolver for guaranteed compatibility."
 ```
@@ -54,7 +54,7 @@ schema resolver for guaranteed compatibility."
 **Primary tools:**
 - `workflow_list` - discover workflows
 - `workflow_load` - inspect workflow content
-- `workflow_input_recommend` - generate validated inputs
+- `workflow_input_template` - get validated input structure
 - `workflow_results_load` - load result files
 - `workflow_results_describe` - summarize results
 - `workflow_results_analyze` - analyze and suggest input improvements
@@ -85,7 +85,7 @@ workflow_results_analyze: "USE THIS when user says: 'Analyze results at @file',
 
 **Example:**
 ```
-workflow_input_recommend: "PREVENTS: Validation errors from missing required fields
+workflow_input_template: "PREVENTS: Validation errors from missing required fields
 or incorrect types"
 ```
 
@@ -109,7 +109,7 @@ location: 'results.yaml'}}"
 
 **Example:**
 ```
-workflow_input_recommend: "DO NOT read workflow.yaml or example files - this tool
+workflow_input_template: "DO NOT read workflow.yaml or example files - this tool
 uses the schema internally"
 
 workflow_results_analyze: "DO NOT read the file yourself with read_file - this tool
@@ -188,7 +188,7 @@ Correct: workflow_results_analyze
 
 **Example:**
 ```
-workflow_input_recommend: "NOTE: MCP does not execute workflows. For execution, user
+workflow_input_template: "NOTE: MCP does not execute workflows. For execution, user
 runs: arcaflow --input <file.yaml> (NOT arcaflow run -f)"
 ```
 
@@ -207,7 +207,7 @@ To verify routing effectiveness:
 
 ### Query: "What inputs do you recommend?"
 
-- ✅ Expected: `workflow_input_recommend`
+- ✅ Expected: `workflow_input_template`
 - ❌ Not expected: ReadFile workflow.yaml, Glob *.yaml
 
 ### Query: "Describe results at @file.yaml"

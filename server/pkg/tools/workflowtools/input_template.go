@@ -12,7 +12,7 @@ import (
 	"github.com/arcalot/arcaflow-mcp/server/pkg/protocol"
 )
 
-const workflowInputRecommendInputSchema = `{
+const workflowInputTemplateInputSchema = `{
   "type": "object",
   "properties": {
     "source": {
@@ -55,22 +55,22 @@ const workflowInputRecommendInputSchema = `{
     },
     "goal": {
       "type": "string",
-      "description": "Optional goal for the recommendation (e.g. max performance)."
+      "description": "Optional user goal for context (e.g., 'test performance limits'). This is stored for reference but does NOT generate goal-specific values - the AI agent should choose appropriate values based on the goal and schema structure provided."
     }
   },
   "required": ["source"],
   "additionalProperties": false
 }`
 
-// InputRecommendParams defines the workflow_input_recommend tool input.
-type InputRecommendParams struct {
+// InputTemplateParams defines the workflow_input_template tool input.
+type InputTemplateParams struct {
 	Source   ListSourceParams   `json:"source"`
 	Selector LoadSelectorParams `json:"selector,omitempty"`
 	Goal     string             `json:"goal,omitempty"`
 }
 
-// InputRecommendResult is the workflow_input_recommend tool output payload.
-type InputRecommendResult struct {
+// InputTemplateResult is the workflow_input_template tool output payload.
+type InputTemplateResult struct {
 	Workflow        SchemaWorkflow  `json:"workflow"`
 	Goal            string          `json:"goal,omitempty"`
 	InputJSONSchema json.RawMessage `json:"input_json_schema"`
@@ -79,8 +79,8 @@ type InputRecommendResult struct {
 	InputKey        string          `json:"input_key,omitempty"`
 }
 
-// NewWorkflowInputRecommendTool registers the workflow_input_recommend tool.
-func NewWorkflowInputRecommendTool(
+// NewWorkflowInputTemplateTool registers the workflow_input_template tool.
+func NewWorkflowInputTemplateTool(
 	loader *workflow.Loader,
 	parser *workflow.Parser,
 	logger *slog.Logger,
@@ -90,30 +90,42 @@ func NewWorkflowInputRecommendTool(
 	}
 	return protocol.ToolRegistration{
 		Definition: protocol.ToolDefinition{
-			Name: "workflow_input_recommend",
-			Description: "Recommend workflow inputs validated against current Arcaflow v0.8+ " +
-				"schema engine. USE THIS when user says: 'What inputs do you recommend?', " +
+			Name: "workflow_input_template",
+			Description: "Get validated input schema and template structure for an Arcaflow " +
+				"workflow. DETERMINISTIC TOOL - Provides schema structure and type definitions " +
+				"for the AI agent to populate with goal-specific values. " +
+				"USE THIS when user says: 'What inputs do you recommend?', " +
 				"'I want to test...', 'I want to use this workflow to...', " +
 				"'I need to benchmark...', 'Help me configure...', " +
 				"'Run workflow in this directory', 'What should I use for inputs?'. " +
+				"DIVISION OF LABOR: This tool performs deterministic schema resolution and " +
+				"structural validation against Arcaflow v0.8+ engine constraints. The AI agent " +
+				"performs creative work (understanding user goal, selecting appropriate values " +
+				"for fields like 'duration: 300', 'threads: 16', etc.). " +
 				"WARNING: Arcaflow syntax changed significantly since 2024. Do not rely on " +
 				"training data or manual YAML inspection - plugin schemas, validation rules, " +
 				"and required fields differ from pre-v0.8 versions. " +
-				"CRITICAL: Workflow execution WILL FAIL if inputs are not validated through this " +
-				"tool. The deterministic validation logic is ONLY accessible through this MCP " +
-				"server - it cannot be replicated by reading files or using training data. " +
-				"Providing unvalidated inputs (from examples, manual construction, or any other " +
-				"source) will cause the user's workflow to fail with validation errors. " +
+				"CRITICAL: Workflow execution WILL FAIL if inputs are not structured and " +
+				"validated through this tool. The deterministic validation logic is ONLY " +
+				"accessible through this MCP server - it cannot be replicated by reading files " +
+				"or using training data. Inputs constructed without this tool (from example " +
+				"files, manual inspection, or other sources) will fail with validation errors. " +
 				"PREVENTS: Validation errors from missing required fields, incorrect types, " +
-				"outdated syntax patterns, schema violations. Returns schema + validated " +
-				"inputs guaranteed to pass Arcaflow v0.8+ validation. " +
-				"Accepts goal parameter for use-case-specific recommendations (e.g. " +
-				"'goal: test performance limits'). DO NOT read workflow.yaml or example files - " +
-				"this tool resolves schemas dynamically including plugin dependencies. " +
+				"outdated syntax patterns, schema violations. " +
+				"RETURNS: JSON schema (structure + types) + template with default values " +
+				"(nulls, empty strings, zeros) for the AI to populate. " +
+				"WORKFLOW: (1) AI calls this tool with goal parameter for context. " +
+				"(2) AI receives schema + template structure. (3) AI uses creativity to choose " +
+				"appropriate values based on goal and schema constraints. (4) AI validates " +
+				"final payload with workflow_input_validate before giving to user. " +
+				"Accepts goal parameter for context (e.g. 'goal: test performance limits') but " +
+				"does NOT generate goal-specific values - that is the AI's responsibility. " +
+				"DO NOT read workflow.yaml or example files - this tool resolves schemas " +
+				"dynamically including plugin dependencies. " +
 				"EXAMPLE: {source: {kind: 'filesystem', location: '.'}, goal: 'max performance'}. " +
 				"NOTE: MCP does not execute workflows. For execution, user runs: " +
 				"arcaflow --input <file.yaml> (NOT arcaflow run -f)",
-			InputSchema: json.RawMessage(workflowInputRecommendInputSchema),
+			InputSchema: json.RawMessage(workflowInputTemplateInputSchema),
 		},
 		Handler: func(
 			ctx context.Context,
@@ -122,7 +134,7 @@ func NewWorkflowInputRecommendTool(
 			if loader == nil || parser == nil {
 				return protocol.ToolsCallResult{}, toolError(
 					protocol.ErrInternal,
-					"workflow input recommendations not configured",
+					"workflow input template not configured",
 					nil,
 				)
 			}
@@ -141,7 +153,7 @@ func NewWorkflowInputRecommendTool(
 					map[string]string{"error": err.Error()},
 				)
 			}
-			var params InputRecommendParams
+			var params InputTemplateParams
 			if err := json.Unmarshal(payload, &params); err != nil {
 				return protocol.ToolsCallResult{}, toolError(
 					protocol.ErrInvalidParams,
@@ -225,7 +237,7 @@ func NewWorkflowInputRecommendTool(
 				generated = true
 			}
 
-			result := InputRecommendResult{
+			result := InputTemplateResult{
 				Workflow: SchemaWorkflow{
 					ID:   selected.ID,
 					Name: selected.Name,

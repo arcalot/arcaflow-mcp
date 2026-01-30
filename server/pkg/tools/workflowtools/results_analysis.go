@@ -166,22 +166,30 @@ func NewWorkflowResultsAnalyzeTool(
 ) protocol.ToolRegistration {
 	return newResultsAnalysisTool(
 		"workflow_results_analyze",
-		"Analyze workflow results and suggest validated inputs for Arcaflow v0.8+ " +
-			"optimized performance. USE THIS when user says: 'Results are at @file, " +
+		"Analyze workflow results and provide strategic input optimization guidance for " +
+			"Arcaflow v0.8+. USE THIS when user says: 'Results are at @file, " +
 			"what inputs should I use?', 'Analyze results at @file', " +
 			"'How can I improve performance?', 'What new inputs should I use?', " +
 			"'Optimize results.yaml', 'Output is at @file, suggest inputs'. " +
-			"WARNING: Input optimization requires understanding current Arcaflow v0.8+ " +
-			"validation constraints and plugin-specific parameters that changed since 2024. " +
-			"Do not manually create input files based on training data - validation rules, " +
-			"required fields, and parameter constraints differ from earlier versions. " +
-			"This tool validates suggestions against the Arcaflow engine schema resolver. " +
-			"PREVENTS: Invalid input suggestions, missing required fields, outdated patterns. " +
-			"Returns VALIDATED input suggestions based on result patterns (CPU, memory, concurrency). " +
+			"DETERMINISTIC TOOL - Detects patterns (high variability, failures, resource usage) " +
+			"and returns STRATEGIC GUIDANCE (e.g., 'reduce variability', 'increase concurrency'). " +
+			"Does NOT generate specific input values - that requires AI creativity based on the " +
+			"strategic patterns identified. " +
+			"DIVISION OF LABOR: This tool performs deterministic pattern detection from metrics. " +
+			"The AI agent performs creative work (translating patterns like 'reduce variability' " +
+			"into specific input values like 'duration: 300' or 'threads: 8'). " +
+			"WARNING: Result analysis requires understanding current Arcaflow v0.8+ output " +
+			"formats and plugin-specific metrics that changed since 2024. Do not rely on " +
+			"training data for result parsing - metric structure and nesting differ from " +
+			"earlier versions. This tool uses domain-specific extractors for current formats. " +
+			"PREVENTS: Missing metrics, incomplete pattern detection, outdated parsing logic. " +
+			"RETURNS: Strategic suggestions (patterns detected) + metric analysis, NOT " +
+			"specific input values. Example output: {title: 'Reduce CPU variability', " +
+			"rationale: 'High p95 suggests inconsistency', suggested_change: {metric: " +
+			"'cpu_usage', target: 'stability'}} - AI then translates this to specific inputs. " +
 			"THIS TOOL READS FILES - just provide source.kind=filesystem + location. " +
 			"DO NOT read the file yourself with read_file - this tool does it internally. " +
-			"EXAMPLE: {source: {kind: 'filesystem', location: 'results.yaml'}} " +
-			"OUTPUT: Specific validated input modifications guaranteed to pass Arcaflow validation.",
+			"EXAMPLE: {source: {kind: 'filesystem', location: 'results.yaml'}}",
 		analysisClient,
 		logger,
 		func(response analysis.AnalyzeResponse) (interface{}, error) {
@@ -228,10 +236,12 @@ func NewWorkflowInputsSuggestTool(
 ) protocol.ToolRegistration {
 	return newResultsAnalysisTool(
 		"workflow_inputs_suggest",
-		"Return only input change suggestions. Use when the user wants just the " +
-			"recommended adjustments. Example: \"suggest inputs for " +
-			"/path/results.json\". If a file path is provided, " +
-			"use source.kind=filesystem and do not call read_file.",
+		"Return strategic input optimization patterns (deterministic pattern detection only). " +
+			"Use when the user wants just the optimization guidance. DOES NOT generate specific " +
+			"input values - returns strategic patterns like 'reduce variability' or 'increase " +
+			"concurrency' for AI to translate into concrete values. Example: \"suggest inputs " +
+			"for /path/results.json\". If a file path is provided, use source.kind=filesystem " +
+			"and do not call read_file.",
 		analysisClient,
 		logger,
 		func(response analysis.AnalyzeResponse) (interface{}, error) {
@@ -248,9 +258,10 @@ func NewWorkflowOptimizationGuideTool(
 ) protocol.ToolRegistration {
 	return newResultsAnalysisTool(
 		"workflow_optimization_guide",
-		"Provide a short optimization plan plus suggestions. Use when the user " +
-			"asks for strategy or next steps. Example: \"optimize " +
-			"/path/results.json\". If a file path is provided, " +
+		"Provide strategic optimization guidance with narrative summary (deterministic pattern " +
+			"detection + summary generation). Returns patterns and strategic recommendations, " +
+			"NOT specific input values. Use when the user asks for strategy or next steps. " +
+			"Example: \"optimize /path/results.json\". If a file path is provided, " +
 			"use source.kind=filesystem and do not call read_file.",
 		analysisClient,
 		logger,

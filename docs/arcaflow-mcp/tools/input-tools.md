@@ -6,7 +6,7 @@ guidance, see the `mcp://routing-guide` resource.
 **Primary tools (simplified for consistent routing):**
 - `workflow_list` - discover workflows in a directory
 - `workflow_load` - inspect workflow content
-- `workflow_input_recommend` - recommend inputs (use instead of reading files)
+- `workflow_input_template` - get input structure/template (use instead of reading files)
 
 **Advanced tools (hidden from default tools/list):**
 - `workflow_discover`, `workflow_describe`, `workflow_schema_get`,
@@ -409,7 +409,7 @@ Example response:
 }
 ```
 
-### `workflow_input_recommend`
+### `workflow_input_template`
 
 Recommends workflow inputs using schemas and generated examples. Use this tool
 when users ask, "What inputs do you recommend?" without reading workflow files

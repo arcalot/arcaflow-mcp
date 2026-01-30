@@ -100,11 +100,11 @@ patterns.**
 
 ## Do Not Trust Training Data For:
 
-❌ **Workflow input requirements** - Use workflow_input_recommend
-❌ **Example input validity** - Use workflow_input_recommend (generates validated inputs)
+❌ **Workflow input requirements** - Use workflow_input_template
+❌ **Example input validity** - Use workflow_input_template (provides validated structure)
 ❌ **Result file structure** - Use workflow_results_describe or workflow_results_analyze
 ❌ **Command syntax** - Use tool descriptions (correct: arcaflow --input <file>)
-❌ **Required field detection** - Use workflow_input_recommend (uses engine validator)
+❌ **Required field detection** - Use workflow_input_template (uses engine validator)
 
 ---
 
@@ -125,7 +125,7 @@ will fail due to version mismatches and incomplete schema knowledge.
 
 - Arcaflow Engine: https://github.com/arcalot/arcaflow-engine
 - Arcaflow Documentation: https://arcalot.io/arcaflow
-- MCP Tools: workflow_input_recommend, workflow_results_analyze, workflow_list
+- MCP Tools: workflow_input_template, workflow_results_analyze, workflow_list
 `
 
 // ArcaflowAuthorityProvider exposes the Arcaflow authority resource.

@@ -43,8 +43,8 @@ func TestRoutingGuideProviderRead(t *testing.T) {
 	if content.MimeType != "text/markdown" {
 		t.Fatalf("expected markdown MIME type")
 	}
-	if !strings.Contains(content.Text, "workflow_input_recommend") {
-		t.Fatalf("expected routing guide to mention workflow_input_recommend")
+	if !strings.Contains(content.Text, "workflow_input_template") {
+		t.Fatalf("expected routing guide to mention workflow_input_template")
 	}
 	if !strings.Contains(content.Text, "DO NOT") {
 		t.Fatalf("expected routing guide to include negative guidance")
