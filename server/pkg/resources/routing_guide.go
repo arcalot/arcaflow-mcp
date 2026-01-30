@@ -44,6 +44,35 @@ inputs - this will cause the user's workflow to fail.
 
 ---
 
+### Input Validation
+
+**User says:** "Validate the inputs", "Validate this input", "Check if inputs are valid",
+"Are these inputs correct?", "Verify inputs", "Is this input valid?"
+
+**Use tool:** workflow_input_validate
+
+**Parameters:**
+- input: The input payload to validate (pass directly as JSON/map)
+- source: Workflow source location
+- Optional: selector if multiple workflows
+
+**Returns:** Boolean valid status + detailed error array with field-level issues
+
+**Why this tool:**
+- Structured validation feedback you can parse and explain clearly
+- Same validation logic as workflow_input_template for consistency
+- No need to manage file I/O or engine configuration
+- Returns specific error messages for each invalid field
+
+**DO NOT:** Shell command with arcaflow engine (less structured output, requires file management)
+
+**Example:**
+- User: "Validate the inputs"
+- Call: workflow_input_validate({input: {...}, source: {...}})
+- Returns: {valid: true} or {valid: false, errors: [{field: "duration", message: "..."}]}
+
+---
+
 ### Result Description
 
 **User says:** "Describe results at @file", "Summarize results.yaml",

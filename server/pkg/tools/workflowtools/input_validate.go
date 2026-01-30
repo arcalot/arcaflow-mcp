@@ -92,7 +92,18 @@ func NewWorkflowInputValidateTool(
 	return protocol.ToolRegistration{
 		Definition: protocol.ToolDefinition{
 			Name: "workflow_input_validate",
-			Description: "Validate workflow inputs before providing to user. " +
+			Description: "Validate workflow inputs against Arcaflow v0.8+ schema engine. " +
+				"USE THIS when user asks to validate, check, or verify inputs: " +
+				"'Validate the inputs', 'Validate this input', 'Check if inputs are valid', " +
+				"'Are these inputs correct?', 'Verify inputs', 'Is this input valid?'. " +
+				"PROVIDES: Structured validation feedback with specific error messages, " +
+				"field-level issues, and schema constraint violations that you can parse " +
+				"and explain to the user. " +
+				"RETURNS: Boolean valid status + detailed error array for debugging. " +
+				"BETTER THAN shell/engine validation because: (1) Structured error output " +
+				"the AI can parse and present clearly, (2) Same validation logic as " +
+				"workflow_input_template for consistency, (3) No need to manage file paths " +
+				"or engine configuration - pass input directly as JSON. " +
 				"MANDATORY SAFETY NET: If you have already constructed inputs manually " +
 				"(which you should not have done), you MUST validate them through this " +
 				"tool before giving to the user. The user's workflow WILL FAIL if you " +

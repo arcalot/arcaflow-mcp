@@ -40,6 +40,7 @@ License: Apache 2.0
 2. Never skip hooks - Use `--no-verify` only when explicitly justified
 3. Never commit without tests - Minimum 85% coverage required
 4. Never accept PRs without docs - Documentation is not optional
+5. Never try to commit without user confirmation or instruction to do so.
 
 ## Code Standards
 

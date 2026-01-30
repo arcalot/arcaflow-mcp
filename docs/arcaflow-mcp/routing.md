@@ -113,6 +113,45 @@ then populate values, to prevent user failure.
 
 ---
 
+### Query: "Validate the inputs" / "Check if inputs are valid"
+
+**Expected tool:** `workflow_input_validate`
+
+**Parameters:**
+```json
+{
+  "input": { /* input payload to validate */ },
+  "source": {"kind": "filesystem", "location": "."}
+}
+```
+
+**Returns:**
+```json
+{
+  "valid": true
+}
+// or
+{
+  "valid": false,
+  "errors": [
+    {"field": "duration", "message": "required field missing"}
+  ]
+}
+```
+
+**Why this tool, not shell/engine:**
+- **Structured output:** AI can parse and explain validation errors clearly
+- **Direct input:** Pass JSON directly, no file I/O needed
+- **Consistent logic:** Same validation as `workflow_input_template`
+- **Field-level errors:** Specific messages for each invalid field
+
+**Not expected:** Shell command with arcaflow engine (e.g., `./arcaflow --validate-only`)
+
+**When engine IS appropriate:** User asks to "run" or "execute" the workflow
+(MCP cannot execute, provide command: `arcaflow --input <file.yaml>`)
+
+---
+
 ### Query: "Describe results at @file.yaml"
 
 **Expected tool:** `workflow_results_describe`
