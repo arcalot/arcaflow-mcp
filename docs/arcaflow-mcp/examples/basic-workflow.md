@@ -47,9 +47,7 @@ The Arcaflow MCP repository includes example workflows in `examples/workflows/`:
 ### Example Conversation:
 
 **You:**
-```
-Load the hello-world workflow from /path/to/arcaflow-mcp/examples/workflows/hello-world
-```
+> Load the hello-world workflow from /path/to/arcaflow-mcp/examples/workflows/hello-world
 
 **Replace `/path/to/arcaflow-mcp`** with your actual installation path, such as:
 - `/home/user/arcaflow-mcp` (Linux)
@@ -57,14 +55,12 @@ Load the hello-world workflow from /path/to/arcaflow-mcp/examples/workflows/hell
 - `C:\Users\user\arcaflow-mcp` (Windows)
 
 **AI (using `workflow_load` tool):**
-```
-I've loaded the hello-world workflow. This is a simple workflow that:
-- Accepts a `name` parameter (string)
-- Generates a greeting message
-- Returns the greeting as output
-
-Would you like me to show you the input schema?
-```
+> I've loaded the hello-world workflow. This is a simple workflow that:
+> - Accepts a `name` parameter (string)
+> - Generates a greeting message
+> - Returns the greeting as output
+>
+> Would you like me to show you the input schema?
 
 ### What Happened?
 
@@ -83,24 +79,20 @@ Before building inputs, it helps to understand what the workflow expects.
 ### Example Conversation:
 
 **You:**
-```
-What inputs does this workflow require?
-```
+> What inputs does this workflow require?
 
 **AI (using `workflow_schema_get` tool):**
-```
-The hello-world workflow requires these inputs:
-
-**Required Fields:**
-- `name` (string) - The name to greet
-  - Must be a non-empty string
-  - Description: "Name to greet"
-
-**Optional Fields:**
-- None
-
-This is a simple workflow with just one required field.
-```
+> The hello-world workflow requires these inputs:
+>
+> **Required Fields:**
+> - `name` (string) - The name to greet
+>   - Must be a non-empty string
+>   - Description: "Name to greet"
+>
+> **Optional Fields:**
+> - None
+>
+> This is a simple workflow with just one required field.
 
 ### What Happened?
 
@@ -119,58 +111,48 @@ Now you can build the inputs by describing what you want, and the AI will help c
 ### Example Conversation:
 
 **You:**
-```
-I want to test the workflow with the name "Alice"
-```
+> I want to test the workflow with the name "Alice"
 
 **AI (using `workflow_input_build` tool):**
-```
-I've created workflow inputs with name set to "Alice". 
-
-The current input:
-```yaml
-name: "Alice"
-```
-
-This input is valid and ready to use. Would you like to:
-- Export it to a file?
-- Validate it one more time?
-- Modify any values?
-```
+> I've created workflow inputs with name set to "Alice". 
+>
+> The current input:
+>
+> ```yaml
+> name: "Alice"
+> ```
+>
+> This input is valid and ready to use. Would you like to:
+> - Export it to a file?
+> - Validate it one more time?
+> - Modify any values?
 
 ### Alternative: Iterative Building
 
 For more complex workflows, you can build inputs iteratively:
 
 **You:**
-```
-Start building inputs for the workflow
-```
+> Start building inputs for the workflow
 
 **AI:**
-```
-Let's build the inputs step by step.
-
-First, I need a value for the required field `name` (string).
-What name would you like to use?
-```
+> Let's build the inputs step by step.
+>
+> First, I need a value for the required field `name` (string).
+> What name would you like to use?
 
 **You:**
-```
-Use "Bob"
-```
+> Use "Bob"
 
 **AI (using `workflow_input_build`):**
-```
-Added name: "Bob"
-
-All required fields are now filled. The input is:
-```yaml
-name: "Bob"
-```
-
-Ready to export or validate?
-```
+> Added name: "Bob"
+>
+> All required fields are now filled. The input is:
+>
+> ```yaml
+> name: "Bob"
+> ```
+>
+> Ready to export or validate?
 
 ### What Happened?
 
@@ -189,32 +171,26 @@ Before exporting, you can explicitly validate the inputs to ensure they'll work 
 ### Example Conversation:
 
 **You:**
-```
-Validate the inputs
-```
+> Validate the inputs
 
 **AI (using `workflow_input_validate` tool):**
-```
-✓ Validation successful!
-
-The inputs are valid and meet all schema requirements:
-- All required fields are present
-- All field types are correct
-- All constraints are satisfied
-
-You can safely export these inputs for use with Arcaflow Engine.
-```
+> ✓ Validation successful!
+>
+> The inputs are valid and meet all schema requirements:
+> - All required fields are present
+> - All field types are correct
+> - All constraints are satisfied
+>
+> You can safely export these inputs for use with Arcaflow Engine.
 
 ### What if Validation Fails?
 
 **AI:**
-```
-✗ Validation failed:
-
-Error: Field `name` is required but not provided
-
-Would you like me to help you add the missing field?
-```
+> ✗ Validation failed:
+>
+> Error: Field `name` is required but not provided
+>
+> Would you like me to help you add the missing field?
 
 ### What Happened?
 
@@ -233,38 +209,32 @@ Once inputs are validated, export them to a file for use with Arcaflow Engine.
 ### Example Conversation:
 
 **You:**
-```
-Export the inputs to hello-inputs.yaml
-```
+> Export the inputs to hello-inputs.yaml
 
 **AI (using `workflow_input_export` tool):**
-```
-✓ Exported inputs to hello-inputs.yaml
-
-The file contains:
-```yaml
-name: "Alice"
-```
-
-You can now run the workflow with:
-```bash
-arcaflow -input hello-inputs.yaml -workflow /path/to/workflow.yaml
-```
-```
+> ✓ Exported inputs to hello-inputs.yaml
+>
+> The file contains:
+>
+> ```yaml
+> name: "Alice"
+> ```
+>
+> You can now run the workflow with:
+>
+> ```bash
+> arcaflow -input hello-inputs.yaml -workflow /path/to/workflow.yaml
+> ```
 
 ### Export Options
 
 You can export in different formats:
 
 **YAML (default):**
-```
-Export inputs to hello-inputs.yaml
-```
+> Export inputs to hello-inputs.yaml
 
 **JSON:**
-```
-Export inputs as JSON to hello-inputs.json
-```
+> Export inputs as JSON to hello-inputs.json
 
 ### What Happened?
 
@@ -281,34 +251,32 @@ The MCP server:
 Here's a complete conversation showing the entire process:
 
 **You:**
-```
-Load the hello-world workflow from /path/to/examples/workflows/hello-world,
-build inputs with name "Alice", and export to hello-inputs.yaml
-```
+> Load the hello-world workflow from /path/to/examples/workflows/hello-world,
+> build inputs with name "Alice", and export to hello-inputs.yaml
 
 **AI:**
-```
-I'll help you with that. Let me:
-
-1. Load the workflow...
-   ✓ Workflow loaded: hello-world
-
-2. Build inputs with name="Alice"...
-   ✓ Input constructed and validated
-
-3. Export to hello-inputs.yaml...
-   ✓ File written
-
-Your workflow inputs are ready! The file contains:
-```yaml
-name: "Alice"
-```
-
-Run the workflow with:
-```bash
-arcaflow -input hello-inputs.yaml -workflow /path/to/workflow.yaml
-```
-```
+> I'll help you with that. Let me:
+>
+> 1. Load the workflow...
+>    ✓ Workflow loaded: hello-world
+>
+> 2. Build inputs with name="Alice"...
+>    ✓ Input constructed and validated
+>
+> 3. Export to hello-inputs.yaml...
+>    ✓ File written
+>
+> Your workflow inputs are ready! The file contains:
+>
+> ```yaml
+> name: "Alice"
+> ```
+>
+> Run the workflow with:
+>
+> ```bash
+> arcaflow -input hello-inputs.yaml -workflow /path/to/workflow.yaml
+> ```
 
 ---
 
@@ -344,9 +312,8 @@ For workflows with many fields:
 ### Schema Exploration
 
 To understand a workflow before building:
-```
-Show me the complete input schema for this workflow
-```
+
+> Show me the complete input schema for this workflow
 
 The AI will provide:
 - All fields (required and optional)
@@ -358,9 +325,8 @@ The AI will provide:
 ### Modifying Existing Inputs
 
 You can modify inputs after building:
-```
-Change the name to "Carol"
-```
+
+> Change the name to "Carol"
 
 The AI will:
 1. Update the field

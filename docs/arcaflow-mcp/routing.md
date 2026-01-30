@@ -65,7 +65,7 @@ mapping reference. This resource includes:
 
 ## Expected Routing Behavior
 
-### "What inputs do you recommend?"
+### Query: "What inputs do you recommend?"
 
 **Expected tool:** `workflow_input_recommend`
 
@@ -81,7 +81,7 @@ mapping reference. This resource includes:
 
 ---
 
-### "Describe results at @file.yaml"
+### Query: "Describe results at @file.yaml"
 
 **Expected tool:** `workflow_results_describe`
 
@@ -96,7 +96,7 @@ mapping reference. This resource includes:
 
 ---
 
-### "Analyze results at @file.yaml"
+### Query: "Analyze results at @file.yaml"
 
 **Expected tool:** `workflow_results_analyze`
 
@@ -111,7 +111,7 @@ mapping reference. This resource includes:
 
 ---
 
-### "Output is at @results.yaml. What new inputs should I use?"
+### Query: "Output is at @results.yaml. What new inputs should I use?"
 
 **Expected tool:** `workflow_results_analyze`
 
@@ -129,7 +129,7 @@ from 2 to 12 to utilize all CPU cores")
 
 ---
 
-### "List workflows in this directory"
+### Query: "List workflows in this directory"
 
 **Expected tool:** `workflow_list`
 
@@ -201,7 +201,8 @@ To verify routing effectiveness:
 
 ### Example 1: Input Recommendations
 
-User: "What inputs do you recommend for this workflow?"
+**User Query:**
+> What inputs do you recommend for this workflow?
 
 **Wrong routing:**
 ```
@@ -228,8 +229,9 @@ workflow_input_recommend {
 
 ### Example 2: Result Analysis and Input Optimization
 
-User: "Output is at @mcp-test-out-1.yaml. What new inputs should I use to keep
-assessing performance?"
+**User Query:**
+> Output is at @mcp-test-out-1.yaml. What new inputs should I use to keep
+> assessing performance?
 
 **Wrong routing:**
 ```

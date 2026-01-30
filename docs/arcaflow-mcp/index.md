@@ -172,19 +172,13 @@ After setup, test with built-in example workflows in the repository:
 **Quick Test with Claude Desktop:**
 
 1. Open Claude and ask:
-   ```
-   "Load the hello-world workflow from /path/to/arcaflow-mcp/examples/workflows/hello-world"
-   ```
+   > Load the hello-world workflow from /path/to/arcaflow-mcp/examples/workflows/hello-world
 
 2. Build inputs conversationally:
-   ```
-   "Build inputs for this workflow. Use the name 'Alice'"
-   ```
+   > Build inputs for this workflow. Use the name 'Alice'
 
 3. Export for use:
-   ```
-   "Export these inputs to /tmp/hello-inputs.yaml"
-   ```
+   > Export these inputs to /tmp/hello-inputs.yaml
 
 **You just built your first workflow input!** See the [Getting Started Guide](getting-started.md) for more.
 
