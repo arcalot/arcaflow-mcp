@@ -93,9 +93,12 @@ func NewWorkflowInputValidateTool(
 		Definition: protocol.ToolDefinition{
 			Name: "workflow_input_validate",
 			Description: "Validate workflow inputs against Arcaflow v0.8+ schema engine. " +
-				"USE THIS when user asks to validate, check, or verify inputs: " +
-				"'Validate the inputs', 'Validate this input', 'Check if inputs are valid', " +
-				"'Are these inputs correct?', 'Verify inputs', 'Is this input valid?'. " +
+				"MANDATORY: You MUST call this tool BEFORE showing any inputs to the user, " +
+				"writing input files, or presenting results. This is a required safety step " +
+				"in the input creation workflow - validation is not optional. " +
+				"USE THIS: (1) After populating inputs from workflow_input_template (REQUIRED), " +
+				"(2) When user explicitly asks to validate: 'Validate the inputs', " +
+				"'Check if inputs are valid', 'Are these inputs correct?', 'Verify inputs'. " +
 				"PROVIDES: Structured validation feedback with specific error messages, " +
 				"field-level issues, and schema constraint violations that you can parse " +
 				"and explain to the user. " +
@@ -104,12 +107,12 @@ func NewWorkflowInputValidateTool(
 				"the AI can parse and present clearly, (2) Same validation logic as " +
 				"workflow_input_template for consistency, (3) No need to manage file paths " +
 				"or engine configuration - pass input directly as JSON. " +
-				"MANDATORY SAFETY NET: If you have already constructed inputs manually " +
-				"(which you should not have done), you MUST validate them through this " +
-				"tool before giving to the user. The user's workflow WILL FAIL if you " +
-				"provide unvalidated inputs. Pass the input payload in the `input` " +
-				"parameter for validation. Only use session_id if you just created a " +
-				"draft with workflow_input_build in the same conversation. " +
+				"CRITICAL: The user's workflow WILL FAIL if you show them unvalidated inputs. " +
+				"NEVER write files, show inputs, or ask 'would you like me to validate' - " +
+				"validation must happen automatically before user sees any inputs. " +
+				"Pass the input payload in the `input` parameter for validation. Only use " +
+				"session_id if you just created a draft with workflow_input_build in the " +
+				"same conversation. " +
 				"NOTE: Prefer workflow_input_template to get validated structure that AI " +
 				"populates, rather than construct and validate separately.",
 			InputSchema: json.RawMessage(workflowInputValidateInputSchema),

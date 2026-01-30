@@ -41,7 +41,7 @@ analysis/
 - `POST /suggest` - Generate optimization suggestions from results
 - `POST /metrics` - Extract metrics only (no analysis)
 - `POST /parse` - Parse result without analysis
-- `GET /health` - Health check endpoint
+- `GET /healthz` - Health check endpoint
 
 **Request/Response Format:**
 

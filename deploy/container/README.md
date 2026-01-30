@@ -37,8 +37,8 @@ docker compose ps
 docker compose logs -f
 
 # Verify both components are healthy
-curl http://localhost:8081/health  # Analysis engine
-curl http://localhost:8080/health  # MCP server
+curl http://localhost:8081/healthz  # Analysis engine
+curl http://localhost:8080/healthz  # MCP server
 ```
 
 ### Using Podman Compose
@@ -59,8 +59,8 @@ podman-compose ps
 podman-compose logs -f
 
 # Verify both components are healthy
-curl http://localhost:8081/health  # Analysis engine
-curl http://localhost:8080/health  # MCP server
+curl http://localhost:8081/healthz  # Analysis engine
+curl http://localhost:8080/healthz  # MCP server
 ```
 
 ## Post-Deployment: Create Tenants

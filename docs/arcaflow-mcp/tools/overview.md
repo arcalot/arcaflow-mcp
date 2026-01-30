@@ -18,37 +18,47 @@ Examples (natural language):
 
 Detailed schemas and examples are in `docs/arcaflow-mcp/tools/input-tools.md`.
 
-**Primary tools (exposed):**
+**Primary tools (registered and available to AI agents):**
 - `workflow_list` - list workflows across filesystem, URL, and git sources
 - `workflow_load` - load a workflow document from a selected source
-- `workflow_input_template` - get input structure/template from schemas
+- `workflow_input_template` - get validated input structure/template from schemas
+- `workflow_input_validate` - validate inputs against workflow schema (fallback safety net)
+- `workflow_input_export` - export validated inputs to JSON or YAML files
 
-**Advanced tools (hidden - for specialized use):**
-- `workflow_discover` - internal workflow discovery with timing details
-- `workflow_describe` - workflow metadata summary (use workflow_list instead)
-- `workflow_schema_get` - internal schema resolution (use workflow_input_template)
-- `workflow_input_build` - advanced iterative input construction
-- `workflow_input_validate` - advanced input validation
-- `workflow_input_export` - advanced input export
-- `workflow_input_examples_get` - internal example generation
-- `plugin_schema_get` - advanced plugin schema inspection
+**Hidden tools (code exists but NOT registered):**
+
+These tools exist in the codebase but are intentionally not exposed to AI agents to avoid tool selection confusion and maintain a focused, high-quality tool surface area. Reasons for keeping them hidden:
+
+- **Internal dependencies**: Some tools provide shared types or helper functions used by registered tools (e.g., `workflow_discover` provides `DiscoveryResult` and `loadDetails` types)
+- **Redundancy**: Tool capabilities fully covered by simpler registered tools (e.g., `workflow_describe` duplicates `workflow_list` + `workflow_load`)
+- **Deferred features**: Advanced capabilities not yet needed by typical workflows (e.g., `workflow_input_build` for multi-step iterative construction)
+- **Too specialized**: Edge case functionality better handled through other means (e.g., `plugin_schema_get` for deep schema inspection)
+
+Hidden tools list:
+- `workflow_discover` - shared types/functions (DiscoveryResult, loadDetails). Use workflow_list instead.
+- `workflow_describe` - redundant with workflow_list + workflow_load
+- `workflow_schema_get` - internal schema resolution used by workflow_input_template
+- `workflow_input_build` - advanced iterative construction (deferred for future)
+- `workflow_input_examples_get` - internal example generation used by workflow_input_template
+- `plugin_schema_get` - plugin-level schema inspection (too specialized)
 
 ### Result analysis tools
 
 Detailed schemas and examples are in `docs/arcaflow-mcp/tools/result-tools.md`.
 
-**Primary tools (exposed):**
+**Primary tools (registered and available to AI agents):**
 - `workflow_results_load` - load result files from disk or URL
 - `workflow_results_describe` - describe results from a file or payload
-- `workflow_results_analyze` - analyze results and suggest improvements
+- `workflow_results_analyze` - analyze results and suggest strategic optimization patterns
+- `workflow_results_compare` - compare multiple runs and rank metrics
 - `workflow_history_load` - load historical analysis runs
 
-**Advanced tools (hidden - for specialized use):**
+**Hidden tools (code exists but NOT registered):**
+
+See input tools section above for explanation of why tools are kept hidden. Result analysis hidden tools:
 - `workflow_results_parse` - consolidated into workflow_results_describe
-- `workflow_results_compare` - advanced multi-run comparison
-- `workflow_inputs_suggest` - advanced input modification generation
-- `workflow_optimization_guide` - advanced strategic guidance
-- `workflow_results_metrics_extract` - advanced KPI extraction
+- `workflow_optimization_guide` - specialized narrative output. Use workflow_results_analyze instead.
+- `workflow_results_metrics_extract` - KPI-only extraction. Use workflow_results_describe instead.
 
 ### Resources
 

@@ -138,7 +138,7 @@ The Python analysis engine (`analysis/`) processes workflow results and generate
 - `POST /suggest` - Generate optimization suggestions
 - `POST /metrics` - Extract metrics only
 - `POST /parse` - Parse result without analysis
-- `GET /health` - Health check
+- `GET /healthz` - Health check
 
 ## Data Flow Patterns
 

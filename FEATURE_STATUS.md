@@ -166,7 +166,7 @@ Legend:
 | Feature | Status | Component | Notes |
 |---------|--------|-----------|-------|
 | Structured logging | ✅ Implemented | Both | JSON logs |
-| Health endpoints | ✅ Implemented | Both | /health checks |
+| Health endpoints | ✅ Implemented | Both | /healthz checks |
 | Version endpoints | ✅ Implemented | Go Server | Version info |
 | Prometheus metrics | 🔮 Future | Both | Monitoring |
 | OpenTelemetry tracing | 🔮 Future | Both | Distributed tracing |

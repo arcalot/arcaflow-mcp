@@ -114,10 +114,13 @@ func NewWorkflowInputTemplateTool(
 				"outdated syntax patterns, schema violations. " +
 				"RETURNS: JSON schema (structure + types) + template with default values " +
 				"(nulls, empty strings, zeros) for the AI to populate. " +
-				"WORKFLOW: (1) AI calls this tool with goal parameter for context. " +
+				"MANDATORY WORKFLOW: (1) AI calls this tool with goal parameter for context. " +
 				"(2) AI receives schema + template structure. (3) AI uses creativity to choose " +
-				"appropriate values based on goal and schema constraints. (4) AI validates " +
-				"final payload with workflow_input_validate before giving to user. " +
+				"appropriate values based on goal and schema constraints. (4) AI MUST call " +
+				"workflow_input_validate with populated inputs. (5) ONLY AFTER validation " +
+				"passes, AI shows inputs to user. CRITICAL: NEVER write files, show inputs, " +
+				"or present results to user without validation. User's workflow WILL FAIL if " +
+				"you skip validation. Validation is not optional - it is a required safety step. " +
 				"Accepts goal parameter for context (e.g. 'goal: test performance limits') but " +
 				"does NOT generate goal-specific values - that is the AI's responsibility. " +
 				"DO NOT read workflow.yaml or example files - this tool resolves schemas " +

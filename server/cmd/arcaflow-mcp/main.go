@@ -22,6 +22,7 @@ import (
 	"github.com/arcalot/arcaflow-mcp/server/pkg/protocol"
 	"github.com/arcalot/arcaflow-mcp/server/pkg/ratelimit"
 	"github.com/arcalot/arcaflow-mcp/server/pkg/resources"
+	"github.com/arcalot/arcaflow-mcp/server/pkg/state"
 	"github.com/arcalot/arcaflow-mcp/server/pkg/tenant"
 	"github.com/arcalot/arcaflow-mcp/server/pkg/tools/workflowtools"
 	"github.com/arcalot/arcaflow-mcp/server/pkg/transport/httpserver"
@@ -242,20 +243,39 @@ func registerDefaultTools(
 	server.RegisterTool(
 		workflowtools.NewWorkflowLoadTool(loader, slog.Default()),
 	)
-	// Advanced: workflow_schema_get (hidden - internal use by workflow_input_recommend)
-	// Advanced: plugin_schema_get (hidden - advanced schema inspection)
-	// Advanced: workflow_describe (hidden - use workflow_list + workflow_load instead)
-	// Advanced input construction tools (hidden - use workflow_input_recommend instead)
-	// Advanced: workflow_input_build
-	// Advanced: workflow_input_validate
-	// Advanced: workflow_input_export
-	// Advanced: workflow_input_examples_get
+	// Hidden tools exist in codebase but are NOT registered:
+	// - workflow_discover: Code kept for shared types (DiscoveryResult, loadDetails). Redundant with workflow_list.
+	// - workflow_describe: Code kept for compatibility. Redundant with workflow_list + workflow_load.
+	// - workflow_schema_get: Internal schema resolution. Use workflow_input_template instead.
+	// - workflow_input_build: Advanced iterative construction. Deferred until multi-step workflows needed.
+	// - workflow_input_examples_get: Internal example generation. Accessed via workflow_input_template.
+	// - workflow_optimization_guide: Kept for specialized narrative output. Consider using workflow_results_analyze.
+	// - workflow_results_metrics_extract: Kept for KPI-only extraction. Consider using workflow_results_describe.
+	// - plugin_schema_get: Advanced plugin-level schema inspection. Too specialized for most users.
 
 	// Primary input template tool
 	server.RegisterTool(
 		workflowtools.NewWorkflowInputTemplateTool(
 			loader,
 			parser,
+			slog.Default(),
+		),
+	)
+	// Primary input validation tool (fallback safety net)
+	stateManager := state.NewManager(0) // 0 = use default 30min TTL
+	server.RegisterTool(
+		workflowtools.NewWorkflowInputValidateTool(
+			loader,
+			stateManager,
+			slog.Default(),
+		),
+	)
+	// Primary input export tool (format conversion, file saving)
+	server.RegisterTool(
+		workflowtools.NewWorkflowInputExportTool(
+			loader,
+			parser,
+			stateManager,
 			slog.Default(),
 		),
 	)
@@ -272,12 +292,9 @@ func registerDefaultTools(
 	server.RegisterTool(
 		workflowtools.NewWorkflowHistoryLoadTool(analysisClient, slog.Default()),
 	)
-
-	// Advanced result analysis tools (hidden - use primary tools instead)
-	// Advanced: workflow_results_compare
-	// Advanced: workflow_results_metrics_extract
-	// Advanced: workflow_inputs_suggest
-	// Advanced: workflow_optimization_guide
+	server.RegisterTool(
+		workflowtools.NewWorkflowResultsCompareTool(analysisClient, slog.Default()),
+	)
 	server.RegisterResourceProvider(
 		resources.NewArcaflowAuthorityProvider(slog.Default()),
 	)

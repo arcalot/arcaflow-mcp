@@ -264,6 +264,7 @@ func TestWorkflowResultsAnalyzeProvidesHintOnFailure(t *testing.T) {
 	if errObj == nil {
 		t.Fatalf("expected analysis error")
 	}
+	// errObj is guaranteed non-nil here due to check above
 	if !errorDataHasHint(errObj.Data) {
 		t.Fatalf("expected hint in error data")
 	}
@@ -293,29 +294,6 @@ func TestWorkflowResultsCompareInvalidArguments(t *testing.T) {
 	if errObj == nil {
 		t.Fatalf("expected invalid arguments error")
 	}
-}
-
-func TestWorkflowInputsSuggestTool(t *testing.T) {
-	t.Parallel()
-
-	server := newAnalysisTestServer(t)
-	t.Cleanup(server.Close)
-
-	client := analysis.NewClient(server.URL)
-	tool := NewWorkflowInputsSuggestTool(client, slog.Default())
-	result, errObj := tool.Handler(context.Background(), analysisToolArgs())
-	if errObj != nil {
-		t.Fatalf("expected no error, got %v", errObj)
-	}
-
-	var payload InputsSuggestResult
-	if err := json.Unmarshal([]byte(result.Content[0].Text), &payload); err != nil {
-		t.Fatalf("unmarshal result: %v", err)
-	}
-	if len(payload.Suggestions) == 0 {
-		t.Fatalf("expected suggestions")
-	}
-	assertSuggestionActionable(t, payload.Suggestions[0])
 }
 
 func TestWorkflowOptimizationGuideTool(t *testing.T) {

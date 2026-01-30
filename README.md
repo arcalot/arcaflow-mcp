@@ -8,6 +8,21 @@ A Model Context Protocol (MCP) server that enables natural language conversation
 with AI agents to build, validate, and optimize Arcaflow workflow inputs, and
 analyze workflow execution results.
 
+## What It IS and IS NOT
+
+**✅ What Arcaflow MCP IS:**
+- A tool for **working with existing Arcaflow workflows**
+- An input construction assistant that helps you create valid workflow inputs through conversation
+- A result analysis engine that suggests optimization strategies
+- A validation layer ensuring inputs are schema-compliant before execution
+
+**❌ What Arcaflow MCP IS NOT:**
+- **NOT a workflow creation tool** - it does not write or generate workflow.yaml files
+- **NOT a workflow execution engine** - use the Arcaflow engine to run workflows
+- **NOT a plugin development tool** - use Arcaflow SDK for plugin creation
+
+**In short:** Arcaflow MCP helps you prepare inputs for workflows and analyze their results. You need existing workflows to work with.
+
 ## What is Arcaflow MCP?
 
 Arcaflow MCP bridges the gap between natural language conversations and
@@ -126,7 +141,7 @@ podman run -d --name arcaflow-analysis \
 
 # Wait for startup and verify
 sleep 2
-curl http://localhost:8081/health
+curl http://localhost:8081/healthz
 # Expected: {"status":"healthy"}
 ```
 

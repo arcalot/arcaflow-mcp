@@ -23,24 +23,35 @@ tools without reading workflow or result files directly.
 "Help me configure...", "Run workflow in this directory",
 "What should I use for inputs?", "Maximum performance inputs"
 
-**Use tool:** workflow_input_template
+**MANDATORY WORKFLOW (all steps required):**
+1. Call workflow_input_template with user's goal
+2. Receive schema + template structure
+3. Populate template with appropriate values for user's goal
+4. Call workflow_input_validate with populated inputs (MANDATORY)
+5. ONLY AFTER validation passes, show inputs to user
 
-**Parameters:**
+**CRITICAL:** NEVER write files, show inputs, or present results to user without 
+validation. Validation is not optional - it is a required safety step. The user's 
+workflow WILL FAIL if you skip validation.
+
+**Parameters for workflow_input_template:**
 - source.kind: "filesystem"
 - source.location: "." (current directory) or specific path
 - goal: REQUIRED when user states intent (e.g., "test performance limits")
 
-**CRITICAL:** When user says "I want to [action]...", extract their goal and pass
-it in the goal parameter. The user's workflow execution WILL FAIL if inputs are not
-validated through this MCP server. Validation logic is ONLY accessible here - it
-cannot be replicated. DO NOT read example-input*.yaml files or manually construct
-inputs - this will cause the user's workflow to fail.
+**Why this matters:** When user says "I want to [action]...", they expect working 
+inputs. Validation logic is ONLY accessible through this MCP server - it cannot be 
+replicated. Unvalidated inputs will cause workflow execution failures.
 
 **Example:**
 - User: "I want to test performance limits"
-- Call: workflow_input_template({source: {...}, goal: "test performance limits"})
+- Step 1: workflow_input_template({source: {...}, goal: "test performance limits"})
+- Step 2-3: Receive template, populate with performance-focused values
+- Step 4: workflow_input_validate({input: populated_inputs, source: {...}})
+- Step 5: If valid, show inputs to user. If invalid, fix and re-validate.
 
-**DO NOT:** read_file(workflow.yaml), read_file(example-input*.yaml), glob(*.yaml)
+**DO NOT:** read_file(workflow.yaml), read_file(example-input*.yaml), glob(*.yaml),
+write_file() before validation, show inputs to user before validation
 
 ---
 

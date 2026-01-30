@@ -116,14 +116,14 @@ Content-Type: application/json
 
 ### 1. Health Check
 
-**Endpoint:** `GET /health`
+**Endpoint:** `GET /healthz`
 
 **Purpose:** Check service availability
 
 **Request:**
 
 ```http
-GET /health HTTP/1.1
+GET /healthz HTTP/1.1
 Host: localhost:8081
 ```
 

@@ -29,7 +29,7 @@ For complete HTTP API specification, see:
 
 | Endpoint | Method | Purpose |
 |----------|--------|---------|
-| `/health` | GET | Health check |
+| `/healthz` | GET | Health check |
 | `/analyze` | POST | Analyze single result |
 | `/compare` | POST | Compare multiple results |
 | `/suggest` | POST | Generate suggestions |

@@ -130,7 +130,7 @@ func (s *Server) Run(ctx context.Context) error {
 
 - `POST /mcp` - MCP JSON-RPC requests
 - `GET /mcp/events` - Server-Sent Events (SSE) for responses
-- `GET /health` - Health check
+- `GET /healthz` - Health check
 - **Admin API** (requires admin token):
   - `POST /admin/tenants` - Create tenant
   - `GET /admin/tenants` - List tenants

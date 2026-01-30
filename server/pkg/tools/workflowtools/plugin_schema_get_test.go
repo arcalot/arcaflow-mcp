@@ -194,9 +194,11 @@ func TestPluginSchemaGetNoSchemasHint(t *testing.T) {
 	if errObj == nil {
 		t.Fatalf("expected no schema error")
 	}
+	// errObj is guaranteed non-nil here due to check above
 	if errObj.Data == nil {
 		t.Fatalf("expected hint details")
 	}
+	// errObj.Data is guaranteed non-nil here due to check above
 	if details, ok := errObj.Data.(map[string]string); ok {
 		if details["hint"] == "" {
 			t.Fatalf("expected hint when no schemas present")

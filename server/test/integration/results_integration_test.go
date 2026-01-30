@@ -80,19 +80,6 @@ func TestResultsAnalysisIntegration(t *testing.T) {
 		t.Fatalf("expected comparison summary")
 	}
 
-	suggestTool := workflowtools.NewWorkflowInputsSuggestTool(client, nil)
-	suggestResult, errObj := suggestTool.Handler(context.Background(), args)
-	if errObj != nil {
-		t.Fatalf("suggest inputs: %v", errObj)
-	}
-	var suggestPayload workflowtools.InputsSuggestResult
-	if err := json.Unmarshal([]byte(suggestResult.Content[0].Text), &suggestPayload); err != nil {
-		t.Fatalf("unmarshal suggest result: %v", err)
-	}
-	if len(suggestPayload.Suggestions) == 0 {
-		t.Fatalf("expected input suggestions")
-	}
-
 	guideTool := workflowtools.NewWorkflowOptimizationGuideTool(client, nil)
 	guideResult, errObj := guideTool.Handler(context.Background(), args)
 	if errObj != nil {

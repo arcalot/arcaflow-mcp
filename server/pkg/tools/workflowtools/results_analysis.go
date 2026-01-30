@@ -229,28 +229,6 @@ func NewWorkflowResultsCompareTool(
 	)
 }
 
-// NewWorkflowInputsSuggestTool registers the workflow_inputs_suggest tool.
-func NewWorkflowInputsSuggestTool(
-	analysisClient *analysis.Client,
-	logger *slog.Logger,
-) protocol.ToolRegistration {
-	return newResultsAnalysisTool(
-		"workflow_inputs_suggest",
-		"Return strategic input optimization patterns (deterministic pattern detection only). " +
-			"Use when the user wants just the optimization guidance. DOES NOT generate specific " +
-			"input values - returns strategic patterns like 'reduce variability' or 'increase " +
-			"concurrency' for AI to translate into concrete values. Example: \"suggest inputs " +
-			"for /path/results.json\". If a file path is provided, use source.kind=filesystem " +
-			"and do not call read_file.",
-		analysisClient,
-		logger,
-		func(response analysis.AnalyzeResponse) (interface{}, error) {
-			return InputsSuggestResult{Suggestions: response.Suggestions}, nil
-		},
-		false,
-	)
-}
-
 // NewWorkflowOptimizationGuideTool registers the workflow_optimization_guide tool.
 func NewWorkflowOptimizationGuideTool(
 	analysisClient *analysis.Client,

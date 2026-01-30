@@ -73,6 +73,7 @@ func TestWorkflowResultsLoadMissingSource(t *testing.T) {
 	if errObj == nil {
 		t.Fatalf("expected missing source error")
 	}
+	// errObj is guaranteed non-nil here due to check above
 	if errObj.Code != protocol.ErrInvalidParams {
 		t.Fatalf("expected invalid params error")
 	}
