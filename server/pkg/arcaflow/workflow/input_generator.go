@@ -38,12 +38,27 @@ type ExportedInput struct {
 	Metadata ExportMetadata
 }
 
+// GenerateInputFileOption configures the input generator.
+type GenerateInputFileOption func(*generateInputFileOptions)
+
+type generateInputFileOptions struct {
+	validator *InputValidator
+}
+
+// WithInputValidator sets a custom validator for the generator.
+func WithInputValidator(v *InputValidator) GenerateInputFileOption {
+	return func(o *generateInputFileOptions) {
+		o.validator = v
+	}
+}
+
 // GenerateInputFile validates and exports a workflow input payload.
 func GenerateInputFile(
 	ctx context.Context,
 	parsed ParsedWorkflow,
 	inputPayload []byte,
 	format ExportFormat,
+	options ...GenerateInputFileOption,
 ) (ExportedInput, error) {
 	if ctx.Err() != nil {
 		return ExportedInput{}, ctx.Err()
@@ -51,7 +66,17 @@ func GenerateInputFile(
 	if format == "" {
 		format = ExportFormatJSON
 	}
-	validator := NewInputValidator()
+
+	opts := &generateInputFileOptions{}
+	for _, option := range options {
+		option(opts)
+	}
+
+	validator := opts.validator
+	if validator == nil {
+		validator = NewInputValidator()
+	}
+
 	result, err := validator.Validate(ctx, parsed.Workflow, inputPayload)
 	if err != nil {
 		return ExportedInput{}, err

@@ -6,12 +6,13 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-)
+	"strings"
 
-// PluginSchemaProvider fetches plugin input JSON schemas.
-type PluginSchemaProvider interface {
-	InputJSONSchema(ctx context.Context, image string, stepID string) (json.RawMessage, error)
-}
+	"go.flow.arcalot.io/engine"
+	"go.flow.arcalot.io/engine/config"
+	"go.flow.arcalot.io/engine/loadfile"
+	"go.flow.arcalot.io/pluginsdk/schema"
+)
 
 // NamespaceResolutionError captures resolver failures with actionable hints.
 type NamespaceResolutionError struct {
@@ -23,11 +24,9 @@ func (err NamespaceResolutionError) Error() string {
 	return err.Message
 }
 
-// InputSchemaResolver resolves workflow input JSON schemas.
+// InputSchemaResolver resolves workflow input JSON schemas using the engine SDK.
 type InputSchemaResolver struct {
-	pluginProvider PluginSchemaProvider
-	workflowCache  map[string]map[string]interface{}
-	pluginCache    map[string]json.RawMessage
+	config *config.Config
 }
 
 // InputSchemaResolverOption configures the resolver.
@@ -36,9 +35,7 @@ type InputSchemaResolverOption func(*InputSchemaResolver)
 // NewInputSchemaResolver constructs an input schema resolver.
 func NewInputSchemaResolver(options ...InputSchemaResolverOption) *InputSchemaResolver {
 	resolver := &InputSchemaResolver{
-		pluginProvider: NewContainerPluginSchemaProvider(),
-		workflowCache:  make(map[string]map[string]interface{}),
-		pluginCache:    make(map[string]json.RawMessage),
+		config: config.Default(),
 	}
 	for _, option := range options {
 		if option != nil {
@@ -48,13 +45,18 @@ func NewInputSchemaResolver(options ...InputSchemaResolverOption) *InputSchemaRe
 	return resolver
 }
 
-// WithPluginSchemaProvider overrides the plugin schema provider.
-func WithPluginSchemaProvider(provider PluginSchemaProvider) InputSchemaResolverOption {
+// WithInputSchemaResolverConfig sets the engine configuration.
+func WithInputSchemaResolverConfig(cfg *config.Config) InputSchemaResolverOption {
 	return func(resolver *InputSchemaResolver) {
-		if provider != nil {
-			resolver.pluginProvider = provider
+		if cfg != nil {
+			resolver.config = cfg
 		}
 	}
+}
+
+// WithPluginSchemaProvider is a legacy option kept for compatibility.
+func WithPluginSchemaProvider(_ PluginSchemaProvider) InputSchemaResolverOption {
+	return func(_ *InputSchemaResolver) {}
 }
 
 // ResolveInputJSONSchema returns a resolved JSON schema for a workflow input.
@@ -65,227 +67,137 @@ func (resolver *InputSchemaResolver) ResolveInputJSONSchema(
 	if ctx.Err() != nil {
 		return nil, ctx.Err()
 	}
-	root, err := parseContent(workflow.Content)
+
+	// 1. Initialize the engine
+	eng, err := engine.New(resolver.config)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create engine: %w", err)
 	}
-	inputScope, ok := root["input"].(map[string]interface{})
-	if !ok {
-		return nil, fmt.Errorf("input section is missing or invalid")
+
+	// 2. Prepare the file cache
+	workflowFileName := "workflow.yaml"
+	if workflow.Path != "" {
+		workflowFileName = filepath.Base(workflow.Path)
 	}
-	steps, _ := root["steps"].(map[string]interface{})
-	baseDir := filepath.Dir(workflow.LocalPath)
-	schema := resolver.buildScopeSchema(ctx, inputScope, steps, baseDir)
-	raw, err := json.Marshal(schema)
+	fileContents := map[string][]byte{
+		workflowFileName: workflow.Content,
+	}
+
+	if workflow.LocalPath != "" {
+		baseDir := filepath.Dir(workflow.LocalPath)
+		entries, err := os.ReadDir(baseDir)
+		if err == nil {
+			for _, entry := range entries {
+				if !entry.IsDir() && (strings.HasSuffix(entry.Name(), ".yaml") || strings.HasSuffix(entry.Name(), ".yml")) {
+					if entry.Name() == workflowFileName {
+						continue
+					}
+					content, err := os.ReadFile(filepath.Join(baseDir, entry.Name()))
+					if err == nil {
+						fileContents[entry.Name()] = content
+					}
+				}
+			}
+		}
+	}
+
+	fc := loadfile.NewFileCache(filepath.Dir(workflow.LocalPath), fileContents)
+
+	// 3. Parse the workflow to resolve all schemas and expressions
+	wf, err := eng.Parse(fc, workflowFileName)
+	if err != nil {
+		return nil, fmt.Errorf("parse workflow: %w", err)
+	}
+
+	// 4. Convert the Arcaflow scope to JSON Schema
+	inputScope := wf.InputSchema()
+	jsonSchema := arcaflowScopeToJSONSchema(inputScope)
+
+	raw, err := json.Marshal(jsonSchema)
 	if err != nil {
 		return nil, fmt.Errorf("marshal input json schema: %w", err)
 	}
 	return raw, nil
 }
 
-func (resolver *InputSchemaResolver) buildScopeSchema(
-	ctx context.Context,
-	inputScope map[string]interface{},
-	steps map[string]interface{},
-	baseDir string,
-) map[string]interface{} {
-	rootID, _ := inputScope["root"].(string)
-	objects, _ := inputScope["objects"].(map[string]interface{})
-	if rootID == "" || objects == nil {
-		return map[string]interface{}{"type": "object"}
+func arcaflowScopeToJSONSchema(scope schema.Scope) map[string]any {
+	rootObj := scope.RootObject()
+	if rootObj == nil {
+		return map[string]any{"type": "object"}
 	}
-	rootObj, _ := objects[rootID].(map[string]interface{})
-	return resolver.objectSchema(ctx, rootObj, objects, steps, baseDir)
+	return arcaflowObjectToJSONSchema(rootObj, scope)
 }
 
-func (resolver *InputSchemaResolver) objectSchema(
-	ctx context.Context,
-	object map[string]interface{},
-	objects map[string]interface{},
-	steps map[string]interface{},
-	baseDir string,
-) map[string]interface{} {
-	properties := map[string]interface{}{}
+func arcaflowObjectToJSONSchema(obj *schema.ObjectSchema, scope schema.Scope) map[string]any {
+	properties := map[string]any{}
 	required := []string{}
-	rawProps, _ := object["properties"].(map[string]interface{})
-	for name, raw := range rawProps {
-		property, ok := raw.(map[string]interface{})
-		if !ok {
-			continue
+
+	for id, prop := range obj.Properties() {
+		properties[id] = arcaflowTypeToJSONSchema(prop.Type(), scope)
+		if prop.Required() {
+			required = append(required, id)
 		}
-		if requiredFlag, _ := property["required"].(bool); requiredFlag {
-			required = append(required, name)
-		}
-		properties[name] = resolver.typeSchema(
-			ctx,
-			property["type"],
-			objects,
-			steps,
-			baseDir,
-		)
 	}
-	schema := map[string]interface{}{
+
+	result := map[string]any{
 		"type":       "object",
 		"properties": properties,
 	}
 	if len(required) > 0 {
-		schema["required"] = required
+		result["required"] = required
 	}
-	return schema
+	return result
 }
 
-func (resolver *InputSchemaResolver) typeSchema(
-	ctx context.Context,
-	typeSpec interface{},
-	objects map[string]interface{},
-	steps map[string]interface{},
-	baseDir string,
-) interface{} {
-	spec, ok := typeSpec.(map[string]interface{})
-	if !ok {
-		return map[string]interface{}{}
-	}
-	typeID, _ := spec["type_id"].(string)
-	switch typeID {
-	case "string":
-		return map[string]interface{}{"type": "string"}
-	case "integer", "int":
-		return map[string]interface{}{"type": "integer"}
-	case "number", "float":
-		return map[string]interface{}{"type": "number"}
-	case "bool", "boolean":
-		return map[string]interface{}{"type": "boolean"}
-	case "enum_string":
-		values := []string{}
-		rawValues, _ := spec["values"].(map[string]interface{})
-		for key := range rawValues {
-			values = append(values, key)
+func arcaflowTypeToJSONSchema(t schema.Type, scope schema.Scope) any {
+	switch t.TypeID() {
+	case schema.TypeIDString:
+		return map[string]any{"type": "string"}
+	case schema.TypeIDInt:
+		return map[string]any{"type": "integer"}
+	case schema.TypeIDFloat:
+		return map[string]any{"type": "number"}
+	case schema.TypeIDBool:
+		return map[string]any{"type": "boolean"}
+	case schema.TypeIDList:
+		listT := t.(schema.UntypedList)
+		return map[string]any{
+			"type":  "array",
+			"items": arcaflowTypeToJSONSchema(listT.Items(), scope),
 		}
-		return map[string]interface{}{
+	case schema.TypeIDMap:
+		mapT := t.(schema.UntypedMap)
+		return map[string]any{
+			"type":                 "object",
+			"additionalProperties": arcaflowTypeToJSONSchema(mapT.Values(), scope),
+		}
+	case schema.TypeIDObject:
+		objT := t.(*schema.ObjectSchema)
+		return arcaflowObjectToJSONSchema(objT, scope)
+	case schema.TypeIDRef:
+		refT := t.(schema.Ref)
+		refID := refT.ID()
+		// Try to resolve the ref in the scope
+		if objects := scope.Objects(); objects != nil {
+			if _, ok := objects[refID]; ok {
+				// To avoid infinite recursion in circular refs for JSON Schema (which we don't handle deeply here),
+				// we just return an object type. Real JSON Schema would use $ref.
+				// For MCP's simplified needs, this is usually enough.
+				return map[string]any{"type": "object", "title": refID}
+			}
+		}
+		return map[string]any{"type": "object"}
+	case schema.TypeIDStringEnum:
+		enumT := t.(schema.StringEnum)
+		values := []string{}
+		for v := range enumT.ValidValues() {
+			values = append(values, v)
+		}
+		return map[string]any{
 			"type": "string",
 			"enum": values,
 		}
-	case "list":
-		items := resolver.typeSchema(
-			ctx,
-			spec["items"],
-			objects,
-			steps,
-			baseDir,
-		)
-		return map[string]interface{}{
-			"type":  "array",
-			"items": items,
-		}
-	case "ref":
-		refID, _ := spec["id"].(string)
-		if refID == "" {
-			return map[string]interface{}{}
-		}
-		namespace, _ := spec["namespace"].(string)
-		if namespace != "" {
-			if resolved, err := resolver.resolveNamespaceSchema(
-				ctx,
-				namespace,
-				refID,
-				steps,
-				baseDir,
-			); err == nil && resolved != nil {
-				return resolved
-			}
-		}
-		if rawObj, ok := objects[refID].(map[string]interface{}); ok {
-			return resolver.objectSchema(ctx, rawObj, objects, steps, baseDir)
-		}
-		return map[string]interface{}{}
 	default:
-		return map[string]interface{}{}
+		return map[string]any{}
 	}
-}
-
-func (resolver *InputSchemaResolver) resolveNamespaceSchema(
-	ctx context.Context,
-	namespace string,
-	refID string,
-	steps map[string]interface{},
-	baseDir string,
-) (interface{}, error) {
-	stepName, path, ok := parseNamespace(namespace)
-	if !ok {
-		return nil, NamespaceResolutionError{
-			Message: "unsupported namespace reference",
-			Hint: "use step input namespaces like " +
-				"$.steps.<step>.starting.inputs.input or " +
-				"$.steps.<step>.execute.inputs.items.item",
-		}
-	}
-	step, _ := steps[stepName].(map[string]interface{})
-	if step == nil {
-		return nil, fmt.Errorf("step %s not found", stepName)
-	}
-	if workflowPath, ok := step["workflow"].(string); ok && workflowPath != "" {
-		if err := validateWorkflowNamespace(path); err != nil {
-			return nil, err
-		}
-		subRoot, err := resolver.loadWorkflowRoot(baseDir, workflowPath)
-		if err != nil {
-			return nil, err
-		}
-		inputScope, _ := subRoot["input"].(map[string]interface{})
-		objects, _ := inputScope["objects"].(map[string]interface{})
-		subSteps, _ := subRoot["steps"].(map[string]interface{})
-		if rawObj, ok := objects[refID].(map[string]interface{}); ok {
-			return resolver.objectSchema(ctx, rawObj, objects, subSteps, baseDir), nil
-		}
-		return nil, fmt.Errorf("object %s not found in subworkflow", refID)
-	}
-	if pluginSpec, ok := step["plugin"].(map[string]interface{}); ok {
-		if err := validatePluginNamespace(path); err != nil {
-			return nil, err
-		}
-		image, _ := pluginSpec["src"].(string)
-		stepID, _ := step["step"].(string)
-		if image == "" {
-			return nil, fmt.Errorf("plugin image missing for step %s", stepName)
-		}
-		cacheKey := fmt.Sprintf("%s::%s", image, stepID)
-		rawSchema, ok := resolver.pluginCache[cacheKey]
-		if !ok {
-			fetched, err := resolver.pluginProvider.InputJSONSchema(ctx, image, stepID)
-			if err != nil {
-				return nil, err
-			}
-			resolver.pluginCache[cacheKey] = fetched
-			rawSchema = fetched
-		}
-		var schema interface{}
-		if err := json.Unmarshal(rawSchema, &schema); err != nil {
-			return nil, err
-		}
-		return schema, nil
-	}
-	return nil, fmt.Errorf("unsupported step %s", stepName)
-}
-
-func (resolver *InputSchemaResolver) loadWorkflowRoot(
-	baseDir string,
-	workflowPath string,
-) (map[string]interface{}, error) {
-	path := workflowPath
-	if !filepath.IsAbs(path) {
-		path = filepath.Join(baseDir, workflowPath)
-	}
-	if cached, ok := resolver.workflowCache[path]; ok {
-		return cached, nil
-	}
-	content, err := os.ReadFile(path)
-	if err != nil {
-		return nil, fmt.Errorf("read workflow %s: %w", path, err)
-	}
-	root, err := parseContent(content)
-	if err != nil {
-		return nil, err
-	}
-	resolver.workflowCache[path] = root
-	return root, nil
 }
