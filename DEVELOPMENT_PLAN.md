@@ -1,9 +1,9 @@
 # Arcaflow MCP Server - Development Plan
 
-**Version:** 1.3.1  
-**Last Updated:** 2026-01-29  
-**Language:** Go for MCP server core, Python for analysis engine  
-**Current Phase:** Phase 7 - Documentation & Examples (In Progress)
+**Version:** 1.4.0
+**Last Updated:** 2026-03-19
+**Language:** Go for MCP server core, Python for analysis engine
+**Current Phase:** Phase 7.75 - Engine-Native Validation (In Progress)
 
 **Historical Record:** Completed phases are archived in `DEVELOPMENT_RECORD.md` with full details. This document contains concise summaries for completed work and full details for current and future phases.
 
@@ -1541,6 +1541,80 @@ Awaiting Gate Approval: NO
 
 ---
 
+### Phase 7.75: Engine-Native Validation
+Status: In Progress (2026-03-19)
+Gate Keeper: User approval to proceed to Phase 8
+
+Objectives:
+- Replace manual YAML schema traversal with Arcaflow Engine SDK for full end-to-end validation
+- Ensure MCP server validation matches actual engine behavior (DAG validation, type-checking, expression resolution, subworkflow handling)
+- Document and configure the container runtime requirement (plugins must be available as containers)
+- Rebuild test coverage lost during the refactor
+
+Rationale:
+The MCP server previously implemented its own YAML-based schema parsing, which diverged from actual engine behavior and could produce false positives (inputs that pass MCP validation but fail engine execution). Using the real engine SDK for Parse() and InputSchema() ensures validation is authoritative. This requires plugins to be available via a container runtime (Podman/Docker), which is an acceptable requirement since workflows reference containerized plugins.
+
+Prior Work (committed):
+- Refactored `validator.go` to use `engine.New()`, `engine.Parse()`, `wf.InputSchema()` with `Unserialize`/`Serialize` roundtrip
+- Refactored `input_schema_resolver.go` to use engine Parse() and convert Arcaflow scope to JSON Schema
+- Added `loadfile.NewFileCache` for feeding workflow files to the engine
+- Added engine injection via `WithInputValidatorEngine` option
+- Removed manual YAML traversal logic
+
+Tasks:
+
+- [DONE] Refactor validator and schema resolver to use engine SDK (2026-03-19)
+  - Outcome: `validator.go` and `input_schema_resolver.go` use `engine.Parse()` and `wf.InputSchema()`.
+  - Status: Code committed in d6701ce. Core logic works but tests are minimal.
+
+- [IN PROGRESS] Configure engine deployer for container runtime
+  - Outcome: MCP server can be configured to use Podman or Docker for plugin resolution.
+  - Requirements:
+    - Engine `config.Config` must specify the deployer (Podman preferred, Docker supported)
+    - MCP server configuration (CLI flags or config file) exposes deployer choice
+    - Default to Podman, fall back to Docker
+    - Document the container runtime as a requirement for validation
+
+- [ ] Rebuild test coverage for validation and schema resolution
+  - Outcome: >85% coverage restored for the `workflow` package.
+  - Requirements:
+    - Unit tests using engine injection (`WithInputValidatorEngine`) for isolated testing
+    - Integration tests (tagged `//go:build integration`) that require a container runtime
+    - Test against reference workflow (arcaflow-workflow-auto-perf)
+    - Test error paths: invalid workflows, missing plugins, malformed inputs
+    - Test the Arcaflow-to-JSON-Schema conversion (`arcaflowScopeToJSONSchema` and type handlers)
+
+- [ ] Document container runtime requirement
+  - Outcome: Users and developers understand that validation requires a container runtime.
+  - Requirements:
+    - Update deployment docs to list container runtime as a prerequisite
+    - Update getting-started guide with container runtime setup
+    - Document which deployers are supported and how to configure them
+    - Add troubleshooting entries for common container runtime issues
+
+- [ ] End-to-end validation verification
+  - Outcome: MCP validation produces identical results to direct engine execution.
+  - Requirements:
+    - Validate inputs for arcaflow-workflow-auto-perf through MCP and compare with engine
+    - Verify that invalid inputs are rejected with clear, actionable error messages
+    - Verify normalized output from MCP matches engine expectations
+
+Dependencies:
+- Phase 7 automated tasks complete (documentation foundation exists)
+
+Exit Criteria:
+- [ ] Engine SDK integration complete and functional
+- [ ] Container runtime deployer configurable (Podman/Docker)
+- [ ] Unit test coverage >85% for workflow package
+- [ ] Integration tests pass with container runtime available
+- [ ] Reference workflow validates correctly end-to-end
+- [ ] Container runtime requirement documented in deployment and getting-started docs
+- [ ] Invalid inputs produce clear, actionable validation errors
+
+Awaiting Gate Approval: NO
+
+---
+
 ### Phase 8: Deployment & Distribution
 Status: In Progress (2026-01-28)
 Gate Keeper: Project release approval
@@ -1600,6 +1674,7 @@ Tasks:
 
 Dependencies:
 - Phase 7 complete
+- Phase 7.75 complete (engine-native validation verified)
 - All testing passed
 
 Exit Criteria:
@@ -1694,13 +1769,13 @@ Awaiting Gate Approval: NO
 ## Current Status
 
 ### Current Phase
-Phase 7: Documentation & Examples (Automated Tasks Complete)
+Phase 7.75: Engine-Native Validation (In Progress)
 
 ### Current Task
-Manual user validation (requires actual user testing - see docs/MANUAL_VALIDATION_PLAN.md)
+Configure engine deployer for container runtime; rebuild test coverage
 
 ### Next Milestone
-Either: (1) Complete Phase 7 manual validation, OR (2) Proceed to Phase 8 in parallel with user approval
+Complete engine-native validation with >85% test coverage, then proceed to Phase 8
 
 ### Blockers
 None currently
@@ -1823,6 +1898,13 @@ Clear messaging - User understands:
 ## Plan Changelog
 
 Purpose: Track significant changes to this plan itself (not development progress).
+
+### 2026-03-19 - Added Phase 7.75 Engine-Native Validation (v1.4.0)
+- Added Phase 7.75 to track the refactor of validation and schema resolution to use the Arcaflow Engine SDK directly
+- Prior work (d6701ce) replaced manual YAML traversal with `engine.Parse()` and `wf.InputSchema()` but left tests minimal
+- Phase covers: deployer configuration (Podman/Docker), test coverage rebuild, container runtime documentation, end-to-end verification
+- Rationale: MCP validation must match actual engine behavior; manual schema parsing diverged and could produce false positives
+- Container runtime is an acceptable requirement since workflows reference containerized plugins
 
 ### 2026-01-29 - Explicit PyPI Publishing in Phase 8 (v1.3.1)
 - Added explicit PyPI publishing requirements to Phase 8 "Build system and local mode distribution" task
