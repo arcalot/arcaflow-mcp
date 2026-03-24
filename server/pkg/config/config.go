@@ -71,6 +71,9 @@ type EngineConfig struct {
 	// Deployer selects the container runtime for plugin resolution.
 	// Valid values: "podman" (default), "docker".
 	Deployer string `yaml:"deployer"`
+	// DeploymentConfig holds deployer-specific settings passed to the
+	// engine's LocalDeployers["image"]["deployment"] map.
+	DeploymentConfig map[string]any `yaml:"deployment,omitempty"`
 }
 
 // TenancyConfig controls per-tenant isolation settings.
@@ -319,11 +322,15 @@ func Validate(cfg Config) error {
 // BuildEngineConfig creates an Arcaflow engine configuration from the
 // MCP server's engine settings.
 func (ec EngineConfig) BuildEngineConfig() (*engineconfig.Config, error) {
+	imageConfig := map[string]any{
+		"deployer_name": ec.Deployer,
+	}
+	if len(ec.DeploymentConfig) > 0 {
+		imageConfig["deployment"] = ec.DeploymentConfig
+	}
 	return engineconfig.Load(map[string]any{
 		"deployers": map[string]any{
-			"image": map[string]any{
-				"deployer_name": ec.Deployer,
-			},
+			"image": imageConfig,
 		},
 	})
 }
