@@ -34,6 +34,8 @@ usage:
   store_path: "/var/lib/arcaflow-mcp/usage.json"
 analysis:
   analysis_http_url: "http://127.0.0.1:8081"
+engine:
+  deployer: podman
 ```
 
 Tenant IDs are required when minting tokens via
@@ -64,6 +66,23 @@ Tenant IDs must match `[A-Za-z0-9_.-]` and be 1-128 characters.
 - `ARCAFLOW_MCP_AUDIT_RETENTION_DAYS` (audit retention in days)
 - `ARCAFLOW_MCP_USAGE_STORE_PATH` (usage store file path)
 - `ARCAFLOW_MCP_ANALYSIS_HTTP_URL` (analysis service HTTP base URL)
+- `ARCAFLOW_MCP_DEPLOYER` (container runtime for plugin resolution: `podman` or `docker`, default `podman`)
+
+### Engine deployer
+
+Arcaflow MCP uses the Arcaflow Engine SDK to validate workflow inputs.
+The engine resolves plugin schemas by pulling container images, so a
+container runtime must be available on the host. Set `engine.deployer`
+in the config file or `ARCAFLOW_MCP_DEPLOYER` as an environment variable.
+
+| Value    | Description                          |
+|----------|--------------------------------------|
+| `podman` | Use Podman (default, recommended)    |
+| `docker` | Use Docker                           |
+
+The container runtime must be installed and accessible to the user
+running the MCP server. Validation will fail if the configured runtime
+is not available.
 
 ### Analysis service integration
 

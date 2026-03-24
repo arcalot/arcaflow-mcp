@@ -403,6 +403,7 @@ For developers working on Arcaflow MCP itself. Requires building BOTH components
 - **Go** 1.23.0+ (see [project README](../../README.md#prerequisites))
 - **Python** 3.12+ with Poetry
 - **Git**
+- **Podman** or **Docker** — required for workflow input validation (the engine resolves plugin schemas from container images)
 
 ### 1. Clone and Setup
 

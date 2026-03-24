@@ -1575,13 +1575,10 @@ Tasks:
   - Outcome: 83.3% coverage for workflow package (ResolveInputJSONSchema requires container runtime).
   - Status: Mock engine for unit tests, 30+ new tests covering validator, schema resolver, JSON schema conversion, and input generator. Removed unused namespace.go. Lint clean.
 
-- [ ] Document container runtime requirement
+- [DONE] Document container runtime requirement (2026-03-24)
   - Outcome: Users and developers understand that validation requires a container runtime.
-  - Requirements:
-    - Update deployment docs to list container runtime as a prerequisite
-    - Update getting-started guide with container runtime setup
-    - Document which deployers are supported and how to configure them
-    - Add troubleshooting entries for common container runtime issues
+  - Status: Updated configuration.md (engine deployer section), getting-started.md (prerequisites),
+    troubleshooting.md (container runtime not found), container.md (socket mounting note).
 
 - [ ] End-to-end validation verification
   - Outcome: MCP validation produces identical results to direct engine execution.

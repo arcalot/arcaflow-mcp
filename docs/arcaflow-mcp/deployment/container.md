@@ -34,6 +34,14 @@ Containerization provides:
 - Podman
 - Kubernetes (see [kubernetes.md](kubernetes.md))
 
+**Important:** The MCP server container needs access to a container
+runtime (Podman or Docker) on the host for workflow input validation.
+The Arcaflow engine resolves plugin schemas by pulling container images.
+When running the MCP server in a container, mount the host's container
+socket (e.g., `podman run -v /run/podman/podman.sock:/run/podman/podman.sock ...`)
+or use `--network host` with a host-level runtime. Set the deployer
+with `ARCAFLOW_MCP_DEPLOYER=podman` (default) or `ARCAFLOW_MCP_DEPLOYER=docker`.
+
 ---
 
 ## Container Images

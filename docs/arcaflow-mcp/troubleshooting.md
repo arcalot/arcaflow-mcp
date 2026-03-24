@@ -6,7 +6,7 @@ This guide helps resolve common issues when using the Arcaflow MCP server.
 
 ## Table of Contents
 
-- [Installation Issues](#installation-issues)
+- [Installation Issues](#installation-issues) (including [container runtime](#container-runtime-not-found-validation-fails))
 - [Connection Issues](#connection-issues)
 - [Workflow Discovery Issues](#workflow-discovery-issues)
 - [Input Construction Issues](#input-construction-issues)
@@ -65,6 +65,41 @@ This guide helps resolve common issues when using the Arcaflow MCP server.
 4. Test hooks manually: `./scripts/validate.sh`
 
 **Related:** [Development Setup](../development/setup.md)
+
+---
+
+### Container Runtime Not Found (Validation Fails)
+
+**Problem:** Workflow input validation fails with deployer or plugin errors
+
+**Solution:**
+1. Verify a container runtime is installed:
+   ```bash
+   podman --version   # Preferred
+   docker --version   # Alternative
+   ```
+2. If using Docker instead of Podman, set the deployer:
+   ```bash
+   export ARCAFLOW_MCP_DEPLOYER=docker
+   ```
+   Or in your config YAML:
+   ```yaml
+   engine:
+     deployer: docker
+   ```
+3. Verify the runtime can pull images:
+   ```bash
+   podman pull quay.io/arcalot/arcaflow-plugin-utilities:latest
+   ```
+4. Check permissions — rootless Podman may need `loginctl enable-linger $USER`
+
+**Why is a container runtime needed?**
+Arcaflow workflows reference plugins as container images. The engine
+resolves plugin schemas by pulling and inspecting these images during
+validation. Without a container runtime, the MCP server cannot validate
+inputs against the full workflow schema.
+
+**Related:** [Configuration - Engine Deployer](usage/configuration.md#engine-deployer)
 
 ---
 
