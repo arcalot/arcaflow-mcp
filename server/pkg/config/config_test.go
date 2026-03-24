@@ -53,6 +53,12 @@ func TestDefaultConfig(t *testing.T) {
 	if cfg.RateLimiting.WindowSeconds <= 0 {
 		t.Fatalf("expected default window seconds > 0")
 	}
+	if cfg.Engine.Deployer != "podman" {
+		t.Fatalf(
+			"expected default deployer podman, got %q",
+			cfg.Engine.Deployer,
+		)
+	}
 	if !cfg.RateLimiting.BackoffEnabled {
 		t.Fatalf("expected backoff enabled by default")
 	}
@@ -97,8 +103,29 @@ func TestValidateConfig(t *testing.T) {
 				Mode:    "local",
 				Address: "127.0.0.1:8080",
 				Logging: LoggingConfig{Level: "info"},
+				Engine:  EngineConfig{Deployer: "podman"},
 			},
 			wantErr: false,
+		},
+		{
+			name: "valid local with docker deployer",
+			cfg: Config{
+				Mode:    "local",
+				Address: "127.0.0.1:8080",
+				Logging: LoggingConfig{Level: "info"},
+				Engine:  EngineConfig{Deployer: "docker"},
+			},
+			wantErr: false,
+		},
+		{
+			name: "invalid deployer",
+			cfg: Config{
+				Mode:    "local",
+				Address: "127.0.0.1:8080",
+				Logging: LoggingConfig{Level: "info"},
+				Engine:  EngineConfig{Deployer: "kubernetes"},
+			},
+			wantErr: true,
 		},
 		{
 			name: "valid analysis http url",
@@ -106,6 +133,7 @@ func TestValidateConfig(t *testing.T) {
 				Mode:    "local",
 				Address: "127.0.0.1:8080",
 				Logging: LoggingConfig{Level: "info"},
+				Engine:  EngineConfig{Deployer: "podman"},
 				Analysis: AnalysisConfig{
 					HTTPURL: "http://127.0.0.1:8081",
 				},
@@ -118,6 +146,7 @@ func TestValidateConfig(t *testing.T) {
 				Mode:    "local",
 				Address: "127.0.0.1:8080",
 				Logging: LoggingConfig{Level: "info"},
+				Engine:  EngineConfig{Deployer: "podman"},
 				Analysis: AnalysisConfig{
 					HTTPURL: "127.0.0.1:8081",
 				},
@@ -130,6 +159,7 @@ func TestValidateConfig(t *testing.T) {
 				Mode:    "server",
 				Address: "127.0.0.1:8080",
 				Logging: LoggingConfig{Level: "info"},
+				Engine:  EngineConfig{Deployer: "podman"},
 				Auth: AuthConfig{
 					AdminToken:     "admin-token",
 					TokenStorePath: t.TempDir(),
@@ -164,6 +194,7 @@ func TestValidateConfig(t *testing.T) {
 				Mode:    "server",
 				Address: "127.0.0.1:8080",
 				Logging: LoggingConfig{Level: "info"},
+				Engine:  EngineConfig{Deployer: "podman"},
 				Auth: AuthConfig{
 					AdminToken:     "admin-token",
 					TokenStorePath: t.TempDir(),
@@ -193,6 +224,7 @@ func TestValidateConfig(t *testing.T) {
 				Mode:    "server",
 				Address: "127.0.0.1:8080",
 				Logging: LoggingConfig{Level: "info"},
+				Engine:  EngineConfig{Deployer: "podman"},
 				Usage: UsageConfig{
 					StorePath: t.TempDir(),
 				},
@@ -205,6 +237,7 @@ func TestValidateConfig(t *testing.T) {
 				Mode:    "server",
 				Address: "127.0.0.1:8080",
 				Logging: LoggingConfig{Level: "info"},
+				Engine:  EngineConfig{Deployer: "podman"},
 				Auth:    AuthConfig{AdminToken: "admin-token"},
 				Usage: UsageConfig{
 					StorePath: t.TempDir(),
@@ -218,6 +251,7 @@ func TestValidateConfig(t *testing.T) {
 				Mode:    "server",
 				Address: "127.0.0.1:8080",
 				Logging: LoggingConfig{Level: "info"},
+				Engine:  EngineConfig{Deployer: "podman"},
 				Auth: AuthConfig{
 					AdminToken:     "admin-token",
 					TokenStorePath: t.TempDir(),
@@ -251,6 +285,7 @@ func TestValidateConfig(t *testing.T) {
 				Mode:    "server",
 				Address: "127.0.0.1:8080",
 				Logging: LoggingConfig{Level: "info"},
+				Engine:  EngineConfig{Deployer: "podman"},
 				Auth: AuthConfig{
 					AdminToken:     "admin-token",
 					TokenStorePath: t.TempDir(),
@@ -284,6 +319,7 @@ func TestValidateConfig(t *testing.T) {
 				Mode:    "server",
 				Address: "127.0.0.1:8080",
 				Logging: LoggingConfig{Level: "info"},
+				Engine:  EngineConfig{Deployer: "podman"},
 				Auth: AuthConfig{
 					AdminToken:     "admin-token",
 					TokenStorePath: t.TempDir(),
@@ -317,6 +353,7 @@ func TestValidateConfig(t *testing.T) {
 				Mode:    "server",
 				Address: "127.0.0.1:8080",
 				Logging: LoggingConfig{Level: "info"},
+				Engine:  EngineConfig{Deployer: "podman"},
 				Auth: AuthConfig{
 					AdminToken:     "admin-token",
 					TokenStorePath: t.TempDir(),
@@ -350,6 +387,7 @@ func TestValidateConfig(t *testing.T) {
 				Mode:    "server",
 				Address: "127.0.0.1:8080",
 				Logging: LoggingConfig{Level: "info"},
+				Engine:  EngineConfig{Deployer: "podman"},
 				Auth: AuthConfig{
 					AdminToken:     "admin-token",
 					TokenStorePath: t.TempDir(),
@@ -383,6 +421,7 @@ func TestValidateConfig(t *testing.T) {
 				Mode:    "server",
 				Address: "127.0.0.1:8080",
 				Logging: LoggingConfig{Level: "info"},
+				Engine:  EngineConfig{Deployer: "podman"},
 				Auth: AuthConfig{
 					AdminToken:     "admin-token",
 					TokenStorePath: t.TempDir(),
@@ -413,6 +452,7 @@ func TestValidateConfig(t *testing.T) {
 				Mode:    "server",
 				Address: "127.0.0.1:8080",
 				Logging: LoggingConfig{Level: "info"},
+				Engine:  EngineConfig{Deployer: "podman"},
 				Auth: AuthConfig{
 					AdminToken:     "admin-token",
 					TokenStorePath: t.TempDir(),
@@ -446,6 +486,7 @@ func TestValidateConfig(t *testing.T) {
 				Mode:    "server",
 				Address: "127.0.0.1:8080",
 				Logging: LoggingConfig{Level: "info"},
+				Engine:  EngineConfig{Deployer: "podman"},
 				Auth: AuthConfig{
 					AdminToken:     "admin-token",
 					TokenStorePath: t.TempDir(),
@@ -476,6 +517,7 @@ func TestValidateConfig(t *testing.T) {
 				Mode:    "server",
 				Address: "127.0.0.1:8080",
 				Logging: LoggingConfig{Level: "info"},
+				Engine:  EngineConfig{Deployer: "podman"},
 				Auth: AuthConfig{
 					AdminToken:     "admin-token",
 					TokenStorePath: t.TempDir(),
@@ -506,6 +548,7 @@ func TestValidateConfig(t *testing.T) {
 				Mode:    "server",
 				Address: "127.0.0.1:8080",
 				Logging: LoggingConfig{Level: "info"},
+				Engine:  EngineConfig{Deployer: "podman"},
 				Auth: AuthConfig{
 					AdminToken:     "admin-token",
 					TokenStorePath: t.TempDir(),
@@ -540,6 +583,7 @@ func TestValidateConfig(t *testing.T) {
 				Mode:    "server",
 				Address: "127.0.0.1:8080",
 				Logging: LoggingConfig{Level: "info"},
+				Engine:  EngineConfig{Deployer: "podman"},
 				Auth: AuthConfig{
 					AdminToken:     "admin-token",
 					TokenStorePath: t.TempDir(),
@@ -574,6 +618,7 @@ func TestValidateConfig(t *testing.T) {
 				Mode:    "server",
 				Address: "127.0.0.1:8080",
 				Logging: LoggingConfig{Level: "info"},
+				Engine:  EngineConfig{Deployer: "podman"},
 				Auth: AuthConfig{
 					AdminToken:     "admin-token",
 					TokenStorePath: t.TempDir(),
@@ -608,6 +653,7 @@ func TestValidateConfig(t *testing.T) {
 				Mode:    "server",
 				Address: "127.0.0.1:8080",
 				Logging: LoggingConfig{Level: "info"},
+				Engine:  EngineConfig{Deployer: "podman"},
 				Auth: AuthConfig{
 					AdminToken:     "admin-token",
 					TokenStorePath: t.TempDir(),
@@ -665,6 +711,31 @@ func TestValidateConfig(t *testing.T) {
 	}
 }
 
+func TestBuildEngineConfig(t *testing.T) {
+	ec := EngineConfig{Deployer: "podman"}
+	cfg, err := ec.BuildEngineConfig()
+	if err != nil {
+		t.Fatalf("build engine config: %v", err)
+	}
+	if cfg == nil {
+		t.Fatal("expected non-nil engine config")
+	}
+	if _, ok := cfg.LocalDeployers["image"]; !ok {
+		t.Fatal("expected image deployer in config")
+	}
+}
+
+func TestBuildEngineConfigDocker(t *testing.T) {
+	ec := EngineConfig{Deployer: "docker"}
+	cfg, err := ec.BuildEngineConfig()
+	if err != nil {
+		t.Fatalf("build engine config: %v", err)
+	}
+	if _, ok := cfg.LocalDeployers["image"]; !ok {
+		t.Fatal("expected image deployer in config")
+	}
+}
+
 func TestLoadConfigWithOverrides(t *testing.T) {
 	tempDir := t.TempDir()
 	configPath := filepath.Join(tempDir, "config.yml")
@@ -703,6 +774,7 @@ func TestLoadConfigWithOverrides(t *testing.T) {
 		"ARCAFLOW_MCP_USAGE_STORE_PATH",
 		filepath.Join(tempDir, "usage.json"),
 	)
+	t.Setenv("ARCAFLOW_MCP_DEPLOYER", "docker")
 
 	cfg, err := Load(configPath)
 	if err != nil {
@@ -797,6 +869,12 @@ func TestLoadConfigWithOverrides(t *testing.T) {
 		t.Fatalf(
 			"expected audit retention 10, got %d",
 			cfg.Audit.RetentionDays,
+		)
+	}
+	if cfg.Engine.Deployer != "docker" {
+		t.Fatalf(
+			"expected deployer override docker, got %q",
+			cfg.Engine.Deployer,
 		)
 	}
 }

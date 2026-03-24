@@ -10,6 +10,7 @@ import (
 	"github.com/arcalot/arcaflow-mcp/server/pkg/auth"
 	"github.com/arcalot/arcaflow-mcp/server/pkg/protocol"
 	"github.com/arcalot/arcaflow-mcp/server/pkg/state"
+	engineconfig "go.flow.arcalot.io/engine/config"
 )
 
 const workflowInputValidateInputSchema = `{
@@ -81,10 +82,12 @@ type InputValidateResult struct {
 }
 
 // NewWorkflowInputValidateTool registers the workflow_input_validate tool.
+// NewWorkflowInputValidateTool registers the workflow_input_validate tool.
 func NewWorkflowInputValidateTool(
 	loader *workflow.Loader,
 	stateManager *state.Manager,
 	logger *slog.Logger,
+	engineCfg ...*engineconfig.Config,
 ) protocol.ToolRegistration {
 	if logger == nil {
 		logger = slog.Default()
@@ -211,7 +214,14 @@ func NewWorkflowInputValidateTool(
 				)
 			}
 
-			validator := workflow.NewInputValidator()
+			var validatorOpts []workflow.InputValidatorOption
+			if len(engineCfg) > 0 && engineCfg[0] != nil {
+				validatorOpts = append(
+					validatorOpts,
+					workflow.WithInputValidatorConfig(engineCfg[0]),
+				)
+			}
+			validator := workflow.NewInputValidator(validatorOpts...)
 			result, err := validator.Validate(ctx, selected, rawInput)
 			if err != nil {
 				return protocol.ToolsCallResult{}, toolError(

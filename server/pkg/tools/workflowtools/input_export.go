@@ -11,6 +11,7 @@ import (
 	"github.com/arcalot/arcaflow-mcp/server/pkg/auth"
 	"github.com/arcalot/arcaflow-mcp/server/pkg/protocol"
 	"github.com/arcalot/arcaflow-mcp/server/pkg/state"
+	engineconfig "go.flow.arcalot.io/engine/config"
 )
 
 const workflowInputExportInputSchema = `{
@@ -95,6 +96,7 @@ func NewWorkflowInputExportTool(
 	parser *workflow.Parser,
 	stateManager *state.Manager,
 	logger *slog.Logger,
+	engineCfg ...*engineconfig.Config,
 ) protocol.ToolRegistration {
 	if logger == nil {
 		logger = slog.Default()
@@ -213,11 +215,25 @@ func NewWorkflowInputExportTool(
 				)
 			}
 
+			var genOpts []workflow.GenerateInputFileOption
+			if len(engineCfg) > 0 && engineCfg[0] != nil {
+				genOpts = append(
+					genOpts,
+					workflow.WithInputValidator(
+						workflow.NewInputValidator(
+							workflow.WithInputValidatorConfig(
+								engineCfg[0],
+							),
+						),
+					),
+				)
+			}
 			exported, err := workflow.GenerateInputFile(
 				ctx,
 				parsed,
 				rawInput,
 				format,
+				genOpts...,
 			)
 			if err != nil {
 				return protocol.ToolsCallResult{}, toolError(

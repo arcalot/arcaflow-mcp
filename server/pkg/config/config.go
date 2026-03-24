@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strconv"
 
+	engineconfig "go.flow.arcalot.io/engine/config"
 	"gopkg.in/yaml.v3"
 )
 
@@ -25,6 +26,7 @@ type Config struct {
 	Audit        AuditConfig     `yaml:"audit"`
 	Usage        UsageConfig     `yaml:"usage"`
 	Analysis     AnalysisConfig  `yaml:"analysis"`
+	Engine       EngineConfig    `yaml:"engine"`
 }
 
 // LoggingConfig controls structured logging behavior.
@@ -62,6 +64,13 @@ type UsageConfig struct {
 // AnalysisConfig controls analysis service integration.
 type AnalysisConfig struct {
 	HTTPURL string `yaml:"analysis_http_url"`
+}
+
+// EngineConfig controls Arcaflow engine behavior for validation.
+type EngineConfig struct {
+	// Deployer selects the container runtime for plugin resolution.
+	// Valid values: "podman" (default), "docker".
+	Deployer string `yaml:"deployer"`
 }
 
 // TenancyConfig controls per-tenant isolation settings.
@@ -112,6 +121,7 @@ func Default() Config {
 			StorePath: usageStorePath,
 		},
 		Analysis: AnalysisConfig{},
+		Engine:   EngineConfig{Deployer: "podman"},
 	}
 }
 
@@ -202,6 +212,9 @@ func applyEnvOverrides(cfg *Config) {
 	if value, ok := os.LookupEnv("ARCAFLOW_MCP_ANALYSIS_HTTP_URL"); ok && value != "" {
 		cfg.Analysis.HTTPURL = value
 	}
+	if value, ok := os.LookupEnv("ARCAFLOW_MCP_DEPLOYER"); ok && value != "" {
+		cfg.Engine.Deployer = value
+	}
 }
 
 // Validate checks required fields and constraints.
@@ -214,6 +227,15 @@ func Validate(cfg Config) error {
 
 	if cfg.Address == "" {
 		return errors.New("address must not be empty")
+	}
+
+	switch cfg.Engine.Deployer {
+	case "podman", "docker":
+	default:
+		return fmt.Errorf(
+			"engine deployer must be podman or docker, got %q",
+			cfg.Engine.Deployer,
+		)
 	}
 
 	if cfg.Analysis.HTTPURL != "" {
@@ -292,4 +314,16 @@ func Validate(cfg Config) error {
 	}
 
 	return nil
+}
+
+// BuildEngineConfig creates an Arcaflow engine configuration from the
+// MCP server's engine settings.
+func (ec EngineConfig) BuildEngineConfig() (*engineconfig.Config, error) {
+	return engineconfig.Load(map[string]any{
+		"deployers": map[string]any{
+			"image": map[string]any{
+				"deployer_name": ec.Deployer,
+			},
+		},
+	})
 }

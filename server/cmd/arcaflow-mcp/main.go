@@ -28,6 +28,7 @@ import (
 	"github.com/arcalot/arcaflow-mcp/server/pkg/transport/httpserver"
 	"github.com/arcalot/arcaflow-mcp/server/pkg/transport/stdio"
 	"github.com/arcalot/arcaflow-mcp/server/pkg/version"
+	engineconfig "go.flow.arcalot.io/engine/config"
 )
 
 const (
@@ -81,6 +82,15 @@ func run() error {
 	}))
 	slog.SetDefault(logger)
 
+	engineCfg, err := cfg.Engine.BuildEngineConfig()
+	if err != nil {
+		return fmt.Errorf("build engine config: %w", err)
+	}
+	logger.Info(
+		"engine deployer configured",
+		"deployer", cfg.Engine.Deployer,
+	)
+
 	var analysisClient *analysis.Client
 	if cfg.Analysis.HTTPURL != "" {
 		analysisClient = analysis.NewClient(cfg.Analysis.HTTPURL)
@@ -104,7 +114,7 @@ func run() error {
 				Version: serverVersion,
 			},
 		)
-		registerDefaultTools(handler, analysisClient)
+		registerDefaultTools(handler, analysisClient, engineCfg)
 		server := stdio.NewServer(
 			handler,
 			os.Stdin,
@@ -123,7 +133,7 @@ func run() error {
 				Version: serverVersion,
 			},
 		)
-		registerDefaultTools(handler, analysisClient)
+		registerDefaultTools(handler, analysisClient, engineCfg)
 		tokenStore, err := auth.NewFileStore(cfg.Auth.TokenStorePath)
 		if err != nil {
 			return err
@@ -202,6 +212,7 @@ func run() error {
 func registerDefaultTools(
 	server *protocol.Server,
 	analysisClient *analysis.Client,
+	engineCfg *engineconfig.Config,
 ) {
 	if server == nil {
 		return
@@ -268,6 +279,7 @@ func registerDefaultTools(
 			loader,
 			stateManager,
 			slog.Default(),
+			engineCfg,
 		),
 	)
 	// Primary input export tool (format conversion, file saving)
@@ -277,6 +289,7 @@ func registerDefaultTools(
 			parser,
 			stateManager,
 			slog.Default(),
+			engineCfg,
 		),
 	)
 	// Primary result analysis tools
