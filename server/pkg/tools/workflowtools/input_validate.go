@@ -82,7 +82,6 @@ type InputValidateResult struct {
 }
 
 // NewWorkflowInputValidateTool registers the workflow_input_validate tool.
-// NewWorkflowInputValidateTool registers the workflow_input_validate tool.
 func NewWorkflowInputValidateTool(
 	loader *workflow.Loader,
 	stateManager *state.Manager,
