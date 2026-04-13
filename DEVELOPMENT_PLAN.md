@@ -1351,24 +1351,39 @@ Manual User Validation (Requires Real Users):
 - New developer tester: No prior codebase knowledge, software dev experience
 - Constraints: Documentation only, no external help, time tracking, issue logging
 
-**New User Tests (5 tests):**
+**New User Tests (7 tests):**
 - [ ] Test 1.1: Documentation Navigation
   - Start at README.md, find getting-started guide within 1 minute
   - Verify navigation is clear, no broken links
 - [ ] Test 1.2: Local Mode Setup
   - Install and configure using only getting-started.md
+  - Verify container runtime (Podman or Docker) is listed as a prerequisite
   - Complete within 15 minutes, verify MCP server connects to Claude Desktop
+  - If container runtime is missing, verify error message is clear and points to docs
 - [ ] Test 1.3: Server Mode Setup
   - Deploy using container.md or kubernetes.md
+  - Verify container socket mounting or host networking is documented for containerized MCP server
+  - Verify ARCAFLOW_MCP_DEPLOYER configuration is discoverable in docs
   - Complete within 30 minutes, verify both services running and authenticated
 - [ ] Test 1.4: Tutorial 1 - Input Construction
   - Complete examples/basic-workflow.md tutorial
+  - Verify validation succeeds end-to-end (triggers container image pull for plugin schema)
+  - Verify first validation may be slow (image pull) and this is explained or expected
   - Verify all steps work, outputs match documentation
 - [ ] Test 1.5: Tutorial 2 - Result Analysis
   - Complete examples/iterative-optimization.md tutorial
   - Verify optimization suggestions generated successfully
+- [ ] Test 1.6: Validation with Container Runtime
+  - Validate a workflow input end-to-end using the MCP server
+  - Verify valid input passes validation and produces normalized output
+  - Verify invalid input fails with a clear, actionable error message
+  - Switch deployer (podman to docker or vice versa) and verify validation still works
+- [ ] Test 1.7: Validation Error Recovery
+  - Attempt validation without a container runtime available
+  - Verify the error message explains the container runtime requirement
+  - Find and follow the troubleshooting entry to resolve the issue
 
-**New Developer Tests (5 tests):**
+**New Developer Tests (6 tests):**
 - [ ] Test 2.1: Dev Setup Navigation
   - Start at README.md, find docs/development/setup.md within 1 minute
 - [ ] Test 2.2: Dev Environment Setup
@@ -1377,32 +1392,40 @@ Manual User Validation (Requires Real Users):
 - [ ] Test 2.3: Running Tests
   - Follow docs/development/testing.md
   - Run unit and integration tests, verify coverage reports
+  - Verify integration tests require Podman and this is documented
 - [ ] Test 2.4: Architecture Understanding
   - Read docs/architecture/ documentation
   - Understand component interaction, locate relevant code based on docs
 - [ ] Test 2.5: Navigation Efficiency (3-Click Rule)
   - Test reaching any topic from README within 3 clicks
-  - Topics: authentication setup, container deployment, testing guidelines, API docs, troubleshooting
+  - Topics: authentication setup, container deployment, testing guidelines, API docs, troubleshooting, engine deployer configuration
+- [ ] Test 2.6: Engine Configuration
+  - Find engine.deployer config in configuration.md from README
+  - Understand DeploymentConfig for custom deployer settings (e.g. NetworkMode)
+  - Run integration tests locally with Podman
 
 **Documentation Quality Review (5 tests):**
 - [ ] Test 3.1: Tutorial Completeness
   - Attempt all 3 tutorials without external resources
   - Verify all code examples work as documented
+  - Verify validation steps work with container runtime present
 - [ ] Test 3.2: Tool Reference Usability
   - Select 5 tools at random, use based only on docs/arcaflow-mcp/tools/ documentation
   - Verify no external help needed
 - [ ] Test 3.3: Troubleshooting Effectiveness
   - Induce common issues, resolve using troubleshooting.md
+  - Include: container runtime not found, wrong deployer, plugin image pull failure
   - Verify solutions are actionable and work
 - [ ] Test 3.4: Cross-Link Validation
   - Follow cross-links in 10 random pages
   - Verify links work and lead to relevant content
+  - Verify engine deployer docs are cross-linked from getting-started, troubleshooting, and container deployment
 - [ ] Test 3.5: External Review
   - Have external reviewer (unfamiliar with project) assess documentation
   - Confirm clarity, completeness, organization, terminology consistency
 
 **Success Criteria:**
-- All 15 tests pass
+- All 18 tests pass
 - Critical issues resolved
 - Documentation updated based on feedback
 - External reviewer approves quality
@@ -1411,7 +1434,7 @@ Manual User Validation (Requires Real Users):
 
 Awaiting Gate Approval: NO
 
-**Phase 7 Status:** All automated documentation tasks complete (2026-01-28). Manual user validation remains (15 tests listed above, requires actual user testing).
+**Phase 7 Status:** All automated documentation tasks complete (2026-01-28). Manual user validation remains (18 tests listed above, requires actual user testing). Test list updated 2026-03-24 to cover Phase 7.75 engine-native validation changes (container runtime prerequisite, deployer configuration, validation error paths).
 
 ---
 
