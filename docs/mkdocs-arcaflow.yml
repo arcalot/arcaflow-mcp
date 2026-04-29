@@ -7,7 +7,11 @@ theme:
 
 nav:
   - Home: index.md
-  - Getting started: getting-started.md
+  - Getting started:
+      - Choose your path: getting-started.md
+      - Local mode (containers): getting-started-local.md
+      - Server mode (containers): getting-started-server.md
+      - Build from source: getting-started-source.md
   - Concepts:
       - Architecture: concepts/architecture.md
       - Capabilities: concepts/capabilities.md
