@@ -198,7 +198,14 @@ Add to your MCP client configuration (e.g., `~/.config/Claude/claude_desktop_con
 }
 ```
 
-**Both components are now connected!** The MCP server communicates with the analysis engine.
+**Verify it works:** Open your AI client and ask: *"Can you see the Arcaflow MCP
+tools?"* The client should list available tools like `workflow_list` and
+`workflow_input_validate`.
+
+**Note:** In local mode, the MCP server communicates over stdin/stdout with
+your AI client — there is no HTTP health endpoint to curl. The analysis engine
+(Component 1) does have a health endpoint at `http://localhost:8081/healthz`,
+but the MCP server itself is only reachable through the MCP client.
 
 **Next Steps**: See [Local Mode Setup](usage/local-mode.md) for detailed configuration.
 
@@ -243,7 +250,9 @@ docker compose up -d
 - **Health checks**: Ensures both components are ready
 - **Proper networking**: Components can communicate
 
-**Verify BOTH Components Are Running:**
+**Verify BOTH Components Are Running (Server Mode Only):**
+
+In server mode, both components expose HTTP health endpoints:
 
 ```bash
 # Check service status
@@ -253,7 +262,7 @@ docker compose ps
 curl http://localhost:8081/healthz
 # Expected: {"status":"healthy"}
 
-# Check MCP server health
+# Check MCP server health (only available in server mode)
 curl http://localhost:8080/healthz
 # Expected: {"status":"healthy","version":"..."}
 
