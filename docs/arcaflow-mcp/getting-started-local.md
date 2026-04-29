@@ -3,6 +3,16 @@
 Set up Arcaflow MCP for use with Claude Desktop, Cursor, Claude Code, or other
 MCP-compatible AI clients. Estimated time: **~5 minutes**.
 
+> [!WARNING]
+> **Container limitations:** The containerized MCP server can discover and
+> load workflows, but **input validation and template generation require
+> access to a container runtime** (Podman/Docker) to resolve plugin schemas.
+> Running Podman-in-Podman or Docker-in-Docker adds complexity.
+>
+> For full functionality including input validation, consider
+> **[building from source](getting-started-source.md)** instead — the MCP
+> server runs directly on your host with native container runtime access.
+
 Arcaflow MCP has two components that work together:
 
 | Component | Container Image | Purpose |

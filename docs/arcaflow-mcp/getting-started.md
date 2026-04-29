@@ -28,18 +28,27 @@ for workflow results. They communicate over HTTP.
 ```mermaid
 flowchart TD
     A[Choose your path]
-    A -->|Desktop AI client| B[Local Mode\n~5 min]
-    A -->|Team deployment| C[Server Mode\n~10 min]
-    A -->|Contributing code| D[From Source\n~15 min]
+    A -->|Desktop AI client\nFull functionality| B[Build from Source\n~15 min]
+    A -->|Quick setup\nLimited validation| C[Containers\n~5 min]
+    A -->|Team deployment| D[Server Mode\n~10 min]
 ```
 
-### Local Mode (Most Common)
+### Build from Source (Recommended)
 
 For individual users with Claude Desktop, Cursor, Claude Code, or similar
-MCP clients. Uses pre-built container images. The AI client launches the
-MCP server on demand.
+MCP clients. The MCP server runs natively on your host with full access to
+the container runtime for plugin schema resolution and input validation.
+Requires Go and Python.
 
-**[Get started with Local Mode](getting-started-local.md)** -- ~5 minutes
+**[Get started from Source](getting-started-source.md)** -- ~15 minutes
+
+### Local Mode with Containers
+
+Uses pre-built container images. Quick to set up, but input validation
+and template generation are limited because the containerized MCP server
+needs container-in-container access to resolve plugin schemas.
+
+**[Get started with Containers](getting-started-local.md)** -- ~5 minutes
 
 ### Server Mode (Multi-Tenant)
 
@@ -47,13 +56,6 @@ For teams sharing a deployment with authentication and workspace isolation.
 Uses Docker Compose or Podman Compose to deploy both components as services.
 
 **[Get started with Server Mode](getting-started-server.md)** -- ~10 minutes
-
-### Build from Source (Developers)
-
-For contributors working on Arcaflow MCP itself. Requires Go, Python, and
-Poetry installed locally.
-
-**[Get started from Source](getting-started-source.md)** -- ~15 minutes
 
 > [!NOTE]
 > **Pre-compiled binaries** will be available after the v0.1.0 release.
