@@ -125,10 +125,12 @@ For use with Claude Desktop, Cursor, or other MCP-compatible clients.
 # Get current tag (if not already set)
 export TAG=${TAG:-$(./scripts/get-container-tag.sh 2>/dev/null || echo "main-$(curl -s https://api.github.com/repos/arcalot/arcaflow-mcp/commits/main | grep -m1 '"sha"' | cut -d'"' -f4 | cut -c1-7)")}
 
-# Create network for component communication
+# Create a shared container network so the MCP server container can
+# reach the analysis engine container by name (arcaflow-analysis:8081)
+# instead of relying on host port mapping.
 podman network create arcaflow 2>/dev/null || true
 
-# Start analysis engine on port 8081
+# Start analysis engine on the shared network
 podman run -d \
   --name arcaflow-analysis \
   --network arcaflow \
@@ -147,11 +149,14 @@ curl http://localhost:8081/healthz
 
 **Component 2 - Configure MCP Client to Launch Go MCP Server:**
 
-The AI client will start the Go MCP server on-demand. It connects to the analysis engine.
+The AI client starts the Go MCP server container on-demand. By placing it
+on the same `arcaflow` network, it can reach the analysis engine at
+`http://arcaflow-analysis:8081` (the container name resolves via DNS on
+the shared network).
 
-Add to your MCP client configuration (e.g., `~/.config/Claude/claude_desktop_config.json`):
+Add to your MCP client configuration (e.g., `~/.config/Claude/claude_desktop_config.json`).
 
-**Note**: Replace `${TAG}` with the actual tag you pulled (e.g., `main-abc1234`):
+**Note**: Replace `main-abc1234` with the actual tag from `echo $TAG`:
 
 ```json
 {
