@@ -1,18 +1,15 @@
 name: container-retag
 
-# Runs on pushes that DON'T trigger container-build (docs-only, scripts, etc.).
-# Copies the latest branch image manifest to a new tag matching the current
-# commit SHA, so get-container-tag.sh always resolves to a valid image.
+# Ensures every commit on tracked branches has a valid container image
+# tag on Quay.io. If the commit didn't change code that triggers a full
+# container build, this copies the most recent build's manifest to a tag
+# matching the current commit SHA.
 
 on:
   push:
     branches:
       - main
       - initial-development
-    paths-ignore:
-      - "analysis/**"
-      - "server/**"
-      - ".github/workflows/container-build.yml"
 
 concurrency:
   group: container-retag-${{ github.ref }}
@@ -31,15 +28,32 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Find source tag and compute new tag
-        id: tags
+      - name: Check if container-build will handle this commit
+        id: check
         run: |
           BRANCH="${{ github.ref_name }}"
-          NEW_SHA="${GITHUB_SHA:0:7}"
-          NEW_TAG="${BRANCH}-${NEW_SHA}"
+          SHORT_SHA="${GITHUB_SHA:0:7}"
+          NEW_TAG="${BRANCH}-${SHORT_SHA}"
 
-          # Find the most recent commit that would have triggered a
-          # container build (changed server/, analysis/, or the workflow)
+          # Check if this commit changed paths that trigger container-build.
+          # If so, container-build will produce the image — skip retagging.
+          BUILD_PATHS="server/ analysis/ .github/workflows/container-build.yml"
+          CHANGED=$(git diff --name-only HEAD~1 HEAD 2>/dev/null || echo "")
+          NEEDS_BUILD=false
+          for path in ${BUILD_PATHS}; do
+            if echo "${CHANGED}" | grep -q "^${path}"; then
+              NEEDS_BUILD=true
+              break
+            fi
+          done
+
+          if [ "${NEEDS_BUILD}" = "true" ]; then
+            echo "Container-build will handle this commit, skipping retag"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Find the most recent commit that triggered a container build
           SOURCE_SHA=$(git log -1 --format='%h' -- \
             server/ analysis/ .github/workflows/container-build.yml)
 
@@ -63,13 +77,13 @@ jobs:
           echo "Retagging ${SOURCE_TAG} -> ${NEW_TAG}"
 
       - name: Install skopeo
-        if: steps.tags.outputs.skip != 'true'
+        if: steps.check.outputs.skip != 'true'
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends skopeo
 
       - name: Login to Quay.io
-        if: steps.tags.outputs.skip != 'true'
+        if: steps.check.outputs.skip != 'true'
         env:
           QUAY_USERNAME: ${{ secrets.QUAY_USERNAME }}
           QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
@@ -82,10 +96,10 @@ jobs:
           fi
 
       - name: Retag images
-        if: steps.tags.outputs.skip != 'true'
+        if: steps.check.outputs.skip != 'true'
         env:
-          SOURCE: ${{ steps.tags.outputs.source_tag }}
-          NEW: ${{ steps.tags.outputs.new_tag }}
+          SOURCE: ${{ steps.check.outputs.source_tag }}
+          NEW: ${{ steps.check.outputs.new_tag }}
         run: |
           for IMAGE in arcaflow-mcp-server arcaflow-mcp-analysis; do
             echo "Copying ${IMAGE}:${SOURCE} -> ${NEW}"
