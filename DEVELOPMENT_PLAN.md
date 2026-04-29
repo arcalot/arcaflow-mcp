@@ -1352,7 +1352,7 @@ Manual User Validation (Requires Real Users):
 - Constraints: Documentation only, no external help, time tracking, issue logging
 
 **New User Tests (7 tests):**
-- [ ] Test 1.1: Documentation Navigation
+- [DONE] Test 1.1: Documentation Navigation (2026-04-29)
   - Start at README.md, find getting-started guide within 1 minute
   - Verify navigation is clear, no broken links
 - [ ] Test 1.2: Local Mode Setup

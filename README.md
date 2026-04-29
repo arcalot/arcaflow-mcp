@@ -121,14 +121,16 @@ Choose your deployment method:
 - **Python Analysis Engine** (result analysis)
 
 > **🚨 Pre-Release Note (Before v0.1.0)**: Container tags change with each commit.
-> Get the current tag: `export TAG=$(curl -s https://raw.githubusercontent.com/arcalot/arcaflow-mcp/main/scripts/get-container-tag.sh | bash)`
+> With repo: `export TAG=$(./scripts/get-container-tag.sh)`
+> Without: `export TAG=main-$(curl -s https://api.github.com/repos/arcalot/arcaflow-mcp/commits/main | grep -m1 '"sha"' | cut -d'"' -f4 | cut -c1-7)`
 > After v0.1.0, use `:latest` or version tags like `:v1.0.0`
 
 **Local Mode** (Desktop AI clients):
 
 ```bash
 # Get current development tag
-export TAG=$(curl -s https://raw.githubusercontent.com/arcalot/arcaflow-mcp/main/scripts/get-container-tag.sh | bash)
+# With repo: export TAG=$(./scripts/get-container-tag.sh)
+export TAG=main-$(curl -s https://api.github.com/repos/arcalot/arcaflow-mcp/commits/main | grep -m1 '"sha"' | cut -d'"' -f4 | cut -c1-7)
 
 # Pull BOTH components
 podman pull quay.io/arcalot/arcaflow-mcp-server:${TAG}

@@ -51,7 +51,9 @@ Arcaflow MCP bridges the gap between natural language AI assistants (like Claude
 
 > **🚨 Pre-Release Note**: Before v0.1.0, get the current tag:
 > ```bash
-> export TAG=$(curl -s https://raw.githubusercontent.com/arcalot/arcaflow-mcp/main/scripts/get-container-tag.sh | bash)
+> # With repo: export TAG=$(./scripts/get-container-tag.sh)
+> # Without:
+> export TAG=main-$(curl -s https://api.github.com/repos/arcalot/arcaflow-mcp/commits/main | grep -m1 '"sha"' | cut -d'"' -f4 | cut -c1-7)
 > ```
 > After v0.1.0, use `:latest` or `:v1.0.0` tags.
 
@@ -60,8 +62,9 @@ Arcaflow MCP bridges the gap between natural language AI assistants (like Claude
 Pre-built container images available for both components:
 
 ```bash
-# Get current development tag (before v0.1.0)
-export TAG=$(curl -s https://raw.githubusercontent.com/arcalot/arcaflow-mcp/main/scripts/get-container-tag.sh | bash)
+# Get current development tag (see pre-release note above)
+# With repo: export TAG=$(./scripts/get-container-tag.sh)
+export TAG=main-$(curl -s https://api.github.com/repos/arcalot/arcaflow-mcp/commits/main | grep -m1 '"sha"' | cut -d'"' -f4 | cut -c1-7)
 
 # Pull BOTH components
 podman pull quay.io/arcalot/arcaflow-mcp-server:${TAG}

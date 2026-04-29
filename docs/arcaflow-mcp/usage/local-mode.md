@@ -37,7 +37,8 @@ The Python analysis engine provides result analysis, comparison, and optimizatio
 
 ```bash
 # Get current development tag (before v0.1.0 release)
-export TAG=$(curl -s https://raw.githubusercontent.com/arcalot/arcaflow-mcp/main/scripts/get-container-tag.sh | bash)
+# With repo: export TAG=$(./scripts/get-container-tag.sh)
+export TAG=main-$(curl -s https://api.github.com/repos/arcalot/arcaflow-mcp/commits/main | grep -m1 '"sha"' | cut -d'"' -f4 | cut -c1-7)
 echo "Using tag: $TAG"
 
 # Pull image

@@ -62,7 +62,9 @@ quay.io/arcalot/arcaflow-mcp-analysis:<tag>
 >
 > **Get the current tag:**
 > ```bash
-> export TAG=$(curl -s https://raw.githubusercontent.com/arcalot/arcaflow-mcp/main/scripts/get-container-tag.sh | bash)
+> # With repo: export TAG=$(./scripts/get-container-tag.sh)
+> # Without:
+> export TAG=main-$(curl -s https://api.github.com/repos/arcalot/arcaflow-mcp/commits/main | grep -m1 '"sha"' | cut -d'"' -f4 | cut -c1-7)
 > echo "Current tag: $TAG"
 > # Example output: main-abc1234
 > ```

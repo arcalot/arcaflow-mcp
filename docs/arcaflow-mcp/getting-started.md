@@ -47,28 +47,19 @@ The fastest way to try Arcaflow MCP is using pre-built container images for **bo
 
 > **🚨 Pre-Release Container Tags (Before v0.1.0)**
 >
-> We're currently in active development. Container tags change with each commit to main.
+> We're currently in active development. Container tags change with each commit.
 >
-> **Get the current tag** (recommended - ensures version alignment):
+> **Get the current tag:**
 > ```bash
-> # Automatically matches your repo/docs version
-> export TAG=$(curl -s https://raw.githubusercontent.com/arcalot/arcaflow-mcp/main/scripts/get-container-tag.sh | bash)
-> echo "Current tag: $TAG"
+> # With repo cloned (uses your current branch/commit)
+> export TAG=$(./scripts/get-container-tag.sh)
+>
+> # Without repo (queries GitHub API for latest main commit)
+> export TAG=main-$(curl -s https://api.github.com/repos/arcalot/arcaflow-mcp/commits/main | grep -m1 '"sha"' | cut -d'"' -f4 | cut -c1-7)
 > ```
 >
-> **Why use the helper script?**
-> - **Version alignment**: If you cloned the repo, uses YOUR git commit (e.g., `main-abc1234`)
-> - **Single source**: Uses GitHub commit as source of truth, not quay.io registry
-> - **Predictable**: Always returns the tag that SHOULD match your documentation
->
-> **Alternative - Query quay.io directly** (simpler but may mismatch your docs):
-> ```bash
-> # Gets latest available tag from quay.io (might be newer than your docs version)
-> export TAG=$(curl -s 'https://quay.io/api/v1/repository/arcalot/arcaflow-mcp-server/tag/' | \
->   jq -r '.tags[] | select(.name | startswith("main-")) | .name' | sort -V | tail -1)
-> ```
-> 
-> The script provides **version alignment**: your docs match your container. With quay.io, you get "latest available" which might be newer.
+> For advanced options (specific versions, latest stable), see the
+> [get-container-tag.sh](../../scripts/get-container-tag.sh) helper script.
 >
 > **After v0.1.0 release**, use stable tags:
 > - `:latest` - Latest stable build
@@ -85,7 +76,9 @@ The fastest way to try Arcaflow MCP is using pre-built container images for **bo
 
 ```bash
 # Get current development tag (before v0.1.0)
-export TAG=$(curl -s https://raw.githubusercontent.com/arcalot/arcaflow-mcp/main/scripts/get-container-tag.sh | bash)
+# With repo: export TAG=$(./scripts/get-container-tag.sh)
+# Without:
+export TAG=main-$(curl -s https://api.github.com/repos/arcalot/arcaflow-mcp/commits/main | grep -m1 '"sha"' | cut -d'"' -f4 | cut -c1-7)
 
 # Pull COMPONENT 1: Go MCP Server
 podman pull quay.io/arcalot/arcaflow-mcp-server:${TAG}
@@ -130,7 +123,7 @@ For use with Claude Desktop, Cursor, or other MCP-compatible clients.
 
 ```bash
 # Get current tag (if not already set)
-export TAG=${TAG:-$(curl -s https://raw.githubusercontent.com/arcalot/arcaflow-mcp/main/scripts/get-container-tag.sh | bash)}
+export TAG=${TAG:-$(./scripts/get-container-tag.sh 2>/dev/null || echo "main-$(curl -s https://api.github.com/repos/arcalot/arcaflow-mcp/commits/main | grep -m1 '"sha"' | cut -d'"' -f4 | cut -c1-7)")}
 
 # Create network for component communication
 podman network create arcaflow 2>/dev/null || true
@@ -678,30 +671,18 @@ podman logs arcaflow-analysis
 
 ### Can't Find Current Development Tag
 
-**Using the helper script** (easiest):
+**With repo cloned** (easiest):
 
 ```bash
-# Clone repository (if not already)
-git clone https://github.com/arcalot/arcaflow-mcp.git
-cd arcaflow-mcp
-
-# Get current tag
 export TAG=$(./scripts/get-container-tag.sh)
 echo "Using tag: $TAG"
-
-# Or get latest main branch tag (without cloning)
-export TAG=$(curl -s https://raw.githubusercontent.com/arcalot/arcaflow-mcp/main/scripts/get-container-tag.sh | bash -s -- --main)
 ```
 
-**Manual method:**
+**Without repo** (queries GitHub API):
 
 ```bash
-# From repository
-git rev-parse --short=7 HEAD
-
-# From GitHub (no clone needed)
-curl -s https://api.github.com/repos/arcalot/arcaflow-mcp/commits/main | \
-  jq -r '.sha[:7]'
+export TAG=main-$(curl -s https://api.github.com/repos/arcalot/arcaflow-mcp/commits/main | grep -m1 '"sha"' | cut -d'"' -f4 | cut -c1-7)
+echo "Using tag: $TAG"
 ```
 
 **Use as tag:**

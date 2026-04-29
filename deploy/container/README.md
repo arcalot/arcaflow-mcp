@@ -6,7 +6,8 @@ This directory contains deployment configurations for running Arcaflow MCP in co
 > 
 > **Get current tag:**
 > ```bash
-> export TAG=$(curl -s https://raw.githubusercontent.com/arcalot/arcaflow-mcp/main/scripts/get-container-tag.sh | bash)
+> # With repo: export TAG=$(./scripts/get-container-tag.sh)
+> export TAG=main-$(curl -s https://api.github.com/repos/arcalot/arcaflow-mcp/commits/main | grep -m1 '"sha"' | cut -d'"' -f4 | cut -c1-7)
 > echo "Current tag: $TAG"
 > ```
 > 
@@ -18,7 +19,8 @@ This directory contains deployment configurations for running Arcaflow MCP in co
 
 ```bash
 # Step 1: Get current development tag (before v0.1.0)
-export TAG=$(curl -s https://raw.githubusercontent.com/arcalot/arcaflow-mcp/main/scripts/get-container-tag.sh | bash)
+# With repo: export TAG=$(./scripts/get-container-tag.sh)
+export TAG=main-$(curl -s https://api.github.com/repos/arcalot/arcaflow-mcp/commits/main | grep -m1 '"sha"' | cut -d'"' -f4 | cut -c1-7)
 echo "Using tag: $TAG"
 
 # Step 2: Generate admin token
