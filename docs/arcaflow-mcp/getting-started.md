@@ -27,14 +27,10 @@ for workflow results. They communicate over HTTP.
 
 ```mermaid
 flowchart TD
-    A[How will you use Arcaflow MCP?]
-    A -->|Desktop AI client\nClaude Desktop, Cursor, etc.| B[Local Mode]
-    A -->|Team deployment\nMultiple users, shared service| C[Server Mode]
-    A -->|Development\nContributing code| D[Build from Source]
-
-    B --> E[<a href='getting-started-local.md'>Getting Started: Local Mode</a>\n~5 minutes, uses containers]
-    C --> F[<a href='getting-started-server.md'>Getting Started: Server Mode</a>\n~10 minutes, uses Docker Compose]
-    D --> G[<a href='getting-started-source.md'>Getting Started: Build from Source</a>\n~15 minutes, requires Go + Python]
+    A[Choose your path]
+    A -->|Desktop AI client| B[Local Mode\n~5 min]
+    A -->|Team deployment| C[Server Mode\n~10 min]
+    A -->|Contributing code| D[From Source\n~15 min]
 ```
 
 ### Local Mode (Most Common)
