@@ -112,6 +112,7 @@ the server container on demand and communicate with it over stdin/stdout.
       "args": [
         "run", "-i", "--rm",
         "--network", "arcaflow",
+        "-v", "/path/to/your/workflows:/workflows:ro",
         "-e", "ARCAFLOW_MCP_ANALYSIS_HTTP_URL=http://arcaflow-analysis:8081",
         "quay.io/arcalot/arcaflow-mcp-server:TAG_HERE",
         "--mode", "local"
@@ -121,7 +122,16 @@ the server container on demand and communicate with it over stdin/stdout.
 }
 ```
 
-Replace `TAG_HERE` with your actual tag (the value of `echo $TAG`).
+Replace:
+- `TAG_HERE` with your actual tag (the value of `echo $TAG`)
+- `/path/to/your/workflows` with the directory containing your Arcaflow
+  workflow files (e.g., the `examples/workflows` directory in this repo)
+
+> [!IMPORTANT]
+> The MCP server runs inside a container and cannot access host files
+> without a volume mount. The `-v /host/path:/workflows:ro` flag maps
+> a host directory into the container at `/workflows`. Use `/workflows`
+> as the path when asking the AI to discover workflows.
 
 > [!TIP]
 > **If the `arcaflow` network doesn't work** (e.g., networking issues with
@@ -135,6 +145,7 @@ Replace `TAG_HERE` with your actual tag (the value of `echo $TAG`).
 >       "args": [
 >         "run", "-i", "--rm",
 >         "--network", "host",
+>         "-v", "/path/to/your/workflows:/workflows:ro",
 >         "-e", "ARCAFLOW_MCP_ANALYSIS_HTTP_URL=http://localhost:8081",
 >         "quay.io/arcalot/arcaflow-mcp-server:TAG_HERE",
 >         "--mode", "local"
@@ -159,10 +170,11 @@ Verify the setup by asking your AI agent these questions in order:
    - Expected: The agent lists tools like `workflow_list`,
      `workflow_input_validate`, `workflow_input_template`, etc.
 
-2. **Discover workflows:** *"List the available workflows from the filesystem at examples/workflows"*
-   - Expected: The agent calls `workflow_list` and finds the example
-     workflows included in the repository (hello-world, data-processing,
-     perf-test).
+2. **Discover workflows:** *"List the available workflows from the filesystem at /workflows"*
+   - This uses the volume-mounted directory from Step 4.
+   - Expected: The agent calls `workflow_list` and finds your workflow
+     files. If you mounted `examples/workflows`, you'll see hello-world,
+     data-processing, and perf-test.
 
 3. **Get a workflow template:** *"Show me the input template for the hello-world workflow"*
    - Expected: The agent calls `workflow_input_template` and shows the
