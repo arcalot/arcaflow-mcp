@@ -52,10 +52,6 @@ const workflowResultsMetricsExtractInputSchema = `{
       "description": "Optional format hint for source: json, yaml, yml, log, or txt."
     }
   },
-  "anyOf": [
-    {"required": ["results"]},
-    {"required": ["source"]}
-  ],
   "additionalProperties": false
 }`
 

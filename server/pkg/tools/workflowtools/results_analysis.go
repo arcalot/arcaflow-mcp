@@ -64,10 +64,6 @@ const workflowResultsAnalysisInputSchema = `{
       }
     }
   },
-  "anyOf": [
-    {"required": ["results"]},
-    {"required": ["source"]}
-  ],
   "additionalProperties": false
 }`
 
