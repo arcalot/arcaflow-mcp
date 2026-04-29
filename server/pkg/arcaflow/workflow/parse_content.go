@@ -41,12 +41,70 @@ func parseAny(content []byte) (interface{}, error) {
 		return root, nil
 	}
 
-	var root interface{}
-	if err := yaml.Unmarshal(content, &root); err != nil {
+	var doc yaml.Node
+	if err := yaml.Unmarshal(content, &doc); err != nil {
 		return nil, fmt.Errorf("parse yaml content: %w", err)
 	}
+	if doc.Kind == 0 {
+		return nil, nil
+	}
+	root := &doc
+	if root.Kind == yaml.DocumentNode && len(root.Content) > 0 {
+		root = root.Content[0]
+	}
+	return nodeToInterface(root), nil
+}
 
-	return normalizeYAML(root), nil
+// nodeToInterface converts a yaml.Node tree to Go types, preserving
+// custom-tagged values (like !expr) as strings.
+func nodeToInterface(n *yaml.Node) interface{} {
+	switch n.Kind {
+	case yaml.MappingNode:
+		result := make(map[string]interface{}, len(n.Content)/2)
+		for i := 0; i+1 < len(n.Content); i += 2 {
+			key := n.Content[i].Value
+			result[key] = nodeToInterface(n.Content[i+1])
+		}
+		return result
+	case yaml.SequenceNode:
+		result := make([]interface{}, 0, len(n.Content))
+		for _, child := range n.Content {
+			result = append(result, nodeToInterface(child))
+		}
+		return result
+	case yaml.ScalarNode:
+		return scalarToInterface(n)
+	case yaml.AliasNode:
+		if n.Alias != nil {
+			return nodeToInterface(n.Alias)
+		}
+		return nil
+	default:
+		return n.Value
+	}
+}
+
+func scalarToInterface(n *yaml.Node) interface{} {
+	switch n.Tag {
+	case "!!null":
+		return nil
+	case "!!bool":
+		return n.Value == "true"
+	case "!!int":
+		var v int64
+		if err := n.Decode(&v); err == nil {
+			return v
+		}
+		return n.Value
+	case "!!float":
+		var v float64
+		if err := n.Decode(&v); err == nil {
+			return v
+		}
+		return n.Value
+	default:
+		return n.Value
+	}
 }
 
 func ensureObject(value interface{}) (map[string]interface{}, error) {

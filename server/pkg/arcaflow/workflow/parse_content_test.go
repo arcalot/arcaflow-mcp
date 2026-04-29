@@ -68,6 +68,89 @@ func TestParseSchemaContentYAML(t *testing.T) {
 	}
 }
 
+func TestParseAnyHandlesExprTags(t *testing.T) {
+	t.Parallel()
+	payload, err := parseAny([]byte(`
+version: v0.2.0
+steps:
+  hello:
+    input:
+      message: !expr $.input.name
+`))
+	if err != nil {
+		t.Fatalf("parse yaml with !expr: %v", err)
+	}
+	root, ok := payload.(map[string]interface{})
+	if !ok {
+		t.Fatalf("expected map payload")
+	}
+	if root["version"] != "v0.2.0" {
+		t.Fatalf("expected version, got %v", root["version"])
+	}
+	steps, ok := root["steps"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("expected steps map")
+	}
+	hello, ok := steps["hello"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("expected hello step")
+	}
+	input, ok := hello["input"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("expected input map")
+	}
+	if input["message"] != "$.input.name" {
+		t.Fatalf(
+			"expected expr value preserved as string, got %v",
+			input["message"],
+		)
+	}
+}
+
+func TestParseAnyHandlesQuotedExpr(t *testing.T) {
+	t.Parallel()
+	payload, err := parseAny([]byte(
+		"value: !expr '`Hello` + $.input.name'\n",
+	))
+	if err != nil {
+		t.Fatalf("parse yaml with quoted !expr: %v", err)
+	}
+	root := payload.(map[string]interface{})
+	if root["value"] != "`Hello` + $.input.name" {
+		t.Fatalf("expected expr string, got %v", root["value"])
+	}
+}
+
+func TestParseAnyPreservesYAMLTypes(t *testing.T) {
+	t.Parallel()
+	payload, err := parseAny([]byte(`
+str: hello
+num: 42
+flt: 3.14
+flag: true
+empty: null
+`))
+	if err != nil {
+		t.Fatalf("parse yaml types: %v", err)
+	}
+	root := payload.(map[string]interface{})
+	if root["str"] != "hello" {
+		t.Fatalf("expected string, got %T %v", root["str"], root["str"])
+	}
+	if root["num"] != int64(42) {
+		t.Fatalf("expected int64, got %T %v", root["num"], root["num"])
+	}
+	if root["flt"] != 3.14 {
+		t.Fatalf("expected float64, got %T %v", root["flt"], root["flt"])
+	}
+	if root["flag"] != true {
+		t.Fatalf("expected bool, got %T %v", root["flag"], root["flag"])
+	}
+	if root["empty"] != nil {
+		t.Fatalf("expected nil, got %T %v", root["empty"], root["empty"])
+	}
+}
+
 func TestNormalizeYAMLMapInterface(t *testing.T) {
 	t.Parallel()
 	value := map[interface{}]interface{}{

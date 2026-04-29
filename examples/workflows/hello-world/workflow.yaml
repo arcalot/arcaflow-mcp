@@ -20,7 +20,7 @@ steps:
       src: quay.io/arcalot/arcaflow-plugin-utilities:0.5.0
     step: echo
     input:
-      message: !expr 'Hello, ' + $.input.name + '!'
+      message: !expr '`Hello, ` + $.input.name + `!`'
 
 outputs:
   success:

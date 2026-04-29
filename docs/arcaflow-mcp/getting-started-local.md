@@ -159,11 +159,10 @@ Verify the setup by asking your AI agent these questions in order:
    - Expected: The agent lists tools like `workflow_list`,
      `workflow_input_validate`, `workflow_input_template`, etc.
 
-2. **Discover workflows:** *"List the available workflows in /path/to/arcaflow-mcp/examples/workflows"*
-   - Replace `/path/to/arcaflow-mcp` with your actual repo path, or any
-     directory containing Arcaflow workflow YAML files.
-   - Expected: The agent calls `workflow_list` and shows the example
-     workflows (hello-world, data-processing, perf-test).
+2. **Discover workflows:** *"List the available workflows from the filesystem at examples/workflows"*
+   - Expected: The agent calls `workflow_list` and finds the example
+     workflows included in the repository (hello-world, data-processing,
+     perf-test).
 
 3. **Get a workflow template:** *"Show me the input template for the hello-world workflow"*
    - Expected: The agent calls `workflow_input_template` and shows the

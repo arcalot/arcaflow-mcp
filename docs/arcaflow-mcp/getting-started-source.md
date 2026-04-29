@@ -128,7 +128,7 @@ AI agent:
 1. *"Can you see the Arcaflow MCP tools? List them."*
    - Expected: tool list including `workflow_list`, `workflow_input_validate`, etc.
 
-2. *"List the available workflows in /path/to/arcaflow-mcp/examples/workflows"*
+2. *"List the available workflows from the filesystem at examples/workflows"*
    - Expected: hello-world, data-processing, perf-test
 
 3. *"Show me the input template for the hello-world workflow"*
