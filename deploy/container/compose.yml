@@ -41,7 +41,7 @@ services:
       # SQLite URL format: sqlite:////<absolute-path> (4 slashes for absolute paths)
       - DATABASE_URL=sqlite:////var/lib/arcaflow-analysis/arcaflow_analysis.db
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8081/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8081/healthz"]
       interval: 10s
       timeout: 5s
       retries: 3
@@ -71,7 +71,7 @@ services:
       - ARCAFLOW_MCP_LOG_LEVEL=${LOG_LEVEL:-info}
     command: ["--mode", "server"]
     healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8080/health"]
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8080/healthz"]
       interval: 10s
       timeout: 5s
       retries: 3

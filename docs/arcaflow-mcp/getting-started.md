@@ -139,7 +139,7 @@ podman run -d \
 sleep 2
 
 # Verify it's running and healthy
-curl http://localhost:8081/health
+curl http://localhost:8081/healthz
 # Expected: {"status":"healthy"}
 ```
 
@@ -245,11 +245,11 @@ docker compose up -d
 docker compose ps
 
 # Check analysis engine health
-curl http://localhost:8081/health
+curl http://localhost:8081/healthz
 # Expected: {"status":"healthy"}
 
 # Check MCP server health
-curl http://localhost:8080/health
+curl http://localhost:8080/healthz
 # Expected: {"status":"healthy","version":"..."}
 
 # View logs
@@ -362,7 +362,7 @@ cd arcaflow-mcp/analysis
 poetry run python -m arcaflow_analysis.server.http_server &
 
 # Verify it's running
-curl http://localhost:8081/health
+curl http://localhost:8081/healthz
 
 # Terminal 2: Configure your MCP client to launch the Go binary
 # Example: ./arcaflow-mcp
@@ -464,11 +464,11 @@ After deployment, verify both components are working correctly.
 
 ```bash
 # Check Analysis Engine (if using result analysis features)
-curl http://localhost:8081/health
+curl http://localhost:8081/healthz
 # Expected: {"status":"healthy"}
 
 # Check MCP Server (server mode only)
-curl http://localhost:8080/health
+curl http://localhost:8080/healthz
 # Expected: {"status":"healthy","version":"..."}
 ```
 
@@ -737,7 +737,7 @@ echo "Save this token: $ARCAFLOW_MCP_ADMIN_TOKEN"
 **Solution:**
 ```bash
 # Verify analysis engine is healthy
-curl http://localhost:8081/health
+curl http://localhost:8081/healthz
 
 # Check container networking (Docker/Podman Compose)
 docker compose ps  # Both should show "healthy"
