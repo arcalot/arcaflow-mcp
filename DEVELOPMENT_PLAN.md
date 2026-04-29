@@ -1355,11 +1355,14 @@ Manual User Validation (Requires Real Users):
 - [DONE] Test 1.1: Documentation Navigation (2026-04-29)
   - Start at README.md, find getting-started guide within 1 minute
   - Verify navigation is clear, no broken links
-- [ ] Test 1.2: Local Mode Setup
+- [DONE] Test 1.2: Local Mode Setup (2026-04-29)
   - Install and configure using only getting-started.md
   - Verify container runtime (Podman or Docker) is listed as a prerequisite
   - Complete within 15 minutes, verify MCP server connects to Claude Desktop
   - If container runtime is missing, verify error message is clear and points to docs
+  - Note: 15 issues found and fixed. Container local mode works for discovery/loading
+    but cannot validate inputs (container-in-container gap). Docs updated to recommend
+    source build for full functionality. Gap tracked as Phase 8 task.
 - [ ] Test 1.3: Server Mode Setup
   - Deploy using container.md or kubernetes.md
   - Verify container socket mounting or host networking is documented for containerized MCP server
@@ -1650,6 +1653,20 @@ Tasks:
     - ⚠️ MCP client config templates [pending]
     - ⚠️ Single-command installer [pending]
   - Creative Freedom: Choose build tools, decide on packaging format, optimize for user experience.
+
+- [ ] Solve container-in-container for local mode MCP server
+  - Outcome: Containerized MCP server can validate workflow inputs by accessing the host container runtime.
+  - Rationale: The Arcaflow engine resolves plugin schemas by pulling container images. When the MCP server
+    runs inside a container (local mode), it cannot reach the host's Podman/Docker without explicit setup
+    (socket mounting, Podman-in-Podman, or similar). Until solved, the containerized local mode path cannot
+    perform input validation or template generation — only workflow discovery and loading work.
+  - Options to evaluate:
+    - Mount host Podman socket into MCP server container (`-v /run/podman/podman.sock:...`)
+    - Podman-in-Podman with `--privileged` or `--security-opt`
+    - Ship a minimal container runtime inside the MCP server image
+    - Offload plugin schema resolution to a sidecar service
+  - Impact: Until resolved, "Build from Source" is the recommended path for full local mode functionality.
+    Container local mode is documented as limited (discovery and loading only).
 
 - [IN PROGRESS] Server mode distribution (2026-01-28)
   - Outcome: Production-ready Podman/Docker container images and deployment configurations.
