@@ -67,11 +67,10 @@ jobs:
             echo "tag=${BRANCH}-${SHORT_SHA}" >> "$GITHUB_OUTPUT"
             if [ "${BRANCH}" = "main" ]; then
               echo "expires=90d" >> "$GITHUB_OUTPUT"
-              echo "should_push=true" >> "$GITHUB_OUTPUT"
             else
-              echo "expires=30d" >> "$GITHUB_OUTPUT"
-              echo "should_push=false" >> "$GITHUB_OUTPUT"
+              echo "expires=14d" >> "$GITHUB_OUTPUT"
             fi
+            echo "should_push=true" >> "$GITHUB_OUTPUT"
           fi
       
       - name: Install buildah/podman/qemu

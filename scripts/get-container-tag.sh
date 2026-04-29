@@ -95,18 +95,20 @@ fi
 # Determine SHA
 if [ "$FORCE_MAIN" = true ] || ! git rev-parse --git-dir > /dev/null 2>&1; then
     # Not in a git repo or forced main - fetch from GitHub
-    SHA=$(curl -s "${GITHUB_API}/commits/main" | \
+    BRANCH="main"
+    SHA=$(curl -s "${GITHUB_API}/commits/${BRANCH}" | \
         grep -m1 '"sha"' | \
         cut -d'"' -f4 | \
         cut -c1-7)
-    
+
     if [ -z "$SHA" ]; then
         echo "Error: Failed to fetch latest commit SHA from GitHub" >&2
         exit 1
     fi
 else
-    # In a git repo - use current commit
+    # In a git repo - use current commit and branch
     SHA=$(git rev-parse --short=7 HEAD)
+    BRANCH=$(git rev-parse --abbrev-ref HEAD)
 fi
 
-echo "main-${SHA}"
+echo "${BRANCH}-${SHA}"
