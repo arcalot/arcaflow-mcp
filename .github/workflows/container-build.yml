@@ -9,13 +9,7 @@ on:
       - "analysis/**"
       - "server/**"
       - ".github/workflows/container-build.yml"
-  pull_request:
-    paths:
-      - "analysis/**"
-      - "server/**"
-      - ".github/workflows/container-build.yml"
   workflow_dispatch: {}
-  # Allow this workflow to be called by other workflows (e.g., release.yml)
   workflow_call:
     inputs:
       tag_override:
@@ -39,11 +33,11 @@ env:
 jobs:
   build:
     name: Build and push container images
-    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
+      pull-requests: read
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -163,6 +157,31 @@ jobs:
             fi
           fi
 
+      - name: Tag images for open PR
+        if: steps.compute_tag.outputs.should_push == 'true' && github.event_name == 'push'
+        env:
+          TAG: ${{ steps.compute_tag.outputs.tag }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          BRANCH="${{ github.ref_name }}"
+          PR_NUM=$(gh pr list --head "${BRANCH}" --state open --json number --jq '.[0].number // empty')
+          if [ -z "${PR_NUM}" ]; then
+            echo "No open PR for branch ${BRANCH}, skipping PR tagging"
+            exit 0
+          fi
+          echo "Found open PR #${PR_NUM} for branch ${BRANCH}"
+          SHORT_SHA="${GITHUB_SHA:0:7}"
+          for IMAGE in arcaflow-mcp-server arcaflow-mcp-analysis; do
+            echo "Tagging ${IMAGE}:${TAG} -> pr-${PR_NUM}"
+            buildah manifest push --all \
+              "${IMAGE_REPO}/${IMAGE}:${TAG}" \
+              "docker://${IMAGE_REPO}/${IMAGE}:pr-${PR_NUM}"
+            echo "Tagging ${IMAGE}:${TAG} -> pr-${PR_NUM}-${SHORT_SHA}"
+            buildah manifest push --all \
+              "${IMAGE_REPO}/${IMAGE}:${TAG}" \
+              "docker://${IMAGE_REPO}/${IMAGE}:pr-${PR_NUM}-${SHORT_SHA}"
+          done
+
       - name: Install Trivy
         run: |
           wget -qO- https://aquasecurity.github.io/trivy-repo/deb/public.key | \
@@ -207,60 +226,3 @@ jobs:
             --exit-code 0 \
             --input /tmp/image-archives/analysis.tar
           echo "::endgroup::"
-
-  pr-tag:
-    name: Tag PR images from branch build
-    if: github.event_name == 'pull_request'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    steps:
-      - name: Compute source and PR tags
-        id: tags
-        run: |
-          PR_NUM="${{ github.event.pull_request.number }}"
-          # The PR's head branch already pushed images as branch-SHA
-          BRANCH="${{ github.event.pull_request.head.ref }}"
-          SHORT_SHA="${{ github.event.pull_request.head.sha }}"
-          SHORT_SHA="${SHORT_SHA:0:7}"
-          echo "source_tag=${BRANCH}-${SHORT_SHA}" >> "$GITHUB_OUTPUT"
-          echo "pr_tag=pr-${PR_NUM}" >> "$GITHUB_OUTPUT"
-          echo "pr_sha_tag=pr-${PR_NUM}-${SHORT_SHA}" >> "$GITHUB_OUTPUT"
-
-      - name: Install skopeo
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends skopeo
-
-      - name: Login to Quay.io
-        env:
-          QUAY_USERNAME: ${{ secrets.QUAY_USERNAME }}
-          QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
-        run: |
-          if [ -n "${QUAY_USERNAME}" ] && [ -n "${QUAY_PASSWORD}" ]; then
-            skopeo login -u "$QUAY_USERNAME" --password "$QUAY_PASSWORD" quay.io
-          else
-            echo "WARNING: QUAY credentials not found, skipping PR tagging" >&2
-            exit 0
-          fi
-
-      - name: Tag images for PR
-        env:
-          SOURCE: ${{ steps.tags.outputs.source_tag }}
-          PR_TAG: ${{ steps.tags.outputs.pr_tag }}
-          PR_SHA_TAG: ${{ steps.tags.outputs.pr_sha_tag }}
-        run: |
-          for IMAGE in arcaflow-mcp-server arcaflow-mcp-analysis; do
-            SRC="docker://${IMAGE_REPO}/${IMAGE}:${SOURCE}"
-
-            echo "Copying ${IMAGE}:${SOURCE} -> ${PR_TAG}"
-            skopeo copy --all "${SRC}" \
-              "docker://${IMAGE_REPO}/${IMAGE}:${PR_TAG}" || {
-              echo "WARNING: Source image ${SOURCE} not found. Branch build may still be in progress."
-              exit 1
-            }
-
-            echo "Copying ${IMAGE}:${SOURCE} -> ${PR_SHA_TAG}"
-            skopeo copy --all "${SRC}" \
-              "docker://${IMAGE_REPO}/${IMAGE}:${PR_SHA_TAG}"
-          done
