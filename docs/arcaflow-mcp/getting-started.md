@@ -207,6 +207,25 @@ your AI client — there is no HTTP health endpoint to curl. The analysis engine
 (Component 1) does have a health endpoint at `http://localhost:8081/healthz`,
 but the MCP server itself is only reachable through the MCP client.
 
+**Try It Out:**
+
+Once your MCP client is configured and restarted, verify the setup by
+asking the AI agent these questions in order:
+
+1. **Check connection:** *"Can you see the Arcaflow MCP tools? List them."*
+   - Expected: The agent lists tools like `workflow_list`,
+     `workflow_input_validate`, `workflow_input_template`, etc.
+
+2. **Discover workflows:** *"List the available workflows in /path/to/arcaflow-mcp/examples/workflows"*
+   - Expected: The agent calls `workflow_list` and shows the example
+     workflows (hello-world, data-processing, perf-test).
+
+3. **Get a workflow template:** *"Show me the input template for the hello-world workflow"*
+   - Expected: The agent calls `workflow_input_template` and shows the
+     input schema with a `name` field.
+
+If any step fails, check the [Troubleshooting Guide](troubleshooting.md).
+
 **Next Steps**: See [Local Mode Setup](usage/local-mode.md) for detailed configuration.
 
 #### Option B: Server Mode (Multi-Tenant Deployments)
@@ -288,7 +307,18 @@ curl -X POST http://localhost:8080/admin/tenants/my-team/tokens \
   -d '{}' | jq -r '.token'
 ```
 
-**Next Steps**: 
+**Try It Out:**
+
+Configure your MCP client to connect to the server using the tenant
+token from above, then verify the setup:
+
+1. **Check connection:** *"Can you see the Arcaflow MCP tools? List them."*
+2. **Discover workflows:** *"List the available workflows"*
+3. **Get a workflow template:** *"Show me the input template for one of the workflows"*
+
+For detailed client configuration, see [Server Mode Setup](usage/server-mode.md).
+
+**Next Steps**:
 - 📖 **Complete tenant setup**: [Authentication Guide](deployment/authentication.md)
 - 📖 **Configure clients**: [Server Mode Setup](usage/server-mode.md)
 - 📖 **Advanced configuration**: [Container Deployment Guide](deployment/container.md)
