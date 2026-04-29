@@ -59,8 +59,9 @@ jobs:
             PR_NUM="${{ github.event.pull_request.number }}"
             SHORT_SHA="${GITHUB_SHA:0:7}"
             echo "tag=pr-${PR_NUM}-${SHORT_SHA}" >> "$GITHUB_OUTPUT"
+            echo "pr_tag=pr-${PR_NUM}" >> "$GITHUB_OUTPUT"
             echo "expires=14d" >> "$GITHUB_OUTPUT"
-            echo "should_push=false" >> "$GITHUB_OUTPUT"
+            echo "should_push=true" >> "$GITHUB_OUTPUT"
           else
             SHORT_SHA="${GITHUB_SHA:0:7}"
             BRANCH="${{ github.ref_name }}"
@@ -98,6 +99,7 @@ jobs:
       - name: Build Go MCP Server (development)
         env:
           TAG: ${{ steps.compute_tag.outputs.tag }}
+          PR_TAG: ${{ steps.compute_tag.outputs.pr_tag }}
           EXPIRES: ${{ steps.compute_tag.outputs.expires }}
           SHOULD_PUSH: ${{ steps.compute_tag.outputs.should_push }}
         run: |
@@ -168,11 +170,18 @@ jobs:
                 "${IMAGE_REPO}/arcaflow-mcp-server:${TAG}" \
                 "docker://${IMAGE_REPO}/arcaflow-mcp-server:${TAG}"
             fi
+            # PR builds get an additional pr-N tag (updates on each push)
+            if [ -n "${PR_TAG}" ]; then
+              buildah manifest push --all \
+                "${IMAGE_REPO}/arcaflow-mcp-server:${TAG}" \
+                "docker://${IMAGE_REPO}/arcaflow-mcp-server:${PR_TAG}"
+            fi
           fi
-      
+
       - name: Build Python Analysis Engine (development)
         env:
           TAG: ${{ steps.compute_tag.outputs.tag }}
+          PR_TAG: ${{ steps.compute_tag.outputs.pr_tag }}
           EXPIRES: ${{ steps.compute_tag.outputs.expires }}
           SHOULD_PUSH: ${{ steps.compute_tag.outputs.should_push }}
         run: |
@@ -243,8 +252,14 @@ jobs:
                 "${IMAGE_REPO}/arcaflow-mcp-analysis:${TAG}" \
                 "docker://${IMAGE_REPO}/arcaflow-mcp-analysis:${TAG}"
             fi
+            # PR builds get an additional pr-N tag (updates on each push)
+            if [ -n "${PR_TAG}" ]; then
+              buildah manifest push --all \
+                "${IMAGE_REPO}/arcaflow-mcp-analysis:${TAG}" \
+                "docker://${IMAGE_REPO}/arcaflow-mcp-analysis:${PR_TAG}"
+            fi
           fi
-      
+
       - name: Install Trivy
         run: |
           wget -qO- https://aquasecurity.github.io/trivy-repo/deb/public.key | \
