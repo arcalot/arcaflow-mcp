@@ -1,12 +1,6 @@
 # Plugin metadata for Arcaflow plugin catalog enrichment.
 # Maps plugin repository names to keywords and categories.
 # Category is a single primary classification for filtering.
-#
-# NOTE: This file is the source of truth. A copy is embedded
-# in the binary via server/pkg/pluginmeta/default_metadata.yaml.
-# After editing this file, copy it there:
-#   cp server/config/plugin_metadata.yaml \
-#      server/pkg/pluginmeta/default_metadata.yaml
 # Keywords are multi-valued for search and fuzzy matching.
 plugins:
   arcaflow-plugin-fio:

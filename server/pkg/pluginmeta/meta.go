@@ -5,11 +5,22 @@
 package pluginmeta
 
 import (
+	_ "embed"
 	"os"
 	"strings"
 
 	"gopkg.in/yaml.v3"
 )
+
+//go:embed default_metadata.yaml
+var defaultMetadata []byte
+
+// DefaultCatalog returns a Catalog loaded from the
+// embedded default metadata. This avoids reliance on
+// a file path at runtime.
+func DefaultCatalog() *Catalog {
+	return NewCatalogFromBytes(defaultMetadata)
+}
 
 // Catalog provides plugin metadata for enrichment.
 // It uses a two-tier approach: static config for known

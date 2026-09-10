@@ -167,6 +167,26 @@ func TestLookupEmptyCatalog(t *testing.T) {
 	}
 }
 
+func TestDefaultCatalog(t *testing.T) {
+	t.Parallel()
+	cat := DefaultCatalog()
+	if cat == nil {
+		t.Fatal("DefaultCatalog returned nil")
+	}
+	// Should contain known plugins from the embedded
+	// default_metadata.yaml.
+	e := cat.Lookup("arcaflow-plugin-fio")
+	if e.Category != "storage" {
+		t.Errorf(
+			"fio category = %q, want storage",
+			e.Category,
+		)
+	}
+	if len(e.Keywords) == 0 {
+		t.Error("expected keywords for fio")
+	}
+}
+
 func TestNewCatalogFromFile(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()

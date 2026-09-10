@@ -334,9 +334,7 @@ func registerDefaultTools(
 	)
 	// Plugin discovery tools
 	quayClient := quay.NewClient(slog.Default())
-	meta := pluginmeta.NewCatalog(
-		"config/plugin_metadata.yaml",
-	)
+	meta := pluginmeta.DefaultCatalog()
 	catalogService := plugintools.NewPluginCatalogService(
 		quayClient,
 		meta,
