@@ -26,6 +26,7 @@ import (
 	"github.com/arcalot/arcaflow-mcp/server/pkg/tenant"
 	"github.com/arcalot/arcaflow-mcp/server/pkg/pluginmeta"
 	"github.com/arcalot/arcaflow-mcp/server/pkg/quay"
+	"github.com/arcalot/arcaflow-mcp/server/pkg/tools/executiontools"
 	"github.com/arcalot/arcaflow-mcp/server/pkg/tools/plugintools"
 	"github.com/arcalot/arcaflow-mcp/server/pkg/tools/workflowtools"
 	"github.com/arcalot/arcaflow-mcp/server/pkg/transport/httpserver"
@@ -56,6 +57,21 @@ func run() error {
 		"1h",
 		"TTL for plugin catalog cache (e.g. 1h, 30m)",
 	)
+	maxConcurrentExec := flag.Int(
+		"max-concurrent-executions",
+		5,
+		"maximum concurrent workflow executions",
+	)
+	executionTTLStr := flag.String(
+		"execution-ttl",
+		"1h",
+		"TTL for completed execution state (e.g. 1h, 30m)",
+	)
+	enableExecution := flag.Bool(
+		"enable-execution",
+		true,
+		"enable workflow execution tools",
+	)
 	showVersion := flag.Bool(
 		"version",
 		false,
@@ -69,6 +85,14 @@ func run() error {
 	if err != nil {
 		return fmt.Errorf(
 			"invalid --plugin-cache-ttl: %w", err,
+		)
+	}
+	executionTTL, err := time.ParseDuration(
+		*executionTTLStr,
+	)
+	if err != nil {
+		return fmt.Errorf(
+			"invalid --execution-ttl: %w", err,
 		)
 	}
 
@@ -135,6 +159,13 @@ func run() error {
 			handler, analysisClient,
 			engineCfg, pluginCacheTTL,
 		)
+		if *enableExecution {
+			registerExecutionTools(
+				handler,
+				*maxConcurrentExec,
+				executionTTL,
+			)
+		}
 		server := stdio.NewServer(
 			handler,
 			os.Stdin,
@@ -157,6 +188,16 @@ func run() error {
 			handler, analysisClient,
 			engineCfg, pluginCacheTTL,
 		)
+		// Execution tools are local-mode by default.
+		// In server mode, only register if explicitly
+		// enabled.
+		if *enableExecution {
+			registerExecutionTools(
+				handler,
+				*maxConcurrentExec,
+				executionTTL,
+			)
+		}
 		tokenStore, err := auth.NewFileStore(cfg.Auth.TokenStorePath)
 		if err != nil {
 			return err
@@ -368,6 +409,52 @@ func registerDefaultTools(
 	)
 	server.RegisterResourceProvider(
 		resources.NewExecutionResourceProvider(slog.Default()),
+	)
+}
+
+// registerExecutionTools adds workflow execution tools
+// (execute, status, cancel, output) to the server.
+func registerExecutionTools(
+	server *protocol.Server,
+	maxConcurrent int,
+	executionTTL time.Duration,
+) {
+	if server == nil {
+		return
+	}
+	loader := workflow.NewLoader()
+	execManager := executiontools.NewExecutionManager(
+		maxConcurrent,
+		executionTTL,
+		slog.Default(),
+	)
+	engineFactory := &executiontools.DefaultEngineFactory{}
+
+	server.RegisterTool(
+		executiontools.NewWorkflowExecuteTool(
+			loader, execManager,
+			engineFactory, slog.Default(),
+		),
+	)
+	server.RegisterTool(
+		executiontools.NewWorkflowExecutionStatusTool(
+			execManager, slog.Default(),
+		),
+	)
+	server.RegisterTool(
+		executiontools.NewWorkflowExecutionCancelTool(
+			execManager, slog.Default(),
+		),
+	)
+	server.RegisterTool(
+		executiontools.NewWorkflowExecutionOutputTool(
+			execManager, slog.Default(),
+		),
+	)
+
+	slog.Info("execution tools registered",
+		"max_concurrent", maxConcurrent,
+		"ttl", executionTTL,
 	)
 }
 
