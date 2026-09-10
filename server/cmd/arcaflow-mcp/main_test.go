@@ -98,7 +98,7 @@ func TestRegisterDefaultToolsPing(t *testing.T) {
 		slog.New(slog.NewTextHandler(os.Stdout, nil)),
 		protocol.ServerInfo{Name: "test", Version: "0"},
 	)
-	registerDefaultTools(server, nil, nil)
+	registerDefaultTools(server, nil, nil, 0)
 
 	initialize := protocol.Request{
 		JSONRPC: "2.0",

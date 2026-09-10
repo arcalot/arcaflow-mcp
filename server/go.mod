@@ -3,10 +3,8 @@ module github.com/arcalot/arcaflow-mcp/server
 go 1.24.3
 
 require (
-	go.flow.arcalot.io/deployer v0.6.1
 	go.flow.arcalot.io/engine v0.20.0
 	go.flow.arcalot.io/pluginsdk v0.14.3
-	go.flow.arcalot.io/testdeployer v0.6.3
 	gopkg.in/yaml.v3 v3.0.1
 )
 
@@ -51,12 +49,12 @@ require (
 	go.arcalot.io/exex v0.2.0 // indirect
 	go.arcalot.io/lang v1.1.0 // indirect
 	go.arcalot.io/log/v2 v2.2.0 // indirect
+	go.flow.arcalot.io/deployer v0.6.1 // indirect
 	go.flow.arcalot.io/dockerdeployer v0.7.4 // indirect
 	go.flow.arcalot.io/expressions v0.4.6 // indirect
 	go.flow.arcalot.io/kubernetesdeployer v0.10.2 // indirect
 	go.flow.arcalot.io/podmandeployer v0.11.5 // indirect
 	go.flow.arcalot.io/pythondeployer v0.6.3 // indirect
-	go.flow.arcalot.io/testplugin v0.4.3 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.59.0 // indirect
 	go.opentelemetry.io/otel v1.39.0 // indirect

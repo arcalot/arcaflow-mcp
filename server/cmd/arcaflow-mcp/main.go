@@ -24,6 +24,9 @@ import (
 	"github.com/arcalot/arcaflow-mcp/server/pkg/resources"
 	"github.com/arcalot/arcaflow-mcp/server/pkg/state"
 	"github.com/arcalot/arcaflow-mcp/server/pkg/tenant"
+	"github.com/arcalot/arcaflow-mcp/server/pkg/pluginmeta"
+	"github.com/arcalot/arcaflow-mcp/server/pkg/quay"
+	"github.com/arcalot/arcaflow-mcp/server/pkg/tools/plugintools"
 	"github.com/arcalot/arcaflow-mcp/server/pkg/tools/workflowtools"
 	"github.com/arcalot/arcaflow-mcp/server/pkg/transport/httpserver"
 	"github.com/arcalot/arcaflow-mcp/server/pkg/transport/stdio"
@@ -48,12 +51,26 @@ func run() error {
 	configPath := flag.String("config", "", "path to YAML config file")
 	mode := flag.String("mode", "", "runtime mode: local or server")
 	address := flag.String("address", "", "listen address (host:port)")
+	pluginCacheTTLStr := flag.String(
+		"plugin-cache-ttl",
+		"1h",
+		"TTL for plugin catalog cache (e.g. 1h, 30m)",
+	)
 	showVersion := flag.Bool(
 		"version",
 		false,
 		"print version information and exit",
 	)
 	flag.Parse()
+
+	pluginCacheTTL, err := time.ParseDuration(
+		*pluginCacheTTLStr,
+	)
+	if err != nil {
+		return fmt.Errorf(
+			"invalid --plugin-cache-ttl: %w", err,
+		)
+	}
 
 	// Handle --version flag before any other processing
 	if *showVersion {
@@ -114,7 +131,10 @@ func run() error {
 				Version: serverVersion,
 			},
 		)
-		registerDefaultTools(handler, analysisClient, engineCfg)
+		registerDefaultTools(
+			handler, analysisClient,
+			engineCfg, pluginCacheTTL,
+		)
 		server := stdio.NewServer(
 			handler,
 			os.Stdin,
@@ -133,7 +153,10 @@ func run() error {
 				Version: serverVersion,
 			},
 		)
-		registerDefaultTools(handler, analysisClient, engineCfg)
+		registerDefaultTools(
+			handler, analysisClient,
+			engineCfg, pluginCacheTTL,
+		)
 		tokenStore, err := auth.NewFileStore(cfg.Auth.TokenStorePath)
 		if err != nil {
 			return err
@@ -213,6 +236,7 @@ func registerDefaultTools(
 	server *protocol.Server,
 	analysisClient *analysis.Client,
 	engineCfg *engineconfig.Config,
+	pluginCacheTTL time.Duration,
 ) {
 	if server == nil {
 		return
@@ -308,6 +332,29 @@ func registerDefaultTools(
 	server.RegisterTool(
 		workflowtools.NewWorkflowResultsCompareTool(analysisClient, slog.Default()),
 	)
+	// Plugin discovery tools
+	quayClient := quay.NewClient(slog.Default())
+	meta := pluginmeta.NewCatalog(
+		"config/plugin_metadata.yaml",
+	)
+	catalogService := plugintools.NewPluginCatalogService(
+		quayClient,
+		meta,
+		slog.Default(),
+		pluginCacheTTL,
+	)
+	server.RegisterTool(
+		plugintools.NewPluginListTool(
+			catalogService, slog.Default(),
+		),
+	)
+	schemaProvider := workflow.NewContainerPluginSchemaProvider()
+	server.RegisterTool(
+		plugintools.NewPluginDescribeTool(
+			schemaProvider, slog.Default(),
+		),
+	)
+
 	server.RegisterResourceProvider(
 		resources.NewArcaflowAuthorityProvider(slog.Default()),
 	)
