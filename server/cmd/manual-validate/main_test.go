@@ -22,7 +22,7 @@ func TestRunManualValidateWritesOutput(t *testing.T) {
 	outputPath := filepath.Join(root, "output.json")
 
 	workflowContent := []byte(
-		"version: v0.1\n" +
+		"version: v0.2.0\n" +
 			"input:\n" +
 			"  root: InputParams\n" +
 			"  objects:\n" +
@@ -107,7 +107,7 @@ func TestRunManualValidateMissingInputFile(t *testing.T) {
 	outputPath := filepath.Join(root, "output.json")
 
 	workflowContent := []byte(
-		"version: v0.1\n" +
+		"version: v0.2.0\n" +
 			"input:\n" +
 			"  root: InputParams\n" +
 			"  objects:\n" +
@@ -140,7 +140,7 @@ func TestRunManualValidateWriteOutputError(t *testing.T) {
 	inputPath := filepath.Join(root, "input.json")
 
 	workflowContent := []byte(
-		"version: v0.1\n" +
+		"version: v0.2.0\n" +
 			"input:\n" +
 			"  root: InputParams\n" +
 			"  objects:\n" +

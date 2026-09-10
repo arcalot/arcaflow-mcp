@@ -12,6 +12,7 @@ import (
 	"go.flow.arcalot.io/engine/config"
 	"go.flow.arcalot.io/engine/loadfile"
 	"go.flow.arcalot.io/pluginsdk/schema"
+	"gopkg.in/yaml.v3"
 )
 
 // NamespaceResolutionError captures resolver failures with actionable hints.
@@ -106,6 +107,14 @@ func (resolver *InputSchemaResolver) ResolveInputJSONSchema(
 	// 3. Parse the workflow to resolve all schemas and expressions
 	wf, err := eng.Parse(fc, workflowFileName)
 	if err != nil {
+		// Fallback: resolve from the input section directly
+		// without resolving step/plugin schemas.
+		fallbackSchema, fallbackErr := resolveFromInputScope(
+			workflow.Content,
+		)
+		if fallbackErr == nil {
+			return fallbackSchema, nil
+		}
 		return nil, fmt.Errorf("parse workflow: %w", err)
 	}
 
@@ -116,6 +125,34 @@ func (resolver *InputSchemaResolver) ResolveInputJSONSchema(
 	raw, err := json.Marshal(jsonSchema)
 	if err != nil {
 		return nil, fmt.Errorf("marshal input json schema: %w", err)
+	}
+	return raw, nil
+}
+
+// resolveFromInputScope extracts the input section from workflow
+// YAML and converts it to JSON Schema without engine parsing.
+func resolveFromInputScope(
+	content []byte,
+) (json.RawMessage, error) {
+	var doc map[string]interface{}
+	if err := yaml.Unmarshal(content, &doc); err != nil {
+		return nil, err
+	}
+
+	inputSection, ok := doc["input"]
+	if !ok {
+		return nil, fmt.Errorf("no input section in workflow")
+	}
+
+	scope, err := schema.UnserializeScope(inputSection)
+	if err != nil {
+		return nil, err
+	}
+
+	jsonSchema := arcaflowScopeToJSONSchema(scope)
+	raw, err := json.Marshal(jsonSchema)
+	if err != nil {
+		return nil, err
 	}
 	return raw, nil
 }

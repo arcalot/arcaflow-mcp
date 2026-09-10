@@ -16,7 +16,7 @@ func TestWorkflowSchemaGetByPath(t *testing.T) {
 	root := t.TempDir()
 	workflowPath := filepath.Join(root, "schema.yaml")
 	content := []byte(
-		"version: v0.1\n" +
+		"version: v0.2.0\n" +
 		"steps: {}\n" +
 			"input:\n" +
 			"  root: InputParams\n" +
@@ -84,7 +84,7 @@ func TestWorkflowSchemaGetMissingInputSection(t *testing.T) {
 
 	root := t.TempDir()
 	workflowPath := filepath.Join(root, "schema.yaml")
-	content := []byte("version: v0.1\nsteps: {}\noutputs:\n  success: {}\n")
+	content := []byte("version: v0.2.0\nsteps: {}\noutputs:\n  success: {}\n")
 	if err := os.WriteFile(workflowPath, content, 0o644); err != nil {
 		t.Fatalf("write workflow: %v", err)
 	}
@@ -113,7 +113,7 @@ func TestWorkflowSchemaGetSelectorRequired(t *testing.T) {
 	first := filepath.Join(root, "first.yaml")
 	second := filepath.Join(root, "second.yaml")
 	content := []byte(
-		"version: v0.1\n" +
+		"version: v0.2.0\n" +
 		"steps: {}\n" +
 			"input:\n" +
 			"  root: Input\n" +

@@ -14,6 +14,7 @@ import (
 	"go.flow.arcalot.io/engine/config"
 	"go.flow.arcalot.io/engine/loadfile"
 	"go.flow.arcalot.io/pluginsdk/schema"
+	"gopkg.in/yaml.v3"
 )
 
 // PluginSchemaProvider fetches plugin input JSON schemas.
@@ -149,6 +150,16 @@ func (v *InputValidator) Validate(
 	// 3. Full parse & validation of the workflow
 	wf, err := eng.Parse(fc, workflowFileName)
 	if err != nil {
+		// Fallback: try to validate using just the input
+		// section from the workflow YAML, without resolving
+		// step schemas. This works when no container runtime
+		// is available.
+		fallbackResult, fallbackErr := v.validateFromInputScope(
+			workflow, inputPayload,
+		)
+		if fallbackErr == nil {
+			return fallbackResult, nil
+		}
 		return ValidationResult{
 			Valid:  false,
 			Issues: []ValidationIssue{{Path: "$", Message: err.Error()}},
@@ -179,6 +190,61 @@ func (v *InputValidator) Validate(
 	normalized, err := json.Marshal(serialized)
 	if err != nil {
 		return ValidationResult{}, fmt.Errorf("normalize validated input: %w", err)
+	}
+
+	return ValidationResult{
+		Valid:           true,
+		NormalizedInput: normalized,
+	}, nil
+}
+
+// validateFromInputScope validates input using the workflow's input
+// section directly via schema.UnserializeScope, bypassing the engine's
+// step/plugin resolution.
+func (v *InputValidator) validateFromInputScope(
+	workflow Workflow,
+	inputPayload []byte,
+) (ValidationResult, error) {
+	var doc map[string]interface{}
+	if err := yaml.Unmarshal(workflow.Content, &doc); err != nil {
+		return ValidationResult{}, err
+	}
+
+	inputSection, ok := doc["input"]
+	if !ok {
+		return ValidationResult{}, fmt.Errorf("no input section")
+	}
+
+	scope, err := schema.UnserializeScope(inputSection)
+	if err != nil {
+		return ValidationResult{}, err
+	}
+
+	inputData, err := parseAny(inputPayload)
+	if err != nil {
+		return ValidationResult{}, err
+	}
+
+	unserialized, err := scope.Unserialize(inputData)
+	if err != nil {
+		return ValidationResult{
+			Valid:  false,
+			Issues: normalizeConstraintIssues(err),
+		}, nil
+	}
+
+	serialized, err := scope.Serialize(unserialized)
+	if err != nil {
+		return ValidationResult{}, fmt.Errorf(
+			"serialize validated input: %w", err,
+		)
+	}
+
+	normalized, err := json.Marshal(serialized)
+	if err != nil {
+		return ValidationResult{}, fmt.Errorf(
+			"normalize validated input: %w", err,
+		)
 	}
 
 	return ValidationResult{

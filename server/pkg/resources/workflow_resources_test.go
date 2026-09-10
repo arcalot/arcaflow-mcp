@@ -18,7 +18,7 @@ func TestWorkflowSchemaResourceReadCachesList(t *testing.T) {
 	root := t.TempDir()
 	workflowPath := filepath.Join(root, "workflow.yaml")
 	content := []byte(
-		"version: v0.1\n" +
+		"version: v0.2.0\n" +
 		"steps: {}\n" +
 			"input:\n" +
 			"  root: InputParams\n" +
@@ -73,7 +73,7 @@ func TestWorkflowResourceRead(t *testing.T) {
 
 	root := t.TempDir()
 	workflowPath := filepath.Join(root, "workflow.yaml")
-	content := []byte("version: v0.1\nsteps: {}\n")
+	content := []byte("version: v0.2.0\nsteps: {}\n")
 	if err := os.WriteFile(workflowPath, content, 0o644); err != nil {
 		t.Fatalf("write workflow: %v", err)
 	}
@@ -108,7 +108,7 @@ func TestPluginSchemaResourceRead(t *testing.T) {
 	workflowPath := filepath.Join(root, "workflow.yaml")
 	schemaPath := filepath.Join(root, "plugin-schema.json")
 	workflowContent := []byte(
-		"version: v0.1\n" +
+		"version: v0.2.0\n" +
 			"steps:\n" +
 			"  sample:\n" +
 			"    plugin_schema_ref: plugin-schema.json\n",
@@ -153,7 +153,7 @@ func TestWorkflowExampleResourceReadGeneratesExample(t *testing.T) {
 	root := t.TempDir()
 	workflowPath := filepath.Join(root, "workflow.yaml")
 	content := []byte(
-		"version: v0.1\n" +
+		"version: v0.2.0\n" +
 		"steps: {}\n" +
 			"input:\n" +
 			"  root: InputParams\n" +
@@ -233,7 +233,7 @@ func TestPluginSchemaResourceMissingStep(t *testing.T) {
 	workflowPath := filepath.Join(root, "workflow.yaml")
 	schemaPath := filepath.Join(root, "plugin-schema.json")
 	workflowContent := []byte(
-		"version: v0.1\n" +
+		"version: v0.2.0\n" +
 			"steps:\n" +
 			"  sample:\n" +
 			"    plugin_schema_ref: plugin-schema.json\n",
@@ -310,7 +310,7 @@ func TestWorkflowSchemaResourceMissingInput(t *testing.T) {
 	workflowPath := filepath.Join(root, "workflow.yaml")
 	if err := os.WriteFile(
 		workflowPath,
-		[]byte("version: v0.1\noutputs:\n  success: {}\n"),
+		[]byte("version: v0.2.0\noutputs:\n  success: {}\n"),
 		0o644,
 	); err != nil {
 		t.Fatalf("write workflow: %v", err)
@@ -338,7 +338,7 @@ func TestWorkflowExampleResourceMissingInput(t *testing.T) {
 	workflowPath := filepath.Join(root, "workflow.yaml")
 	if err := os.WriteFile(
 		workflowPath,
-		[]byte("version: v0.1\noutputs:\n  success: {}\n"),
+		[]byte("version: v0.2.0\noutputs:\n  success: {}\n"),
 		0o644,
 	); err != nil {
 		t.Fatalf("write workflow: %v", err)
@@ -381,7 +381,7 @@ func TestWorkflowSchemaResourceCanceledContext(t *testing.T) {
 	root := t.TempDir()
 	workflowPath := filepath.Join(root, "workflow.yaml")
 	content := []byte(
-		"version: v0.1\n" +
+		"version: v0.2.0\n" +
 			"input:\n" +
 			"  root: InputParams\n" +
 			"  objects:\n" +
@@ -420,7 +420,7 @@ func TestWorkflowExampleResourceCanceledContext(t *testing.T) {
 	root := t.TempDir()
 	workflowPath := filepath.Join(root, "workflow.yaml")
 	content := []byte(
-		"version: v0.1\n" +
+		"version: v0.2.0\n" +
 			"input:\n" +
 			"  root: InputParams\n" +
 			"  objects:\n" +
