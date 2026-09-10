@@ -78,6 +78,51 @@ func (p *ContainerPluginSchemaProvider) InputJSONSchema(
 	return json.RawMessage(output), nil
 }
 
+// FullSchema returns the complete plugin schema (all steps,
+// inputs, outputs) by running the container with --schema.
+// This works for both Go and Python SDK plugins.
+// The returned bytes are the raw YAML output.
+func (p *ContainerPluginSchemaProvider) FullSchema(
+	ctx context.Context,
+	image string,
+) ([]byte, error) {
+	if p.runtime == "" {
+		return nil, fmt.Errorf("no container runtime available")
+	}
+	args := []string{"run", "--rm", image, "--schema"}
+	timeoutCtx, cancel := context.WithTimeout(ctx, p.timeout)
+	defer cancel()
+
+	cmd := exec.CommandContext(timeoutCtx, p.runtime, args...)
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		return nil, fmt.Errorf(
+			"schema command failed: %w: %s",
+			err,
+			stderr.String(),
+		)
+	}
+	output := stdout.Bytes()
+	if len(bytes.TrimSpace(output)) == 0 {
+		return nil, fmt.Errorf("empty schema output")
+	}
+	return output, nil
+}
+
+// HasRuntime reports whether a container runtime is available.
+func (p *ContainerPluginSchemaProvider) HasRuntime() bool {
+	return p.runtime != ""
+}
+
+// Runtime returns the detected container runtime name
+// (e.g., "podman", "docker") or empty string if none found.
+func (p *ContainerPluginSchemaProvider) Runtime() string {
+	return p.runtime
+}
+
 func detectContainerRuntime() string {
 	candidates := []string{"podman", "docker"}
 	for _, name := range candidates {
