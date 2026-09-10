@@ -31,8 +31,11 @@ type Catalog struct {
 
 // Entry holds metadata for a single plugin.
 type Entry struct {
-	Keywords []string `yaml:"keywords"`
-	Category string   `yaml:"category"`
+	Keywords      []string `yaml:"keywords"`
+	Category      string   `yaml:"category"`
+	DefaultStep   string   `yaml:"default_step"`
+	Steps         []string `yaml:"steps"`
+	Architectures []string `yaml:"architectures"`
 }
 
 // configFile mirrors the YAML structure on disk so we
@@ -78,9 +81,25 @@ func NewCatalogFromBytes(data []byte) *Catalog {
 // on hyphens, and sets category to "other".
 func (c *Catalog) Lookup(repoName string) Entry {
 	if e, ok := c.plugins[repoName]; ok {
-		return e
+		return applyDefaults(e)
 	}
 	return inferEntry(repoName)
+}
+
+// applyDefaults fills in zero-value fields with sensible
+// defaults so callers don't need nil checks. Most
+// single-step plugins use "workload" as their step ID.
+func applyDefaults(e Entry) Entry {
+	if e.DefaultStep == "" {
+		e.DefaultStep = "workload"
+	}
+	if len(e.Steps) == 0 {
+		e.Steps = []string{"workload"}
+	}
+	if len(e.Architectures) == 0 {
+		e.Architectures = []string{"unknown"}
+	}
+	return e
 }
 
 // inferEntry derives keywords from a plugin repo name.
@@ -98,7 +117,10 @@ func inferEntry(repoName string) Entry {
 		}
 	}
 	return Entry{
-		Keywords: keywords,
-		Category: "other",
+		Keywords:      keywords,
+		Category:      "other",
+		DefaultStep:   "workload",
+		Steps:         []string{"workload"},
+		Architectures: []string{"unknown"},
 	}
 }

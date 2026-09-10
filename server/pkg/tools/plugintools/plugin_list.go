@@ -56,6 +56,8 @@ type PluginInfo struct {
 	Keywords      []string `json:"keywords"`
 	Architectures []string `json:"architectures"`
 	Category      string   `json:"category"`
+	DefaultStep   string   `json:"default_step"`
+	Steps         []string `json:"steps"`
 }
 
 // NewPluginCatalogService creates a catalog service
@@ -211,13 +213,15 @@ func (s *PluginCatalogService) buildInfo(
 	}
 
 	return PluginInfo{
-		Name:    repo.Name,
-		Image:   fmt.Sprintf("quay.io/%s/%s", org, repo.Name),
-		Version: version,
+		Name:          repo.Name,
+		Image:         fmt.Sprintf("quay.io/%s/%s", org, repo.Name),
+		Version:       version,
 		Description:   desc,
 		Keywords:      entry.Keywords,
-		Architectures: []string{"unknown"},
+		Architectures: entry.Architectures,
 		Category:      entry.Category,
+		DefaultStep:   entry.DefaultStep,
+		Steps:         entry.Steps,
 	}, nil
 }
 

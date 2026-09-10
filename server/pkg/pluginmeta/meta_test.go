@@ -13,9 +13,21 @@ plugins:
   arcaflow-plugin-fio:
     keywords: [fio, storage, io, disk]
     category: storage
+    default_step: workload
+    steps: [workload]
+    architectures: [amd64, arm64]
   arcaflow-plugin-pcp:
     keywords: [pcp, metrics, monitoring]
     category: monitoring
+    default_step: start_pcp
+    steps: [start_pcp, stop_pcp]
+    architectures: [amd64]
+  arcaflow-plugin-uperf:
+    keywords: [uperf, network]
+    category: network
+    default_step: uperf
+    steps: [uperf, uperf_server]
+    architectures: [amd64, arm64]
 `
 
 func TestLookupKnownPlugin(t *testing.T) {
@@ -79,6 +91,24 @@ func TestLookupUnknownPlugin(t *testing.T) {
 	if !reflect.DeepEqual(e.Keywords, want) {
 		t.Errorf("keywords = %v, want %v", e.Keywords, want)
 	}
+	// Unknown plugins default to workload step.
+	if e.DefaultStep != "workload" {
+		t.Errorf(
+			"default_step = %q, want workload",
+			e.DefaultStep,
+		)
+	}
+	wantSteps := []string{"workload"}
+	if !reflect.DeepEqual(e.Steps, wantSteps) {
+		t.Errorf("steps = %v, want %v", e.Steps, wantSteps)
+	}
+	wantArch := []string{"unknown"}
+	if !reflect.DeepEqual(e.Architectures, wantArch) {
+		t.Errorf(
+			"architectures = %v, want %v",
+			e.Architectures, wantArch,
+		)
+	}
 }
 
 func TestLookupInference(t *testing.T) {
@@ -95,6 +125,73 @@ func TestLookupInference(t *testing.T) {
 	if !reflect.DeepEqual(e.Keywords, want) {
 		t.Errorf("keywords = %v, want %v", e.Keywords, want)
 	}
+	if e.DefaultStep != "workload" {
+		t.Errorf(
+			"default_step = %q, want workload",
+			e.DefaultStep,
+		)
+	}
+}
+
+func TestLookupMultiStepPlugin(t *testing.T) {
+	t.Parallel()
+	cat := NewCatalogFromBytes([]byte(validYAML))
+
+	e := cat.Lookup("arcaflow-plugin-uperf")
+	if e.DefaultStep != "uperf" {
+		t.Errorf(
+			"default_step = %q, want uperf",
+			e.DefaultStep,
+		)
+	}
+	wantSteps := []string{"uperf", "uperf_server"}
+	if !reflect.DeepEqual(e.Steps, wantSteps) {
+		t.Errorf(
+			"steps = %v, want %v",
+			e.Steps, wantSteps,
+		)
+	}
+	wantArch := []string{"amd64", "arm64"}
+	if !reflect.DeepEqual(e.Architectures, wantArch) {
+		t.Errorf(
+			"architectures = %v, want %v",
+			e.Architectures, wantArch,
+		)
+	}
+}
+
+func TestApplyDefaultsOnKnownPlugin(t *testing.T) {
+	t.Parallel()
+	// Plugin with no step/arch fields in YAML gets
+	// defaults applied.
+	yml := `
+plugins:
+  arcaflow-plugin-bare:
+    keywords: [bare]
+    category: utility
+`
+	cat := NewCatalogFromBytes([]byte(yml))
+	e := cat.Lookup("arcaflow-plugin-bare")
+	if e.DefaultStep != "workload" {
+		t.Errorf(
+			"default_step = %q, want workload",
+			e.DefaultStep,
+		)
+	}
+	wantSteps := []string{"workload"}
+	if !reflect.DeepEqual(e.Steps, wantSteps) {
+		t.Errorf(
+			"steps = %v, want %v",
+			e.Steps, wantSteps,
+		)
+	}
+	wantArch := []string{"unknown"}
+	if !reflect.DeepEqual(e.Architectures, wantArch) {
+		t.Errorf(
+			"architectures = %v, want %v",
+			e.Architectures, wantArch,
+		)
+	}
 }
 
 func TestNewCatalogFromBytes(t *testing.T) {
@@ -104,9 +201,9 @@ func TestNewCatalogFromBytes(t *testing.T) {
 	if cat == nil {
 		t.Fatal("catalog is nil")
 	}
-	if len(cat.plugins) != 2 {
+	if len(cat.plugins) != 3 {
 		t.Errorf(
-			"plugins count = %d, want 2",
+			"plugins count = %d, want 3",
 			len(cat.plugins),
 		)
 	}
@@ -201,9 +298,9 @@ func TestNewCatalogFromFile(t *testing.T) {
 	if cat == nil {
 		t.Fatal("catalog is nil")
 	}
-	if len(cat.plugins) != 2 {
+	if len(cat.plugins) != 3 {
 		t.Errorf(
-			"plugins count = %d, want 2",
+			"plugins count = %d, want 3",
 			len(cat.plugins),
 		)
 	}

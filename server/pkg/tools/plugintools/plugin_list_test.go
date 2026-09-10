@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -22,12 +23,21 @@ plugins:
   arcaflow-plugin-fio:
     keywords: ["storage", "benchmark", "fio"]
     category: "storage"
+    default_step: workload
+    steps: [workload]
+    architectures: [amd64, arm64]
   arcaflow-plugin-stressng:
     keywords: ["stress", "cpu", "memory"]
     category: "stress"
+    default_step: workload
+    steps: [workload]
+    architectures: [amd64, arm64]
   arcaflow-plugin-iperf3:
     keywords: ["network", "bandwidth"]
     category: "network"
+    default_step: workload
+    steps: [workload]
+    architectures: [amd64]
 `
 
 // reposJSON builds a Quay repos response with the
@@ -252,15 +262,16 @@ func TestPluginListFilterByArchitecture(t *testing.T) {
 	svc := newTestService(t, srv)
 	tool := NewPluginListTool(svc, nil)
 
-	// Default architecture is "unknown", so filtering
-	// by "unknown" should return all, and "amd64"
-	// should return none.
+	// fio and stressng have [amd64,arm64], iperf3
+	// has [amd64]. So amd64 matches all 3, arm64
+	// matches 2, and s390x matches none.
 	tests := []struct {
 		arch string
 		want int
 	}{
-		{"unknown", 3},
-		{"amd64", 0},
+		{"amd64", 3},
+		{"arm64", 2},
+		{"s390x", 0},
 	}
 
 	for _, tc := range tests {
@@ -465,6 +476,26 @@ func TestPluginListEnrichment(t *testing.T) {
 	}
 	if fio.Image != "quay.io/arcalot/arcaflow-plugin-fio" {
 		t.Errorf("fio image = %s", fio.Image)
+	}
+	if fio.DefaultStep != "workload" {
+		t.Errorf(
+			"fio default_step = %q, want workload",
+			fio.DefaultStep,
+		)
+	}
+	wantSteps := []string{"workload"}
+	if !reflect.DeepEqual(fio.Steps, wantSteps) {
+		t.Errorf(
+			"fio steps = %v, want %v",
+			fio.Steps, wantSteps,
+		)
+	}
+	wantArch := []string{"amd64", "arm64"}
+	if !reflect.DeepEqual(fio.Architectures, wantArch) {
+		t.Errorf(
+			"fio architectures = %v, want %v",
+			fio.Architectures, wantArch,
+		)
 	}
 
 	// stressng has no description — should be inferred.
