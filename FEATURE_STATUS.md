@@ -46,6 +46,19 @@ Legend:
 | Input versioning | 🔮 Future | Go Server | Track input evolution |
 | Input diffing | 🔮 Future | Go Server | Compare input versions |
 
+### Plugin Discovery
+
+| Feature | Status | Component | Notes |
+|---------|--------|-----------|-------|
+| Plugin catalog listing | ✅ Implemented | Go Server | Quay.io API with caching |
+| Plugin metadata enrichment | ✅ Implemented | Go Server | Keywords, categories, steps |
+| Plugin schema retrieval | ✅ Implemented | Go Server | Via container --schema |
+| Category filtering | ✅ Implemented | Go Server | Filter by plugin category |
+| Architecture filtering | ✅ Implemented | Go Server | Filter by platform arch |
+| Architecture detection (API) | 🔮 Future | Go Server | Dynamic OCI manifest parsing |
+| Plugin catalog cache | ✅ Implemented | Go Server | Configurable TTL (default 1h) |
+| Image security validation | ✅ Implemented | Go Server | Allowed registry prefixes only |
+
 ### Result Analysis
 
 | Feature | Status | Component | Notes |

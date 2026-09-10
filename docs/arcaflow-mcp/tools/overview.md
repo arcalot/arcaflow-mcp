@@ -9,6 +9,9 @@ Examples (natural language):
   `source.kind=filesystem`.
 - "Show me /path/results.json" → `workflow_results_load` with
   `source.kind=filesystem`.
+- "What Arcaflow plugins are available?" → `plugin_list`
+- "Show me the schema for the fio plugin" → `plugin_describe`
+  with `plugin=arcaflow-plugin-fio`
 - "Run the workflow in this directory; what inputs do you recommend?" →
   `workflow_discover` or `workflow_list`, then `workflow_schema_get` and
   `workflow_input_examples_get`. Use `workflow_input_build` +
@@ -59,6 +62,23 @@ See input tools section above for explanation of why tools are kept hidden. Resu
 - `workflow_results_parse` - consolidated into workflow_results_describe
 - `workflow_optimization_guide` - specialized narrative output. Use workflow_results_analyze instead.
 - `workflow_results_metrics_extract` - KPI-only extraction. Use workflow_results_describe instead.
+
+### Plugin discovery tools
+
+Detailed schemas and examples are in
+`docs/arcaflow-mcp/tools/plugin-tools.md`.
+
+**Primary tools (registered and available to AI agents):**
+- `plugin_list` - list available Arcaflow plugins with metadata,
+  keywords, and categories
+- `plugin_describe` - get detailed plugin information including
+  step schemas
+
+**Usage pattern:**
+1. Call `plugin_list` to browse the catalog (optionally filter by
+   category or architecture)
+2. Call `plugin_describe` with a specific plugin name to get full
+   step schemas
 
 ### Resources
 

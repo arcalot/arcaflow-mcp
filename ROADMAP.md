@@ -24,6 +24,8 @@ The v0.1.0 release establishes the foundational MCP server with robust input con
 - ✅ Multi-tenancy with workspace isolation
 - ✅ Authentication and rate limiting
 - ✅ Audit logging and usage tracking
+- ✅ Plugin discovery and catalog (Quay.io API, metadata enrichment)
+- ✅ Plugin schema retrieval (container-based --schema)
 
 **In Progress:**
 - 🚧 Container deployment stability and documentation

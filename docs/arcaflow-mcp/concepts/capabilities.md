@@ -91,6 +91,66 @@ See [Tutorial: Input Construction](../examples/basic-workflow.md) for a complete
 
 ---
 
+## Plugin Discovery
+
+Browse the Arcaflow plugin catalog and inspect plugin capabilities
+through natural language conversation.
+
+**Provided by:** Go MCP Server
+
+### Core Features
+
+**Plugin Catalog Browsing**
+- List all available plugins from Quay.io registries
+  (arcalot, redhat-performance organizations)
+- Filter by category (storage, network, cpu, memory, etc.)
+- Filter by architecture (amd64, arm64)
+- Enriched metadata with keywords, descriptions, and step lists
+
+**Plugin Schema Inspection**
+- Retrieve full step input/output schemas for any plugin
+- Powered by container-based `--schema` extraction
+- No container runtime needed on the client — only on the
+  MCP server host
+
+**Caching and Security**
+- In-memory catalog cache with configurable TTL (default 1 hour)
+- Stale cache served when Quay.io is unreachable
+- Image execution restricted to allowed registries only
+
+### Use Cases
+
+**Workflow Planning**
+- Discover which plugins are available before writing workflows
+- Understand plugin input requirements without reading source code
+- Find plugins by category or keyword for a specific task
+
+**Input Construction Support**
+- Get plugin schemas to understand step input contracts
+- Use schema information to build valid workflow inputs
+- Combine with `workflow_input_template` for end-to-end input
+  construction
+
+### Example Workflow
+
+```
+You: "What storage benchmark plugins are available?"
+AI: "Found 3 storage plugins: fio, sysbench, ioping."
+
+You: "Show me the fio plugin schema"
+AI: "The fio plugin has a 'workload' step that accepts
+     filename, bs, rw, and runtime parameters..."
+
+You: "Build inputs for the perf-test workflow using fio
+      with random reads"
+AI: "Created inputs with rw=randread. What block size?"
+```
+
+See [Plugin Discovery Tools](../tools/plugin-tools.md) for
+full tool schemas and examples.
+
+---
+
 ## Result Analysis
 
 Analyze workflow execution results and get AI-powered optimization suggestions.
