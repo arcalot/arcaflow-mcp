@@ -106,7 +106,7 @@ func TestWorkflowExecuteSuccess(t *testing.T) {
 	)
 	dir := writeWorkflow(t)
 
-	tool := NewWorkflowExecuteTool(
+	tool := NewWorkflowExecuteTool(context.Background(), 
 		workflow.NewLoader(), manager,
 		factory, slog.Default(),
 	)
@@ -176,7 +176,7 @@ func TestWorkflowExecuteMissingSource(t *testing.T) {
 	manager := NewExecutionManager(
 		5, time.Hour, slog.Default(),
 	)
-	tool := NewWorkflowExecuteTool(
+	tool := NewWorkflowExecuteTool(context.Background(), 
 		workflow.NewLoader(), manager, factory, nil,
 	)
 
@@ -199,7 +199,7 @@ func TestWorkflowExecuteMissingDeployer(t *testing.T) {
 	manager := NewExecutionManager(
 		5, time.Hour, slog.Default(),
 	)
-	tool := NewWorkflowExecuteTool(
+	tool := NewWorkflowExecuteTool(context.Background(), 
 		workflow.NewLoader(), manager, factory, nil,
 	)
 
@@ -227,7 +227,7 @@ func TestWorkflowExecuteEngineCreateError(t *testing.T) {
 	)
 	dir := writeWorkflow(t)
 
-	tool := NewWorkflowExecuteTool(
+	tool := NewWorkflowExecuteTool(context.Background(), 
 		workflow.NewLoader(), manager, factory, nil,
 	)
 
@@ -255,7 +255,7 @@ func TestWorkflowExecuteConcurrencyLimit(t *testing.T) {
 	)
 	dir := writeWorkflow(t)
 
-	tool := NewWorkflowExecuteTool(
+	tool := NewWorkflowExecuteTool(context.Background(), 
 		workflow.NewLoader(), manager, factory, nil,
 	)
 
@@ -293,7 +293,7 @@ func TestWorkflowExecuteTimeout(t *testing.T) {
 	)
 	dir := writeWorkflow(t)
 
-	tool := NewWorkflowExecuteTool(
+	tool := NewWorkflowExecuteTool(context.Background(), 
 		workflow.NewLoader(), manager, factory, nil,
 	)
 
@@ -345,7 +345,7 @@ func TestWorkflowExecuteEngineFailure(t *testing.T) {
 	)
 	dir := writeWorkflow(t)
 
-	tool := NewWorkflowExecuteTool(
+	tool := NewWorkflowExecuteTool(context.Background(), 
 		workflow.NewLoader(), manager, factory, nil,
 	)
 

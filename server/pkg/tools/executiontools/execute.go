@@ -92,8 +92,11 @@ func (f *DefaultEngineFactory) Create(
 
 // NewWorkflowExecuteTool registers the workflow_execute
 // MCP tool. It starts workflow executions asynchronously
-// using the Arcaflow engine as a library.
+// using the Arcaflow engine as a library. The serverCtx
+// is used as the parent context for executions so they
+// are cancelled when the server shuts down.
 func NewWorkflowExecuteTool(
+	serverCtx context.Context,
 	loader *workflow.Loader,
 	manager *ExecutionManager,
 	engineFactory EngineFactory,
@@ -117,12 +120,14 @@ func NewWorkflowExecuteTool(
 			),
 		},
 		Handler: handleExecute(
-			loader, manager, engineFactory, logger,
+			serverCtx, loader, manager,
+			engineFactory, logger,
 		),
 	}
 }
 
 func handleExecute(
+	serverCtx context.Context,
 	loader *workflow.Loader,
 	manager *ExecutionManager,
 	engineFactory EngineFactory,
@@ -260,9 +265,12 @@ func handleExecute(
 				)
 		}
 
-		// Create execution context with timeout
+		// Derive from server context so executions
+		// stop when the server shuts down. The request
+		// ctx is short-lived (tool call duration) so
+		// we must not use it as the parent.
 		execCtx, cancel := context.WithTimeout(
-			context.Background(),
+			serverCtx,
 			time.Duration(timeoutSec)*time.Second,
 		)
 
@@ -340,6 +348,9 @@ func runExecution(
 	outputID, outputData, outputError, err :=
 		eng.RunWorkflow(ctx, inputBytes, fc, fileName)
 
+	// Complete is safe to call even if Cancel() already
+	// set the status — it's a no-op for non-running
+	// executions.
 	if ctx.Err() == context.DeadlineExceeded {
 		manager.Complete(
 			execID, "", nil, true,
@@ -348,7 +359,10 @@ func runExecution(
 		return
 	}
 	if ctx.Err() == context.Canceled {
-		// Already cancelled via Cancel() — state is set.
+		manager.Complete(
+			execID, "", nil, true,
+			fmt.Errorf("execution cancelled"),
+		)
 		return
 	}
 

@@ -246,7 +246,9 @@ func (m *ExecutionManager) Get(id string) *Execution {
 
 // Complete marks an execution as completed or failed.
 // If err is non-nil the status is set to StatusFailed,
-// otherwise StatusCompleted.
+// otherwise StatusCompleted. If the execution was
+// already cancelled, the call is ignored to avoid
+// overwriting the cancellation state.
 func (m *ExecutionManager) Complete(
 	id string,
 	outputID string,
@@ -263,6 +265,13 @@ func (m *ExecutionManager) Complete(
 			"complete called for unknown execution",
 			"id", id,
 		)
+		return
+	}
+
+	// Do not overwrite a cancelled or already-finished
+	// execution. Cancel() may have been called while
+	// RunWorkflow was returning.
+	if exec.Status != StatusRunning {
 		return
 	}
 

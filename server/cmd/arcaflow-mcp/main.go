@@ -161,7 +161,7 @@ func run() error {
 		)
 		if *enableExecution {
 			registerExecutionTools(
-				handler,
+				ctx, handler,
 				*maxConcurrentExec,
 				executionTTL,
 			)
@@ -193,7 +193,7 @@ func run() error {
 		// enabled.
 		if *enableExecution {
 			registerExecutionTools(
-				handler,
+				ctx, handler,
 				*maxConcurrentExec,
 				executionTTL,
 			)
@@ -415,6 +415,7 @@ func registerDefaultTools(
 // registerExecutionTools adds workflow execution tools
 // (execute, status, cancel, output) to the server.
 func registerExecutionTools(
+	serverCtx context.Context,
 	server *protocol.Server,
 	maxConcurrent int,
 	executionTTL time.Duration,
@@ -432,7 +433,7 @@ func registerExecutionTools(
 
 	server.RegisterTool(
 		executiontools.NewWorkflowExecuteTool(
-			loader, execManager,
+			serverCtx, loader, execManager,
 			engineFactory, slog.Default(),
 		),
 	)
