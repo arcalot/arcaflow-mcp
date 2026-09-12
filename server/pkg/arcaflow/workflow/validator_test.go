@@ -7,6 +7,7 @@ import (
 	"io"
 	"log/slog"
 	"os"
+	"strings"
 	"testing"
 
 	"go.flow.arcalot.io/engine"
@@ -624,6 +625,54 @@ func TestInputValidatorLocalPathWithSiblingFiles(t *testing.T) {
 	}
 	if !result.Valid {
 		t.Fatalf("expected valid, got issues: %v", result.Issues)
+	}
+}
+
+func TestInputValidatorUnresolvedPluginRefs(t *testing.T) {
+	// Workflow with input referencing a type that
+	// would only exist in a plugin schema. The
+	// fallback path should detect this and return
+	// a clear error, not panic.
+	content := `
+version: v0.2.0
+input:
+  root: CompositeInput
+  objects:
+    CompositeInput:
+      id: CompositeInput
+      properties:
+        fio_params:
+          required: true
+          type:
+            type_id: ref
+            id: FioInputParams
+            namespace: "$.steps.fio.starting.inputs.input"
+steps: {}
+outputs:
+  success:
+    status: ok
+`
+	validator := NewInputValidator()
+	result, err := validator.validateFromInputScope(
+		Workflow{Content: []byte(content)},
+		[]byte(`{"fio_params":{"filename":"/dev/sda"}}`),
+	)
+	// Should return an error about unresolved refs,
+	// not panic.
+	if err == nil {
+		t.Fatalf(
+			"expected error for unresolved refs, "+
+				"got valid=%v",
+			result.Valid,
+		)
+	}
+	if !strings.Contains(
+		err.Error(), "container runtime",
+	) {
+		t.Errorf(
+			"error should mention container runtime: %v",
+			err,
+		)
 	}
 }
 

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"sync"
 )
@@ -319,12 +320,53 @@ func (s *Server) handleToolsCall(
 		)
 	}
 
-	result, errObj := registration.Handler(ctx, params.Arguments)
+	result, errObj, panicErr := s.safeCallTool(
+		ctx, registration, params,
+	)
+	if panicErr != nil {
+		return errorResponse(
+			req.ID,
+			newError(
+				ErrInternal,
+				"internal tool error",
+				map[string]string{
+					"error": panicErr.Error(),
+				},
+			),
+		)
+	}
 	if errObj != nil {
 		return errorResponse(req.ID, errObj)
 	}
 
 	return resultResponse(req.ID, result)
+}
+
+// safeCallTool invokes a tool handler with panic
+// recovery. If the handler panics, the panic is caught
+// and returned as an error instead of crashing the
+// server process.
+func (s *Server) safeCallTool(
+	ctx context.Context,
+	reg ToolRegistration,
+	params ToolsCallParams,
+) (result ToolsCallResult, errObj *ErrorObject, panicErr error) {
+	defer func() {
+		if r := recover(); r != nil {
+			s.logger.Error(
+				"tool handler panicked",
+				"tool", params.Name,
+				"panic", fmt.Sprintf("%v", r),
+			)
+			panicErr = fmt.Errorf(
+				"tool %q panicked: %v",
+				params.Name, r,
+			)
+		}
+	}()
+
+	result, errObj = reg.Handler(ctx, params.Arguments)
+	return result, errObj, nil
 }
 
 func (s *Server) handleResourcesList(

@@ -944,6 +944,98 @@ func TestHandleInitializedTwice(t *testing.T) {
 	}
 }
 
+func TestHandleToolsCallPanicRecovery(t *testing.T) {
+	server := NewServer(
+		nil, ServerInfo{Name: "arcaflow-mcp"},
+	)
+	server.RegisterTool(ToolRegistration{
+		Definition: ToolDefinition{Name: "panicker"},
+		Handler: func(
+			_ context.Context,
+			_ map[string]interface{},
+		) (ToolsCallResult, *ErrorObject) {
+			panic("deliberate test panic")
+		},
+	})
+
+	initReq := mustMarshal(Request{
+		JSONRPC: JSONRPCVersion,
+		ID:      rawID(1),
+		Method:  "initialize",
+		Params: mustMarshalRaw(InitializeParams{
+			ProtocolVersion: ProtocolVersion,
+		}),
+	})
+	if _, err := server.Handle(
+		context.Background(), initReq,
+	); err != nil {
+		t.Fatalf("initialize: %v", err)
+	}
+	initialized := mustMarshal(Request{
+		JSONRPC: JSONRPCVersion,
+		ID:      rawID(2),
+		Method:  "initialized",
+	})
+	if _, err := server.Handle(
+		context.Background(), initialized,
+	); err != nil {
+		t.Fatalf("initialized: %v", err)
+	}
+
+	// Call the panicking tool — server must not crash.
+	call := mustMarshal(Request{
+		JSONRPC: JSONRPCVersion,
+		ID:      rawID(3),
+		Method:  "tools/call",
+		Params: mustMarshalRaw(ToolsCallParams{
+			Name: "panicker",
+		}),
+	})
+	responses, err := server.Handle(
+		context.Background(), call,
+	)
+	if err != nil {
+		t.Fatalf("handle returned error: %v", err)
+	}
+	if len(responses) != 1 {
+		t.Fatalf("expected 1 response, got %d",
+			len(responses))
+	}
+
+	// Verify the response is an error, not a result.
+	var resp Response
+	if err := json.Unmarshal(
+		responses[0], &resp,
+	); err != nil {
+		t.Fatalf("unmarshal response: %v", err)
+	}
+	if resp.Error == nil {
+		t.Fatal("expected error response after panic")
+	}
+	if resp.Error.Code != ErrInternal {
+		t.Errorf(
+			"error code = %d, want %d",
+			resp.Error.Code, ErrInternal,
+		)
+	}
+
+	// Verify the server still works after the panic.
+	pingReq := mustMarshal(Request{
+		JSONRPC: JSONRPCVersion,
+		ID:      rawID(4),
+		Method:  "ping",
+	})
+	pingResp, err := server.Handle(
+		context.Background(), pingReq,
+	)
+	if err != nil {
+		t.Fatalf("ping after panic: %v", err)
+	}
+	if len(pingResp) != 1 {
+		t.Fatal("expected ping response")
+	}
+}
+
 func mustMarshal(req Request) []byte {
 	data, err := json.Marshal(req)
 	if err != nil {

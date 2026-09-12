@@ -204,7 +204,18 @@ func (v *InputValidator) Validate(
 func (v *InputValidator) validateFromInputScope(
 	workflow Workflow,
 	inputPayload []byte,
-) (ValidationResult, error) {
+) (result ValidationResult, err error) {
+	// The SDK may panic on unlinked ref types in
+	// complex workflows (e.g., composite inputs
+	// referencing multiple plugin schemas). Recover
+	// and return an error instead of crashing.
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf(
+				"schema validation panicked: %v", r,
+			)
+		}
+	}()
 	var doc map[string]interface{}
 	if err := yaml.Unmarshal(workflow.Content, &doc); err != nil {
 		return ValidationResult{}, err
@@ -218,6 +229,21 @@ func (v *InputValidator) validateFromInputScope(
 	scope, err := schema.UnserializeScope(inputSection)
 	if err != nil {
 		return ValidationResult{}, err
+	}
+
+	// Check for unresolved refs before attempting
+	// validation. Complex workflows reference types
+	// from plugin schemas (e.g., PcpInputParams)
+	// that only exist after the engine fetches
+	// plugin schemas via ATP. Without the engine,
+	// these refs are unlinked and would panic.
+	if refErr := scope.ValidateReferences(); refErr != nil {
+		return ValidationResult{}, fmt.Errorf(
+			"workflow input references plugin-defined "+
+				"types that require a container "+
+				"runtime (podman/docker) to resolve: %w",
+			refErr,
+		)
 	}
 
 	inputData, err := parseAny(inputPayload)

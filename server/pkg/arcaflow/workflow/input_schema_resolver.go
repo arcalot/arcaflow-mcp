@@ -133,7 +133,17 @@ func (resolver *InputSchemaResolver) ResolveInputJSONSchema(
 // YAML and converts it to JSON Schema without engine parsing.
 func resolveFromInputScope(
 	content []byte,
-) (json.RawMessage, error) {
+) (raw json.RawMessage, err error) {
+	// The SDK may panic on unlinked ref types in
+	// complex multi-plugin workflows. Recover and
+	// return an error instead of crashing.
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf(
+				"schema resolution panicked: %v", r,
+			)
+		}
+	}()
 	var doc map[string]interface{}
 	if err := yaml.Unmarshal(content, &doc); err != nil {
 		return nil, err
@@ -149,8 +159,21 @@ func resolveFromInputScope(
 		return nil, err
 	}
 
+	// Detect unresolvable plugin-defined types before
+	// attempting to convert. Without the engine, refs
+	// to plugin schemas (e.g., step input types) are
+	// unlinked and would panic during traversal.
+	if refErr := scope.ValidateReferences(); refErr != nil {
+		return nil, fmt.Errorf(
+			"workflow input references plugin-defined "+
+				"types that require a container "+
+				"runtime to resolve: %w",
+			refErr,
+		)
+	}
+
 	jsonSchema := arcaflowScopeToJSONSchema(scope)
-	raw, err := json.Marshal(jsonSchema)
+	raw, err = json.Marshal(jsonSchema)
 	if err != nil {
 		return nil, err
 	}
