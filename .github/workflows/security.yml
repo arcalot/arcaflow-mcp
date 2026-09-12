@@ -1,0 +1,57 @@
+name: security
+
+on:
+  pull_request:
+  push:
+    branches: [main, initial-development]
+  workflow_dispatch: {}
+
+jobs:
+  dependency-review:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/dependency-review-action@v4
+        with:
+          # No patched protobuf release available yet for CVE-2026-0994.
+          allow-ghsas: |
+            GHSA-7gcm-g887-7qv7
+
+  govulncheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ vars.ARCALOT_GO_VERSION || '1.23' }}
+      
+      - name: Install govulncheck
+        run: go install golang.org/x/vuln/cmd/govulncheck@latest
+      
+      - name: Run govulncheck
+        working-directory: server
+        run: govulncheck ./...
+
+  pip-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ vars.ARCALOT_PYTHON_VERSION || '3.12' }}
+      
+      - name: Install Poetry and pip-audit
+        run: |
+          python -m pip install --upgrade pip
+          pip install poetry==1.8.3 pip-audit
+      
+      - name: Export requirements
+        working-directory: analysis
+        run: poetry export --without-hashes -f requirements.txt -o /tmp/req.txt
+      
+      - name: Run pip-audit
+        # No patched protobuf release available yet for CVE-2026-0994.
+        run: pip-audit -r /tmp/req.txt --ignore-vuln CVE-2026-0994

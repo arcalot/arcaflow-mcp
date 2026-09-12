@@ -1,0 +1,103 @@
+# Plugin metadata for Arcaflow plugin catalog enrichment.
+# Maps plugin repository names to keywords and categories.
+# Category is a single primary classification for filtering.
+# Keywords are multi-valued for search and fuzzy matching.
+# Steps and default_step describe the plugin's callable steps.
+# Architectures lists supported container image platforms.
+plugins:
+  arcaflow-plugin-fio:
+    keywords: [fio, storage, io, disk, throughput, latency, iops, benchmark]
+    category: storage
+    default_step: workload
+    steps: [workload]
+    architectures: [amd64, arm64]
+  arcaflow-plugin-stressng:
+    keywords: [stress-ng, cpu, memory, stress, io, benchmark]
+    category: stress
+    default_step: workload
+    steps: [workload]
+    architectures: [amd64, arm64]
+  arcaflow-plugin-uperf:
+    keywords: [uperf, network, throughput, latency, bandwidth, benchmark]
+    category: network
+    default_step: uperf
+    steps: [uperf, uperf_server]
+    architectures: [amd64, arm64]
+  arcaflow-plugin-sysbench:
+    keywords: [sysbench, database, cpu, oltp, benchmark]
+    category: mixed
+    default_step: sysbench
+    steps: [sysbench]
+    architectures: [amd64, arm64]
+  arcaflow-plugin-pcp:
+    keywords: [pcp, metrics, monitoring, performance, collection]
+    category: monitoring
+    default_step: start_pcp
+    steps: [start_pcp, stop_pcp]
+    architectures: [amd64]
+  arcaflow-plugin-horreum:
+    keywords: [horreum, results, upload, storage]
+    category: utility
+    default_step: workload
+    steps: [workload]
+    architectures: [amd64]
+  arcaflow-plugin-kill-pod:
+    keywords: [kill, pod, kubernetes, chaos, fault-injection]
+    category: chaos
+    default_step: kill-pod
+    steps: [kill-pod, wait]
+    architectures: [amd64, arm64]
+  arcaflow-plugin-coremark:
+    keywords: [coremark, cpu, benchmark, performance]
+    category: cpu
+    default_step: workload
+    steps: [workload]
+    architectures: [amd64, arm64]
+  arcaflow-plugin-metadata:
+    keywords: [metadata, system, collection, inventory]
+    category: utility
+    default_step: workload
+    steps: [workload]
+    architectures: [amd64, arm64]
+  arcaflow-plugin-opensearch:
+    keywords: [opensearch, search, indexing, upload]
+    category: utility
+    default_step: workload
+    steps: [workload]
+    architectures: [amd64]
+  arcaflow-plugin-elasticsearch:
+    keywords: [elasticsearch, search, indexing, upload]
+    category: utility
+    default_step: workload
+    steps: [workload]
+    architectures: [amd64]
+  arcaflow-plugin-kubeburner:
+    keywords: [kube-burner, kubernetes, scale, load, benchmark]
+    category: mixed
+    default_step: workload
+    steps: [workload]
+    architectures: [amd64, arm64]
+  arcaflow-plugin-network-observability:
+    keywords: [network, observability, monitoring, flow]
+    category: network
+    default_step: workload
+    steps: [workload]
+    architectures: [amd64]
+  arcaflow-plugin-image-builder:
+    keywords: [image, builder, container, build]
+    category: utility
+    default_step: workload
+    steps: [workload]
+    architectures: [amd64]
+  arcaflow-plugin-utilities:
+    keywords: [utilities, helper, misc]
+    category: utility
+    default_step: workload
+    steps: [workload]
+    architectures: [amd64, arm64]
+  arcaflow-plugin-regex:
+    keywords: [regex, text, parsing, extraction]
+    category: utility
+    default_step: workload
+    steps: [workload]
+    architectures: [amd64]

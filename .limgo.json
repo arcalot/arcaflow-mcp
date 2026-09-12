@@ -1,0 +1,41 @@
+{
+  "$schema": "https://raw.githubusercontent.com/GoTestTools/limgo/main/limgo-schema.json",
+  "version": "1.0.0",
+  "coverage": {
+    "threshold": 85.0,
+    "exclude": [
+      "**/cmd/**",
+      "**/test/**",
+      "**/*_test.go",
+      "**/mock_*.go"
+    ],
+    "packageThresholds": {
+      "github.com/arcalot/arcaflow-mcp/server/pkg/protocol": 85.0,
+      "github.com/arcalot/arcaflow-mcp/server/pkg/workflow": 82.0,
+      "github.com/arcalot/arcaflow-mcp/server/pkg/tools/workflowtools": 81.0,
+      "github.com/arcalot/arcaflow-mcp/server/pkg/arcaflow/workflow": 82.0,
+      "github.com/arcalot/arcaflow-mcp/server/pkg/arcaflow/pluginschema": 83.0,
+      "github.com/arcalot/arcaflow-mcp/server/pkg/transport/httpserver": 86.0,
+      "github.com/arcalot/arcaflow-mcp/server/pkg/transport/stdio": 84.0,
+      "github.com/arcalot/arcaflow-mcp/server/pkg/tenant": 88.0,
+      "github.com/arcalot/arcaflow-mcp/server/pkg/auth": 83.0,
+      "github.com/arcalot/arcaflow-mcp/server/pkg/audit": 86.0,
+      "github.com/arcalot/arcaflow-mcp/server/pkg/state": 89.0,
+      "github.com/arcalot/arcaflow-mcp/server/pkg/ratelimit": 90.0,
+      "github.com/arcalot/arcaflow-mcp/server/pkg/config": 92.0,
+      "github.com/arcalot/arcaflow-mcp/server/pkg/analysis": 91.0,
+      "github.com/arcalot/arcaflow-mcp/server/pkg/resources": 82.0,
+      "github.com/arcalot/arcaflow-mcp/server/pkg/version": 92.0,
+      "github.com/arcalot/arcaflow-mcp/server/pkg/quay": 85.0,
+      "github.com/arcalot/arcaflow-mcp/server/pkg/pluginmeta": 90.0,
+      "github.com/arcalot/arcaflow-mcp/server/pkg/tools/plugintools": 85.0,
+      "github.com/arcalot/arcaflow-mcp/server/pkg/tools/executiontools": 85.0
+    }
+  },
+  "output": {
+    "format": "markdown",
+    "showFiles": true,
+    "showPackages": true,
+    "colorize": false
+  }
+}

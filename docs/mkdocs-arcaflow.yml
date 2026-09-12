@@ -1,0 +1,41 @@
+site_name: Arcaflow MCP
+site_description: Arcaflow MCP user documentation
+docs_dir: arcaflow-mcp
+site_dir: ../site-arcaflow
+theme:
+  name: material
+
+nav:
+  - Home: index.md
+  - Getting started:
+      - Choose your path: getting-started.md
+      - Local mode (containers): getting-started-local.md
+      - Server mode (containers): getting-started-server.md
+      - Build from source: getting-started-source.md
+  - Concepts:
+      - Architecture: concepts/architecture.md
+      - Capabilities: concepts/capabilities.md
+      - Deployment modes: concepts/deployment-modes.md
+      - Multi-tenancy: concepts/multi-tenancy.md
+  - Usage:
+      - Local mode: usage/local-mode.md
+      - Server mode: usage/server-mode.md
+      - Input construction: usage/input-construction.md
+      - Result analysis: usage/result-analysis.md
+      - Configuration: usage/configuration.md
+  - Deployment:
+      - Containers: deployment/container.md
+      - Kubernetes: deployment/kubernetes.md
+      - Authentication: deployment/authentication.md
+      - TLS: deployment/tls.md
+  - Tools:
+      - Overview: tools/overview.md
+      - Input construction tools: tools/input-tools.md
+      - Result analysis tools: tools/result-tools.md
+      - Resources: tools/resources.md
+  - Examples:
+      - Basic workflow: examples/basic-workflow.md
+      - Iterative optimization: examples/iterative-optimization.md
+      - Multi-run comparison: examples/multi-run-comparison.md
+  - Troubleshooting: troubleshooting.md
+  - FAQ: faq.md

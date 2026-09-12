@@ -1,0 +1,76 @@
+version: v0.2.0
+input:
+  root: RootObject
+  objects:
+    RootObject:
+      id: RootObject
+      properties:
+        test_config:
+          display:
+            description: Performance test configuration
+            name: Test Configuration
+          type:
+            type_id: ref
+            id: TestConfig
+          required: true
+    TestConfig:
+      id: TestConfig
+      properties:
+        name:
+          display:
+            description: Test name
+            name: Name
+          type:
+            type_id: string
+          required: true
+        users:
+          display:
+            description: Number of concurrent users
+            name: Users
+          type:
+            type_id: integer
+          required: true
+        duration:
+          display:
+            description: Test duration in seconds
+            name: Duration
+          type:
+            type_id: integer
+          required: true
+        ramp_up:
+          display:
+            description: Ramp-up time in seconds
+            name: Ramp Up
+          type:
+            type_id: integer
+          required: false
+        timeout:
+          display:
+            description: Request timeout in seconds
+            name: Timeout
+          type:
+            type_id: integer
+          required: false
+        success_threshold:
+          display:
+            description: Required success rate (0.0-1.0)
+            name: Success Threshold
+          type:
+            type_id: float
+          required: false
+
+steps:
+  simulate:
+    plugin:
+      deployment_type: image
+      src: quay.io/arcalot/arcaflow-plugin-utilities:0.5.0
+    step: echo
+    input:
+      message: !expr '"Running test: " + $.input.test_config.name + " with " + str($.input.test_config.users) + " users"'
+
+outputs:
+  success:
+    test_name: !expr $.input.test_config.name
+    users: !expr $.input.test_config.users
+    duration: !expr $.input.test_config.duration
+    message: !expr $.steps.simulate.outputs.success.output

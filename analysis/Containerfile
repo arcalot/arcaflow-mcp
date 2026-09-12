@@ -1,0 +1,110 @@
+# Containerfile for Arcaflow MCP Analysis Engine (Python)
+#
+# This builds a container image for the Python analysis engine component.
+# The engine provides result parsing, statistical analysis, and optimization suggestions.
+#
+# Build from repository root:
+#   podman build -t quay.io/arcalot/arcaflow-mcp-analysis:latest -f analysis/Containerfile .
+#   docker build -t quay.io/arcalot/arcaflow-mcp-analysis:latest -f analysis/Containerfile .
+#
+# Run:
+#   podman run -p 8081:8081 quay.io/arcalot/arcaflow-mcp-analysis:latest
+#
+
+# Package path for this module relative to repo root
+ARG package=arcaflow_analysis
+
+# STAGE 1 -- Build module dependencies and run tests
+FROM python:3.12-alpine3.20 AS build
+ARG package
+
+WORKDIR /app
+
+# Install Poetry for dependency management
+RUN pip install --no-cache-dir poetry==1.8.3
+
+# Copy dependency manifests from analysis directory (cached layer)
+COPY analysis/poetry.lock analysis/pyproject.toml ./
+
+# Install all dependencies including dev (needed for pytest in build)
+# Convert runtime dependencies to static requirements.txt for final image
+RUN poetry config virtualenvs.create false \
+ && poetry install --no-root \
+ && poetry export -f requirements.txt --output requirements.txt --without-hashes --without dev
+
+# Install protoc for proto generation
+RUN apk add --no-cache protobuf-dev
+
+# Copy proto files and generation script
+COPY api/proto/ /app/api/proto/
+COPY scripts/proto-gen.sh /app/scripts/
+
+# Generate protobuf Python modules
+RUN mkdir -p /app/api/generated/python && \
+    python -m grpc_tools.protoc \
+      -I /app/api/proto \
+      --python_out /app/api/generated/python \
+      --grpc_python_out /app/api/generated/python \
+      /app/api/proto/*.proto
+
+# Copy application code from analysis directory
+COPY analysis/${package}/ /app/${package}/
+COPY analysis/tests/ /app/tests/
+# Copy test fixtures from repository root
+COPY test/ /test/
+# Copy LICENSE and README from repository root
+COPY LICENSE README.md ./
+
+# Run tests to validate build
+ENV PYTHONPATH=/app:/app/api/generated/python
+RUN python -m pytest tests/ -v
+
+# STAGE 2 -- Build final runtime image
+FROM python:3.12-alpine3.20
+ARG package
+
+WORKDIR /app
+
+# Copy requirements, application code, and generated protos from build stage
+COPY --from=build /app/requirements.txt ./
+COPY --from=build /app/${package}/ /app/${package}/
+COPY --from=build /app/api/generated/python/ /app/api/generated/python/
+# Copy LICENSE and README from repository root
+COPY LICENSE README.md ./
+
+# Set PYTHONPATH to include generated protos
+ENV PYTHONPATH=/app:/app/api/generated/python
+
+# Install all dependencies from generated requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Create data directory for SQLite database
+RUN mkdir -p /var/lib/arcaflow-analysis
+
+# Create non-root user and set ownership
+# Alpine uses adduser instead of useradd
+RUN adduser -D -u 1000 arcaflow \
+ && chown -R arcaflow:arcaflow /app /var/lib/arcaflow-analysis
+
+USER arcaflow
+
+# Expose analysis engine HTTP port
+EXPOSE 8081
+
+ENV ARCAFLOW_ANALYSIS_HTTP_ADDRESS=0.0.0.0:8081
+
+# Health check endpoint
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD python -c "import os,urllib.request; addr=os.getenv('ARCAFLOW_ANALYSIS_HTTP_ADDRESS','0.0.0.0:8081'); port=addr.rsplit(':',1)[-1]; urllib.request.urlopen(f'http://127.0.0.1:{port}/healthz')" || exit 1
+
+# OCI labels following Arcalot conventions
+LABEL org.opencontainers.image.source="https://github.com/arcalot/arcaflow-mcp"
+LABEL org.opencontainers.image.licenses="Apache-2.0"
+LABEL org.opencontainers.image.vendor="Arcalot project"
+LABEL org.opencontainers.image.authors="Arcalot contributors"
+LABEL org.opencontainers.image.title="Arcaflow MCP Analysis Engine"
+LABEL org.opencontainers.image.description="Python analysis engine for Arcaflow workflow result analysis and optimization"
+
+# Start the analysis service (gRPC + HTTP when configured)
+ENTRYPOINT ["python", "-m", "arcaflow_analysis.server.app"]
+CMD []

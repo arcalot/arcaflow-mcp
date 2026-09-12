@@ -1,0 +1,56 @@
+version: v0.2.0
+input:
+  root: RootObject
+  objects:
+    RootObject:
+      id: RootObject
+      properties:
+        dataset:
+          display:
+            description: Dataset to process
+            name: Dataset
+          type:
+            type_id: ref
+            id: Dataset
+          required: true
+    Dataset:
+      id: Dataset
+      properties:
+        name:
+          display:
+            description: Dataset name
+            name: Name
+          type:
+            type_id: string
+          required: true
+        values:
+          display:
+            description: Data values
+            name: Values
+          type:
+            type_id: list
+            items:
+              type_id: integer
+          required: true
+        threshold:
+          display:
+            description: Threshold for analysis
+            name: Threshold
+          type:
+            type_id: integer
+          required: false
+
+steps:
+  process:
+    plugin:
+      deployment_type: image
+      src: quay.io/arcalot/arcaflow-plugin-utilities:0.5.0
+    step: echo
+    input:
+      message: !expr '"Processing dataset: " + $.input.dataset.name'
+
+outputs:
+  success:
+    dataset_name: !expr $.input.dataset.name
+    value_count: !expr 'len($.input.dataset.values)'
+    message: !expr $.steps.process.outputs.success.output

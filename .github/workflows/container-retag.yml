@@ -1,0 +1,112 @@
+name: container-retag
+
+# Ensures every commit on tracked branches has a valid container image
+# tag on Quay.io. If the commit didn't change code that triggers a full
+# container build, this copies the most recent build's manifest to a tag
+# matching the current commit SHA.
+
+on:
+  push:
+    branches:
+      - main
+      - initial-development
+
+concurrency:
+  group: container-retag-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  IMAGE_REPO: ${{ vars.IMAGE_REPO || 'quay.io/arcalot' }}
+
+jobs:
+  retag:
+    name: Retag container images for current commit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check if container-build will handle this commit
+        id: check
+        run: |
+          BRANCH="${{ github.ref_name }}"
+          SHORT_SHA="${GITHUB_SHA:0:7}"
+          NEW_TAG="${BRANCH}-${SHORT_SHA}"
+
+          # Check if this commit changed paths that trigger container-build.
+          # If so, container-build will produce the image — skip retagging.
+          BUILD_PATHS="server/ analysis/ .github/workflows/container-build.yml"
+          CHANGED=$(git diff --name-only HEAD~1 HEAD 2>/dev/null || echo "")
+          NEEDS_BUILD=false
+          for path in ${BUILD_PATHS}; do
+            if echo "${CHANGED}" | grep -q "^${path}"; then
+              NEEDS_BUILD=true
+              break
+            fi
+          done
+
+          if [ "${NEEDS_BUILD}" = "true" ]; then
+            echo "Container-build will handle this commit, skipping retag"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Find the most recent commit that triggered a container build
+          SOURCE_SHA=$(git log -1 --format='%h' -- \
+            server/ analysis/ .github/workflows/container-build.yml)
+
+          if [ -z "${SOURCE_SHA}" ]; then
+            echo "No prior container build commit found"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          SOURCE_TAG="${BRANCH}-${SOURCE_SHA}"
+
+          if [ "${SOURCE_TAG}" = "${NEW_TAG}" ]; then
+            echo "Tags match, nothing to retag"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "source_tag=${SOURCE_TAG}" >> "$GITHUB_OUTPUT"
+          echo "new_tag=${NEW_TAG}" >> "$GITHUB_OUTPUT"
+          echo "skip=false" >> "$GITHUB_OUTPUT"
+          echo "Retagging ${SOURCE_TAG} -> ${NEW_TAG}"
+
+      - name: Install skopeo
+        if: steps.check.outputs.skip != 'true'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends skopeo
+
+      - name: Login to Quay.io
+        if: steps.check.outputs.skip != 'true'
+        env:
+          QUAY_USERNAME: ${{ secrets.QUAY_USERNAME }}
+          QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
+        run: |
+          if [ -n "${QUAY_USERNAME}" ] && [ -n "${QUAY_PASSWORD}" ]; then
+            skopeo login -u "$QUAY_USERNAME" --password "$QUAY_PASSWORD" quay.io
+          else
+            echo "::warning::QUAY credentials not found, skipping retag"
+            exit 0
+          fi
+
+      - name: Retag images
+        if: steps.check.outputs.skip != 'true'
+        env:
+          SOURCE: ${{ steps.check.outputs.source_tag }}
+          NEW: ${{ steps.check.outputs.new_tag }}
+        run: |
+          for IMAGE in arcaflow-mcp-server arcaflow-mcp-analysis; do
+            echo "Copying ${IMAGE}:${SOURCE} -> ${NEW}"
+            skopeo copy --all \
+              "docker://${IMAGE_REPO}/${IMAGE}:${SOURCE}" \
+              "docker://${IMAGE_REPO}/${IMAGE}:${NEW}" || {
+              echo "::warning::Failed to retag ${IMAGE}. Source tag ${SOURCE} may not exist yet."
+              exit 1
+            }
+          done

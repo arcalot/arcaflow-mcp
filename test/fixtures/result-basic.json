@@ -1,0 +1,15 @@
+{
+  "success": true,
+  "metrics": {
+    "latency_ms": 10,
+    "throughput": 200
+  },
+  "records": [
+    {
+      "value": 1
+    },
+    {
+      "value": 2
+    }
+  ]
+}

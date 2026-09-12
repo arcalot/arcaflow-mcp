@@ -1,0 +1,219 @@
+# GoReleaser configuration for Arcaflow MCP Server
+# This builds multi-platform binaries and container images for the Go MCP server.
+#
+# Release process:
+# 1. Tag a version: git tag -a v1.0.0 -m "Release v1.0.0"
+# 2. Push the tag: git push origin v1.0.0
+# 3. GitHub Actions will automatically run GoReleaser
+#
+# For local testing:
+#   goreleaser release --snapshot --clean
+#
+# References:
+# - GoReleaser docs: https://goreleaser.com/
+# - Arcaflow Engine: https://github.com/arcalot/arcaflow-engine/blob/main/.goreleaser.yml
+
+version: 2
+
+project_name: arcaflow-mcp-server
+
+# Ensure git tags are fetched for changelog generation
+git:
+  ignore_tags:
+    - "analysis/*"  # Ignore Python analysis engine tags if using monorepo tags
+
+before:
+  hooks:
+    # Run tests before building (in server directory where go.mod is)
+    - sh -c "cd server && go test ./..."
+    # Generate mocks and other code (in server directory)
+    - sh -c "cd server && go generate ./..."
+
+builds:
+  - id: server
+    # Build from server subdirectory
+    dir: server
+    main: ./cmd/arcaflow-mcp
+    binary: arcaflow-mcp
+    
+    env:
+      - CGO_ENABLED=0
+    
+    # Multi-platform support
+    goos:
+      - linux
+      - darwin
+      - windows
+    
+    goarch:
+      - amd64
+      - arm64
+    
+    # Skip combinations that don't make sense
+    ignore:
+      - goos: windows
+        goarch: arm64
+    
+    # Flags for smaller binaries
+    flags:
+      - -trimpath
+    
+    ldflags:
+      - -s -w
+      - -X main.version={{.Version}}
+      - -X main.commit={{.Commit}}
+      - -X main.date={{.Date}}
+      - -X main.builtBy=goreleaser
+
+# Archive configuration for binary releases
+archives:
+  - id: server
+    name_template: >-
+      {{ .ProjectName }}_
+      {{- .Version }}_
+      {{- .Os }}_
+      {{- .Arch }}
+    
+    # Use tar.gz for all platforms except Windows which uses zip
+    format: tar.gz
+    format_overrides:
+      - goos: windows
+        format: zip
+    
+    files:
+      - LICENSE
+      - README.md
+      - CONTRIBUTING.md
+      - docs/**/*
+      - examples/**/*
+
+# Checksum file for all archives
+checksum:
+  name_template: 'checksums.txt'
+  algorithm: sha256
+
+# GitHub Release configuration
+release:
+  github:
+    owner: arcalot
+    name: arcaflow-mcp
+  
+  # Release notes generation
+  header: |
+    ## Arcaflow MCP Server {{ .Tag }}
+    
+    Release of the Arcaflow MCP Server for natural language interaction with Arcaflow workflows.
+    
+    ### Binary Downloads
+    
+    Download the appropriate binary for your platform below, extract it, and add it to your PATH.
+    
+    Each archive includes:
+    - The `arcaflow-mcp` binary
+    - LICENSE and README
+    - Documentation
+    - Software Bill of Materials (SBOM)
+    - Checksums and signatures
+    
+    ### Container Images
+    
+    Multi-arch container images for both components are built separately and available on Quay.io:
+    
+    ```bash
+    # Pull the Go MCP server
+    podman pull quay.io/arcalot/arcaflow-mcp-server:{{ .Tag }}
+    
+    # Pull the Python analysis engine
+    podman pull quay.io/arcalot/arcaflow-mcp-analysis:{{ .Tag }}
+    ```
+    
+    For container deployment, see the [deployment documentation](https://github.com/arcalot/arcaflow-mcp/tree/main/docs/arcaflow-mcp/deployment).
+  
+  footer: |
+    ---
+    
+    **Full Changelog**: https://github.com/arcalot/arcaflow-mcp/compare/{{ .PreviousTag }}...{{ .Tag }}
+    
+    **Documentation**: https://arcalot.io/arcaflow/
+  
+  draft: false
+  prerelease: auto
+
+# Changelog customization
+changelog:
+  use: github
+  sort: asc
+  abbrev: 0
+  groups:
+    - title: "New Features"
+      regexp: '^.*?feat(\([[:word:]]+\))??!?:.+$'
+      order: 0
+    - title: "Bug Fixes"
+      regexp: '^.*?fix(\([[:word:]]+\))??!?:.+$'
+      order: 1
+    - title: "Security Updates"
+      regexp: '^.*?sec(\([[:word:]]+\))??!?:.+$'
+      order: 2
+    - title: "Performance Improvements"
+      regexp: '^.*?perf(\([[:word:]]+\))??!?:.+$'
+      order: 3
+    - title: "Documentation"
+      regexp: '^.*?docs(\([[:word:]]+\))??!?:.+$'
+      order: 4
+    - title: "Build & CI"
+      regexp: '^.*?build(\([[:word:]]+\))??!?:.+$'
+      order: 5
+    - title: "Other Changes"
+      order: 999
+  
+  filters:
+    exclude:
+      - '^test:'
+      - '^chore:'
+      - '^ci:'
+      - 'typo'
+      - Merge pull request
+      - Merge branch
+
+# Container image builds
+# NOTE: Container images are built by dedicated workflows:
+#   - container-build.yml: Development/branch builds with Trivy scanning
+#   - release.yml: Release builds for both Go server and Python analysis
+# This separation provides better control over multi-arch builds, security
+# scanning, and allows independent versioning of the two components.
+
+# Sign checksums and artifacts
+signs:
+  - cmd: cosign
+    signature: "${artifact}.sig"
+    certificate: "${artifact}.pem"
+    args:
+      - "sign-blob"
+      - "--oidc-issuer=https://token.actions.githubusercontent.com"
+      - "--output-certificate=${certificate}"
+      - "--output-signature=${signature}"
+      - "${artifact}"
+      - "--yes"
+    artifacts: all
+
+# SBOM generation
+sboms:
+  - id: archive
+    artifacts: archive
+  - id: source
+    artifacts: source
+
+# Announce releases
+announce:
+  skip: '{{gt .Patch 0}}'  # Only announce major.minor releases, not patches
+
+# Go module proxy configuration
+gomod:
+  proxy: true
+  env:
+    - GOPROXY=https://proxy.golang.org,direct
+    - GOSUMDB=sum.golang.org
+
+# Snapshot configuration (for testing with --snapshot flag)
+snapshot:
+  version_template: "{{ incpatch .Version }}-next"

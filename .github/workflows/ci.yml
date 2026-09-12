@@ -1,0 +1,155 @@
+name: ci
+
+on:
+  push:
+    branches: [main, initial-development]
+  pull_request:
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ vars.ARCALOT_GO_VERSION || '1.23' }}
+      
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: v1.64.5
+          working-directory: server
+          args: --timeout=3m
+      
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ vars.ARCALOT_PYTHON_VERSION || '3.12' }}
+      
+      - name: Install Poetry
+        run: |
+          python -m pip install --upgrade pip
+          pip install poetry==1.8.3
+      
+      - name: Install Python dependencies
+        working-directory: analysis
+        run: poetry install --no-root
+      
+      - name: Run Python lint
+        working-directory: analysis
+        run: |
+          poetry run black --check .
+          poetry run flake8 .
+
+  go-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ vars.ARCALOT_GO_VERSION || '1.23' }}
+      
+      - name: Set up gotestfmt
+        uses: GoTestTools/gotestfmt-action@v2
+      
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: go-test-${{ hashFiles('**/go.sum') }}
+          restore-keys: go-test-
+      
+      - name: Setup mocks and generated code
+        working-directory: server
+        run: |
+          go install go.uber.org/mock/mockgen@v0.4.0
+          go generate ./...
+      
+      - name: Run Go tests with formatting
+        working-directory: server
+        run: |
+          set -euo pipefail
+          go test -coverprofile=/tmp/coverage.out -json -v ./... 2>&1 | tee /tmp/gotest.log | gotestfmt
+      
+      - name: Generate coverage report
+        if: always()
+        run: |
+          go install github.com/GoTestTools/limgo/cmd/limgo@v1.0.0
+          cd server && limgo -coverfile=/tmp/coverage.out -config=../.limgo.json -outfmt=md -outfile=/tmp/coverage.md
+          cat /tmp/coverage.md >> $GITHUB_STEP_SUMMARY
+      
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: go-test-results
+          path: |
+            /tmp/gotest.log
+            /tmp/coverage.out
+            /tmp/coverage.md
+          if-no-files-found: error
+
+  python-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ vars.ARCALOT_PYTHON_VERSION || '3.12' }}
+      
+      - name: Install Poetry
+        run: |
+          python -m pip install --upgrade pip
+          pip install poetry==1.8.3
+      
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/pypoetry
+            analysis/.venv
+          key: poetry-${{ hashFiles('**/poetry.lock') }}
+          restore-keys: poetry-
+      
+      - name: Install Python dependencies
+        working-directory: analysis
+        run: poetry install --no-root
+      
+      - name: Run Python tests
+        run: ./scripts/test-python.sh
+      
+      - name: Run Python coverage
+        run: ./scripts/test-python-coverage.sh
+      
+      - name: Upload coverage to summary
+        if: always()
+        working-directory: analysis
+        run: |
+          poetry run coverage report --format=markdown >> $GITHUB_STEP_SUMMARY || echo "No coverage report generated"
+
+  integration-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ vars.ARCALOT_GO_VERSION || '1.23' }}
+      
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ vars.ARCALOT_PYTHON_VERSION || '3.12' }}
+      
+      - name: Install Poetry
+        run: |
+          python -m pip install --upgrade pip
+          pip install poetry==1.8.3
+      
+      - name: Install Python dependencies
+        working-directory: analysis
+        run: poetry install --no-root
+      
+      - name: Run integration validation
+        run: ./scripts/test-integration.sh

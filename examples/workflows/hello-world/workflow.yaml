@@ -1,0 +1,28 @@
+version: v0.2.0
+input:
+  root: RootObject
+  objects:
+    RootObject:
+      id: RootObject
+      properties:
+        name:
+          display:
+            description: Name to greet
+            name: Name
+          type:
+            type_id: string
+          required: true
+
+steps:
+  hello:
+    plugin:
+      deployment_type: image
+      src: quay.io/arcalot/arcaflow-plugin-utilities:0.5.0
+    step: echo
+    input:
+      message: !expr '`Hello, ` + $.input.name + `!`'
+
+outputs:
+  success:
+    message: !expr $.steps.hello.outputs.success.output
+    status: !expr '"success"'

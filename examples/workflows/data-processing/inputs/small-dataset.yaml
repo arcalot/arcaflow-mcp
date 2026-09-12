@@ -1,0 +1,9 @@
+dataset:
+  name: "Small Test Dataset"
+  values:
+    - 10
+    - 20
+    - 30
+    - 40
+    - 50
+  threshold: 25

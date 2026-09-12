@@ -1,0 +1,38 @@
+input:
+  # Metadata
+  run_id: "stress-test-001"
+  user: "gemini-cli"
+  description: "Simultaneous CPU (8 cores), Memory (14GB), and Disk Stress"
+
+  # Enable only the stress-ng step for simultaneous loading
+  enable_stressng: true
+  enable_sysbench: false
+  enable_fio: false
+  enable_coremark: false
+  enable_autobench: false
+  enable_horreum: false
+
+  # Configuration for the combined stress test
+  stressng_tests:
+    - timeout: 300 # Run for 5 minutes
+      verbose: true
+      stressors:
+        # 1. CPU Stress: Load all 8 cores at 100%
+        - stressor: "cpu"
+          workers: 8
+          cpu-load: 100
+          cpu-method: "all"
+
+        # 2. Memory Stress: Allocate ~14GB (leaving ~2GB for OS)
+        # Using 4 workers, each allocating ~3.5GB
+        - stressor: "vm"
+          workers: 4
+          vm-bytes: "3500M" 
+          vm-method: "all"
+        
+        # 3. Disk Stress: Heavy I/O
+        - stressor: "hdd"
+          workers: 4
+          hdd-bytes: "4G"
+          hdd-opts:
+            - "dsync"

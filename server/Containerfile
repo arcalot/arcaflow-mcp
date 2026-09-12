@@ -1,0 +1,76 @@
+# Containerfile for Arcaflow MCP Server (Go)
+#
+# This builds a minimal container image for the Go MCP server component.
+# The server handles MCP protocol, workflow input construction, and validation.
+#
+# Build from repository root:
+#   podman build -t quay.io/arcalot/arcaflow-mcp-server:latest -f server/Containerfile .
+#   docker build -t quay.io/arcalot/arcaflow-mcp-server:latest -f server/Containerfile .
+#
+# Run:
+#   podman run -p 8080:8080 -e ARCAFLOW_MCP_ADMIN_TOKEN=token quay.io/arcalot/arcaflow-mcp-server:latest
+#
+
+# STAGE 1 -- Build Go binary
+FROM golang:1.24-alpine3.20 AS build
+
+WORKDIR /build
+
+# Copy VERSION file from repository root
+COPY VERSION ./
+
+# Copy dependency manifests and download (cached layer)
+COPY server/go.mod server/go.sum ./
+RUN go mod download
+
+# Copy source code from server directory
+COPY server/ .
+
+# Build static binary with optimizations
+# CGO_ENABLED=0 ensures fully static binary for portability
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo \
+    -ldflags="-w -s -X main.version=$(cat VERSION 2>/dev/null || echo 'dev')" \
+    -o arcaflow-mcp \
+    ./cmd/arcaflow-mcp
+
+# STAGE 2 -- Build minimal runtime image
+FROM alpine:3.20
+
+# Install CA certificates for HTTPS connections
+RUN apk --no-cache add ca-certificates wget
+
+WORKDIR /app
+
+# Copy binary from build stage
+COPY --from=build /build/arcaflow-mcp /app/arcaflow-mcp
+# Copy documentation from repository root
+COPY LICENSE /app/
+COPY README.md /app/
+
+# Create data directory for server mode
+RUN mkdir -p /var/lib/arcaflow-mcp
+
+# Create non-root user and set ownership
+RUN adduser -D -u 1000 arcaflow && \
+    chown -R arcaflow:arcaflow /app /var/lib/arcaflow-mcp
+
+USER arcaflow
+
+# Expose MCP server port
+EXPOSE 8080
+
+# Health check (requires server mode with --mode server)
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD wget --spider -q http://localhost:8080/health || exit 1
+
+# OCI labels following Arcalot conventions
+LABEL org.opencontainers.image.source="https://github.com/arcalot/arcaflow-mcp"
+LABEL org.opencontainers.image.licenses="Apache-2.0"
+LABEL org.opencontainers.image.vendor="Arcalot project"
+LABEL org.opencontainers.image.authors="Arcalot contributors"
+LABEL org.opencontainers.image.title="Arcaflow MCP Server"
+LABEL org.opencontainers.image.description="MCP server for Arcaflow workflow input construction and result analysis"
+
+# Default to server mode
+ENTRYPOINT ["/app/arcaflow-mcp"]
+CMD ["--mode", "server"]

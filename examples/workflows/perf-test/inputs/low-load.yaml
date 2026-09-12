@@ -1,0 +1,7 @@
+test_config:
+  name: "Low Load Test"
+  users: 10
+  duration: 60
+  ramp_up: 5
+  timeout: 5
+  success_threshold: 0.99
